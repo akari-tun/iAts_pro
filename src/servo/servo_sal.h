@@ -4,13 +4,14 @@
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
 
-#include "ease_effect.h"
+#include "ease.h"
 
 #define MAX_PAN_DEGREE 180
 #define MAX_TILT_DEGREE 90
 
 typedef struct servo_mcpwm_config_s
-{   uint32_t mcpwm_frequency;
+{
+    uint32_t mcpwm_frequency;
     mcpwm_unit_t mcpwm_unit;
     mcpwm_timer_t mcpwm_timer;
     mcpwm_duty_type_t mcpwm_duty_type;
@@ -49,5 +50,5 @@ typedef struct servo_status_s
 
 uint16_t servo_pan_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
 uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
-uint16_t servo_ease_cal(ease_effect_config_t *ease_config, servo_status_t *status);
+uint16_t servo_ease_cal(ease_config_t *ease_config, servo_status_t *status);
 void servo_pwm_out(servo_config_t *config, servo_status_t *status, uint16_t pulsewidth);

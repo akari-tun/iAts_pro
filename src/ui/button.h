@@ -5,16 +5,20 @@
 
 #include <hal/gpio.h>
 
+#include "../src/target/target.h"
+
 typedef struct button_s button_t;
 
 typedef enum
 {
-    // use five ways button
+    // Single button targets use only this button
     BUTTON_ID_ENTER = 0,
+#if defined(USE_BUTTON_5WAY)
     BUTTON_ID_LEFT,
     BUTTON_ID_RIGHT,
     BUTTON_ID_UP,
     BUTTON_ID_DOWN,
+#endif
 } button_id_e;
 
 typedef enum

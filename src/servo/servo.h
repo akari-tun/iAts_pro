@@ -16,9 +16,6 @@
 #define SERVO_PAN_MCPWM_OPR MCPWM_OPR_A
 #define SERVO_TILT_MCPWM_OPR MCPWM_OPR_B
 
-#define SERVO_PAN_GPIO 15
-#define SERVO_TILT_GPIO 18
-
 #define SERVO_TILT_MIN_ANGLE 0
 #define SERVO_TILT_MAX_ANGLE 90
 #define SERVO_PAN_MIN_ANGLE 0
@@ -30,7 +27,7 @@ typedef struct servo_s
 
     servo_config_t servo_pan_config;
     servo_config_t servo_tilt_config;
-    ease_effect_config_t servo_ease_config;
+    ease_config_t servo_ease_config;
 
     servo_status_t servo_pan_status;
     servo_status_t servo_tilt_status;
@@ -39,4 +36,4 @@ typedef struct servo_s
 void servo_gpio_initialize(servo_t *servo);
 void servo_configuration(servo_t *servo);
 void servo_update(servo_t *servo);
-void servo_control(servo_config_t *servo_config, ease_effect_config_t *ease_config, servo_status_t *status);
+void servo_control(servo_config_t *servo_config, ease_config_t *ease_config, servo_status_t *status);

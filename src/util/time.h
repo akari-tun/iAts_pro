@@ -4,14 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <os.h>
+#include "../lib/os/os.h"
 
-#include <esp_timer.h>
-
-inline uint64_t hal_time_micros_now(void)
-{
-    return esp_timer_get_time();
-}
+#include <hal/time.h>
 
 #define MILLIS_PER_SEC (1000)
 #define MICROS_PER_SEC (1000000)

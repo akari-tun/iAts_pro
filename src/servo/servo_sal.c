@@ -19,14 +19,14 @@ uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_ro
     return cal_pulsewidth;
 }
 
-uint16_t servo_ease_cal(ease_effect_config_t *ease_config, servo_status_t *status) 
+uint16_t servo_ease_cal(ease_config_t *ease_config, servo_status_t *status) 
 {
     uint16_t easing_pulsewidth = 0;
     
     if (status->last_pulsewidth <= status->currtent_pulsewidth) {
-        easing_pulsewidth = status->last_pulsewidth + easeing(ease_config->ease_out_type, status->step_positon, 0, status->currtent_pulsewidth - status->last_pulsewidth, ease_config->steps);
+        easing_pulsewidth = status->last_pulsewidth + easeing(ease_config->ease_out, status->step_positon, 0, status->currtent_pulsewidth - status->last_pulsewidth, ease_config->steps);
     } else {
-        easing_pulsewidth = status->last_pulsewidth - easeing(ease_config->ease_out_type, status->step_positon, 0, status->last_pulsewidth - status->currtent_pulsewidth, ease_config->steps);
+        easing_pulsewidth = status->last_pulsewidth - easeing(ease_config->ease_out, status->step_positon, 0, status->last_pulsewidth - status->currtent_pulsewidth, ease_config->steps);
     }
 
     if (++status->step_positon >= ease_config->steps) {

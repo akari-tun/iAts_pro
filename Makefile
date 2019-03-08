@@ -1,4 +1,4 @@
-PROJECT_NAME := iAts_rx_pro
+PROJECT_NAME := iAts_pro
 export PROJECT_NAME
 
 PORT ?=

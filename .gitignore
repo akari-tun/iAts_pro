@@ -56,3 +56,8 @@ dkms.conf
 
 # platformIO
 .pioenvs
+
+# make
+/build
+/build-*
+/tmp

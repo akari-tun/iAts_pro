@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include "../src/target/target.h"
+
 #include "util/time.h"
 
 #if defined(LED_1_GPIO)
@@ -81,6 +83,8 @@ typedef enum
     LED_MODE_BIND_WITH_REQUEST,
 
     LED_MODE_BOOT,
+
+    LED_MODE_EASING,
 
     LED_MODE_COUNT,
 } led_mode_e;

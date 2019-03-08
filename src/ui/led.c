@@ -88,11 +88,22 @@ static const led_stage_t boot_stages[] = {
 };
 LED_PATTERN(boot_pattern, boot_stages, 1);
 
+static const led_stage_t easing_stages[] = {
+    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE_OFF(50, 0),
+    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE_OFF(50, 0),
+    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE_OFF(50, 0),
+};
+LED_PATTERN(easing_pattern, easing_stages, 1);
+
 static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
     [LED_MODE_FAILSAFE] = &failsafe_pattern,
     [LED_MODE_BIND] = &bind_pattern,
     [LED_MODE_BIND_WITH_REQUEST] = &bind_with_request_pattern,
+    [LED_MODE_EASING] = &easing_pattern,
     [LED_MODE_BOOT] = &boot_pattern,
 };
 

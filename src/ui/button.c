@@ -1,3 +1,7 @@
+#include "../src/target/target.h"
+
+#include <hal/log.h>
+
 #include "ui/button.h"
 
 #include "util/time.h"
