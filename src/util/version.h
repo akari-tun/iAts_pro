@@ -10,4 +10,4 @@
 #define SOFTWARE_VERSION "Unknown"
 #endif
 
-#define FIRMWARE_NAME "iAts pro"
+#define FIRMWARE_NAME "iAts"

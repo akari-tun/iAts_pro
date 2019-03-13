@@ -18,35 +18,11 @@ void servo_pwmc_init(servo_pwmc_t *servo_pwmc, ui_t *ui)
 
     beeper = &ui->internal.beeper;
 
-    // ease_config_t e_cfg = {
-    //     .steps = DEFAULT_EASE_STEPS,
-    //     .min_pulsewidth = DEFAULT_EASE_MIN_PULSEWIDTH,
-    //     .ease_out = DEFAULT_EASE_OUT,
-    // };
-
-    // servo_pwmc->internal.ease_config = &e_cfg;
-
     //pan
-    // servo_pwmc_config_t pan_cfg = {
-    //     .gpio = SERVO_PAN_GPIO, 
-    //     .min_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH, 
-    //     .max_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH, 
-    //     .max_degree = DEFAULT_SERVO_MAX_DEGREE, 
-    //     .min_degree = DEFAULT_SERVO_MIN_DEGREE,
-    // };
-    // servo_pwmc->internal.pan.config = &pan_cfg;
     servo_pwmc->internal.pan.pTr_pulsewidth_cal = &servo_pwmc_pan_per_degree_cal;
     servo_pwmc->internal.pan.gpio = SERVO_PAN_GPIO;
     servo_pwmc_config(&servo_pwmc->internal.pan, servo_pwmc->internal.pan.gpio);
     //tilt
-    // servo_pwmc_config_t tilt_cfg = {
-    //     .gpio = SERVO_TILT_GPIO, 
-    //     .min_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH, 
-    //     .max_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH, 
-    //     .max_degree = DEFAULT_SERVO_MAX_DEGREE, 
-    //     .min_degree = DEFAULT_SERVO_MIN_DEGREE,
-    // };
-    // servo_pwmc->internal.tilt.config = &tilt_cfg;
     servo_pwmc->internal.tilt.pTr_pulsewidth_cal = &servo_pwmc_tilt_per_degree_cal;
     servo_pwmc->internal.tilt.gpio = SERVO_TILT_GPIO;
     servo_pwmc_config(&servo_pwmc->internal.tilt, servo_pwmc->internal.tilt.gpio);

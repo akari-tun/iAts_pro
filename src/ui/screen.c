@@ -18,7 +18,7 @@
 #include "screen.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
-#define ANIMATION_FRAME_DURATION_MS 66
+#define ANIMATION_FRAME_DURATION_MS 450
 #define ANIMATION_TOTAL_DURATION_MS (ANIMATION_REPEAT * ANIMATION_COUNT * ANIMATION_FRAME_DURATION_MS)
 
 typedef enum
@@ -77,70 +77,58 @@ static void screen_splash_task(void *arg)
     uint16_t w = u8g2_GetDisplayWidth(&u8g2);
     uint16_t h = u8g2_GetDisplayHeight(&u8g2);
 
-    uint16_t anim_x = (w - LOGO_WIDTH) / 2;
-    uint16_t anim_y = (h - LOGO_HEIGHT) / 2;
+    uint16_t anim_x = (w - AF_LOGO_WIDTH) / 2;
+    uint16_t anim_y = (h - AF_LOGO_HEIGHT) / 2 + 2;
 
 #define SPLASH_TOP FIRMWARE_NAME
-#define SPLASH_TOP_SUBTITLE "iAts"
+#define SPLASH_AUTHOR "A.T"
+#define SPLASH_AUTHOR_LABEL " Design by A.T"
 #define SPLASH_VERSION_LABEL "Version:"
 #define SPLASH_BOTTOM_HORIZONTAL SOFTWARE_VERSION
 
-    for (int ii = 0; ii < 10; ii++)
+    for (int ii = 0; ii < AF_LOGO_ANIMATION_REPEAT + 1; ii++)
     {
-        for (int jj = 0; jj < 10; jj++)
-        {
+        if (ii < AF_LOGO_ANIMATION_REPEAT) {
+            // Draw logo by animation
+            for (int jj = 0; jj < AF_LOGO_ANIMATION_COUNT; jj++)
+            {
+                u8g2_ClearBuffer(&u8g2);
+
+                u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH, AF_LOGO_HEIGHT,  (uint8_t *)af_logo_images[jj]);
+
+                u8g2_SendBuffer(&u8g2);
+                time_millis_delay(ANIMATION_FRAME_DURATION_MS);
+            }
+        } else {
+            // Draw all startup info 
             u8g2_ClearBuffer(&u8g2);
 
             u8g2_SetFontPosTop(&u8g2);
             u8g2_SetFont(&u8g2, u8g2_font_profont22_tf);
             uint16_t tw = u8g2_GetStrWidth(&u8g2, SPLASH_TOP);
-            u8g2_DrawStr(&u8g2, (w - tw) / 2, 0, SPLASH_TOP);
+            u8g2_DrawStr(&u8g2, (w - tw) / 3, 0, SPLASH_TOP);
+
+            u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+
+            tw = u8g2_GetStrWidth(&u8g2, SOFTWARE_VERSION);
+            u8g2_DrawStr(&u8g2, w - (w / 4) - tw + 10, 6, SOFTWARE_VERSION);
 
             u8g2_SetFontPosBottom(&u8g2);
             u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
 
-            uint16_t bw;
-            if (w > h)
-            {
-                // Horizontal
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_TOP_SUBTITLE);
-                u8g2_DrawStr(&u8g2, 0, 15, SPLASH_TOP_SUBTITLE);
+            uint16_t bw = u8g2_GetStrWidth(&u8g2, SPLASH_AUTHOR_LABEL);
+            u8g2_DrawStr(&u8g2, (w - bw) / 2, h, SPLASH_AUTHOR_LABEL);
 
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_BOTTOM_HORIZONTAL);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h, SPLASH_BOTTOM_HORIZONTAL);
-            }
-            else
-            {
-                // Vertical
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_TOP_SUBTITLE);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, 34, SPLASH_TOP_SUBTITLE);
-
-#if defined(VERSION) && defined(GIT_REVISION)
-#define SUB_VERSION "(" GIT_REVISION ")"
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_VERSION_LABEL);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h - 30, SPLASH_VERSION_LABEL);
-
-                bw = u8g2_GetStrWidth(&u8g2, VERSION);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h - 15, VERSION);
-
-                bw = u8g2_GetStrWidth(&u8g2, SUB_VERSION);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h - 0, SUB_VERSION);
-#else
-                bw = u8g2_GetStrWidth(&u8g2, SPLASH_VERSION_LABEL);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h - 15, SPLASH_VERSION_LABEL);
-
-                bw = u8g2_GetStrWidth(&u8g2, SOFTWARE_VERSION);
-                u8g2_DrawStr(&u8g2, (w - bw) / 2, h - 0, SOFTWARE_VERSION);
-#endif
-            }
-
-            u8g2_DrawXBM(&u8g2, anim_x, anim_y, LOGO_WIDTH, LOGO_HEIGHT, AF_LOGO);
+            u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH,AF_LOGO_HEIGHT,  AF_LOGO);
 
             u8g2_SendBuffer(&u8g2);
             time_millis_delay(ANIMATION_FRAME_DURATION_MS);
         }
     }
+
+    time_millis_delay(ANIMATION_FRAME_DURATION_MS);
     screen->internal.splashing = false;
+
     vTaskDelete(NULL);
 }
 
@@ -232,42 +220,42 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
     int direction = 1;
 #endif
 
-    if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
-    {
-        screen->internal.telemetry.page += direction;
-        if (screen->internal.telemetry.page < 0)
-        {
-            screen->internal.telemetry.page = 0;
-            screen->internal.main_mode = SCREEN_MODE_CHANNELS;
-        }
-        else if (screen->internal.telemetry.page >= screen->internal.telemetry.count)
-        {
-            screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
-            screen->internal.main_mode = SCREEN_MODE_MAIN;
-        }
-    }
-    else
-    {
-        screen->internal.main_mode += direction;
-        if (screen->internal.main_mode < 0)
-        {
-            screen->internal.main_mode = SCREEN_MODE_TELEMETRY;
-            screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
-        }
-        else if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
-        {
-            if (direction > 0)
-            {
-                screen->internal.telemetry.page = 0;
-            }
-            else
-            {
-                screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
-            }
-        }
-        // It's not possible to go over SCREEN_MODE_TELEMETRY when moving
-        // to the right, because it's handled separately in the previous if block
-    }
+    // if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
+    // {
+    //     screen->internal.telemetry.page += direction;
+    //     if (screen->internal.telemetry.page < 0)
+    //     {
+    //         screen->internal.telemetry.page = 0;
+    //         screen->internal.main_mode = SCREEN_MODE_CHANNELS;
+    //     }
+    //     else if (screen->internal.telemetry.page >= screen->internal.telemetry.count)
+    //     {
+    //         screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
+    //         screen->internal.main_mode = SCREEN_MODE_MAIN;
+    //     }
+    // }
+    // else
+    // {
+    //     screen->internal.main_mode += direction;
+    //     if (screen->internal.main_mode < 0)
+    //     {
+    //         screen->internal.main_mode = SCREEN_MODE_TELEMETRY;
+    //         screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
+    //     }
+    //     else if (screen->internal.main_mode == SCREEN_MODE_TELEMETRY)
+    //     {
+    //         if (direction > 0)
+    //         {
+    //             screen->internal.telemetry.page = 0;
+    //         }
+    //         else
+    //         {
+    //             screen->internal.telemetry.page = screen->internal.telemetry.count - 1;
+    //         }
+    //     }
+    //     // It's not possible to go over SCREEN_MODE_TELEMETRY when moving
+    //     // to the right, because it's handled separately in the previous if block
+    // }
     return true;
 }
 
@@ -288,89 +276,89 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
 //     return false;
 // }
 
-static uint16_t screen_animation_offset(uint16_t width, uint16_t max_width, uint16_t *actual_width)
-{
-    if (width > max_width)
-    {
-        // Value is too wide, gotta animate
-        uint16_t extra = width - max_width;
-        // Move 1 pixel every 200ms, stopping for 3 cycles at each end
-        time_ticks_t step_duration = MILLIS_TO_TICKS(200);
-        uint16_t stop = 3;
-        uint16_t offset = (time_ticks_now() / step_duration) % (extra + stop * 2);
-        if (offset < stop * 2)
-        {
-            offset = 0;
-        }
-        else
-        {
-            offset -= stop;
-            if (offset > extra - 1)
-            {
-                offset = extra - 1;
-            }
-        }
-        if (actual_width)
-        {
-            *actual_width = max_width;
-        }
-        return offset;
-    }
-    if (actual_width)
-    {
-        *actual_width = width;
-    }
-    return 0;
-}
+// static uint16_t screen_animation_offset(uint16_t width, uint16_t max_width, uint16_t *actual_width)
+// {
+//     if (width > max_width)
+//     {
+//         // Value is too wide, gotta animate
+//         uint16_t extra = width - max_width;
+//         // Move 1 pixel every 200ms, stopping for 3 cycles at each end
+//         time_ticks_t step_duration = MILLIS_TO_TICKS(200);
+//         uint16_t stop = 3;
+//         uint16_t offset = (time_ticks_now() / step_duration) % (extra + stop * 2);
+//         if (offset < stop * 2)
+//         {
+//             offset = 0;
+//         }
+//         else
+//         {
+//             offset -= stop;
+//             if (offset > extra - 1)
+//             {
+//                 offset = extra - 1;
+//             }
+//         }
+//         if (actual_width)
+//         {
+//             *actual_width = max_width;
+//         }
+//         return offset;
+//     }
+//     if (actual_width)
+//     {
+//         *actual_width = width;
+//     }
+//     return 0;
+// }
 
-static int screen_autosplit_lines(char *buf, uint16_t max_width)
-{
-    uint16_t line_width;
-    size_t len = strlen(buf);
-    const char *p = buf;
-    int lines = 1;
-    int sep = -1;
-    for (int ii = 0; ii <= len; ii++)
-    {
-        if (buf[ii] == ' ' || buf[ii] == '\0')
-        {
-            buf[ii] = '\0';
-            line_width = u8g2_GetStrWidth(&u8g2, p);
-            if (line_width <= max_width)
-            {
-                // Still fits in the line. Store the separator and continue.
-                sep = ii;
-                buf[ii] = ' ';
-            }
-            else
-            {
-                // We need a new line. Check if we had a previous separator,
-                // otherwise break here
-                if (sep >= 0)
-                {
-                    buf[ii] = ' ';
-                    buf[sep] = '\n';
-                    p = &buf[sep + 1];
-                    sep = ii;
-                }
-                else
-                {
-                    if (ii == len)
-                    {
-                        // String ends exactly here, the last line scrolls
-                        break;
-                    }
-                    buf[ii] = '\n';
-                    p = &buf[ii + 1];
-                    sep = -1;
-                }
-                lines++;
-            }
-        }
-    }
-    buf[len] = '\0';
-    return lines;
-}
+// static int screen_autosplit_lines(char *buf, uint16_t max_width)
+// {
+//     uint16_t line_width;
+//     size_t len = strlen(buf);
+//     const char *p = buf;
+//     int lines = 1;
+//     int sep = -1;
+//     for (int ii = 0; ii <= len; ii++)
+//     {
+//         if (buf[ii] == ' ' || buf[ii] == '\0')
+//         {
+//             buf[ii] = '\0';
+//             line_width = u8g2_GetStrWidth(&u8g2, p);
+//             if (line_width <= max_width)
+//             {
+//                 // Still fits in the line. Store the separator and continue.
+//                 sep = ii;
+//                 buf[ii] = ' ';
+//             }
+//             else
+//             {
+//                 // We need a new line. Check if we had a previous separator,
+//                 // otherwise break here
+//                 if (sep >= 0)
+//                 {
+//                     buf[ii] = ' ';
+//                     buf[sep] = '\n';
+//                     p = &buf[sep + 1];
+//                     sep = ii;
+//                 }
+//                 else
+//                 {
+//                     if (ii == len)
+//                     {
+//                         // String ends exactly here, the last line scrolls
+//                         break;
+//                     }
+//                     buf[ii] = '\n';
+//                     p = &buf[ii + 1];
+//                     sep = -1;
+//                 }
+//                 lines++;
+//             }
+//         }
+//     }
+//     buf[len] = '\0';
+//     return lines;
+// }
 
 // static int screen_draw_multiline(char *buf, uint16_t y, screen_multiline_opt_e opt)
 // {
@@ -761,7 +749,56 @@ static int screen_autosplit_lines(char *buf, uint16_t max_width)
 //     }
 // }
 
-#define TELEMETRY_LINE_HEIGHT 12
+uint8_t wifi_index = 0;
+bool last_flash = true;
+
+static void screen_draw_wait_connect(screen_t *s)
+{
+    u8g2_SetDrawColor(&u8g2, 1);
+    u8g2_SetFont(&u8g2, u8g2_font_micro_tr);
+    u8g2_SetFontPosTop(&u8g2);
+
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+
+    bool flash = TIME_CYCLE_EVERY_MS(400, 2) == 0;
+
+    if (last_flash != flash) {
+        wifi_index++;
+        last_flash = flash;
+    }
+    if (wifi_index > 3) wifi_index = 0;
+
+    u8g2_DrawXBM(&u8g2, 0 / 2, 0, WIFI_WIDTH, WIFI_HEIGHT,  (uint8_t *)wifi_images[wifi_index]);
+
+    u8g2_SetFontPosBottom(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+
+    const char *ptr_ssid = "SSID:iAts_wifi";
+    //uint16_t tw = u8g2_GetStrWidth(&u8g2, ptr_ssid);
+    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT / 2 + 5, ptr_ssid);
+
+    const char *ptr_pwd = " PWD:12345678";
+    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT, ptr_pwd);
+
+    bool wait_connect = TIME_CYCLE_EVERY_MS(800, 2) == 0;
+
+    if (wait_connect) {
+
+        u8g2_SetFontPosCenter(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+        const char *wait_conn = "WAITING CONNECT";
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, wait_conn);
+        u8g2_DrawStr(&u8g2,  (w - tw) / 2, h - (h / 4), wait_conn);
+    }
+
+    // uint16_t box_w = 100;
+    // uint16_t box_h = 20;
+
+    //u8g2_DrawBox(&u8g2, (w - box_w) / 2, (h - box_h) / 2, box_w, box_h);
+}
+
+//#define TELEMETRY_LINE_HEIGHT 12
 
 // static bool screen_display_telemetry(const telemetry_t *val, int id)
 // {
@@ -1205,108 +1242,129 @@ static int screen_autosplit_lines(char *buf, uint16_t max_width)
 //     screen_draw_label_value(s, "Core Temp:", buf, SCREEN_W(s), y, 3);
 // }
 
-// static void screen_draw(screen_t *screen)
-// {
-//     menu_t *menu = menu_get_active();
+static void screen_draw(screen_t *screen)
+{
+    // menu_t *menu = menu_get_active();
 
-//     if (ota_is_in_progress())
-//     {
-//         if (menu != &menu_empty)
-//         {
-//             menu_set_active(&menu_empty);
-//         }
-//         screen_draw_ota(screen);
-//         return;
-//     }
+    // if (ota_is_in_progress())
+    // {
+    //     if (menu != &menu_empty)
+    //     {
+    //         menu_set_active(&menu_empty);
+    //     }
+    //     screen_draw_ota(screen);
+    //     return;
+    // }
 
-//     if (menu == &menu_empty)
-//     {
-//         menu_pop_active();
-//         menu = menu_get_active();
-//     }
+    // if (menu == &menu_empty)
+    // {
+    //     menu_pop_active();
+    //     menu = menu_get_active();
+    // }
 
-//     air_bind_packet_t packet;
-//     bool has_pending_bind_request = rc_has_pending_bind_request(screen->internal.rc, &packet);
-//     if (has_pending_bind_request && packet.role == AIR_ROLE_TX)
-//     {
-//         if (menu == &menu_bind_info)
-//         {
-//             menu_pop_active();
-//             menu = menu_get_active();
-//         }
-//         // We're an RX with a pending bind request from a TX.
-//         // Check that the bind req menu is on top, to handle
-//         // user interactions.
-//         if (menu != &menu_bind_req)
-//         {
-//             menu_set_active(&menu_bind_req);
-//         }
-//         screen_draw_bind_request_from_tx(screen, &packet);
-//         return;
-//     }
+    // air_bind_packet_t packet;
+    // bool has_pending_bind_request = rc_has_pending_bind_request(screen->internal.rc, &packet);
+    // if (has_pending_bind_request && packet.role == AIR_ROLE_TX)
+    // {
+    //     if (menu == &menu_bind_info)
+    //     {
+    //         menu_pop_active();
+    //         menu = menu_get_active();
+    //     }
+    //     // We're an RX with a pending bind request from a TX.
+    //     // Check that the bind req menu is on top, to handle
+    //     // user interactions.
+    //     if (menu != &menu_bind_req)
+    //     {
+    //         menu_set_active(&menu_bind_req);
+    //     }
+    //     screen_draw_bind_request_from_tx(screen, &packet);
+    //     return;
+    // }
 
-//     if (has_pending_bind_request && packet.role == AIR_ROLE_RX_AWAITING_CONFIRMATION)
-//     {
-//         // We're a TX and we've been informed that there's an RX
-//         // waiting for bind confirmation.
-//         if (menu != &menu_bind_info)
-//         {
-//             menu_set_active(&menu_bind_info);
-//         }
-//         screen_draw_bind_request_info_from_rx(screen, &packet);
-//         return;
-//     }
+    // if (has_pending_bind_request && packet.role == AIR_ROLE_RX_AWAITING_CONFIRMATION)
+    // {
+    //     // We're a TX and we've been informed that there's an RX
+    //     // waiting for bind confirmation.
+    //     if (menu != &menu_bind_info)
+    //     {
+    //         menu_set_active(&menu_bind_info);
+    //     }
+    //     screen_draw_bind_request_info_from_rx(screen, &packet);
+    //     return;
+    // }
 
-//     air_pairing_t alt_pairings[MENU_ALT_PAIRINGS_MAX];
-//     int alt_pairing_count = rc_get_alternative_pairings(screen->internal.rc, alt_pairings, ARRAY_COUNT(alt_pairings));
-//     if (alt_pairing_count > 0)
-//     {
-//         menu_set_alt_pairings(alt_pairings, alt_pairing_count);
-//         if (menu != &menu_alt_pairings)
-//         {
-//             menu_set_active(&menu_alt_pairings);
-//         }
-//         screen_draw_menu(screen, &menu_alt_pairings, 0);
-//         return;
-//     }
+    // air_pairing_t alt_pairings[MENU_ALT_PAIRINGS_MAX];
+    // int alt_pairing_count = rc_get_alternative_pairings(screen->internal.rc, alt_pairings, ARRAY_COUNT(alt_pairings));
+    // if (alt_pairing_count > 0)
+    // {
+    //     menu_set_alt_pairings(alt_pairings, alt_pairing_count);
+    //     if (menu != &menu_alt_pairings)
+    //     {
+    //         menu_set_active(&menu_alt_pairings);
+    //     }
+    //     screen_draw_menu(screen, &menu_alt_pairings, 0);
+    //     return;
+    // }
 
-//     // There's nothing overriding the screen, draw the normal interface
-//     while (menu == &menu_empty || menu == &menu_bind_req || menu == &menu_bind_info || menu == &menu_alt_pairings)
-//     {
-//         menu_pop_active();
-//         menu = menu_get_active();
-//     }
-//     if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
-//     {
-//         screen_draw_menu(screen, menu, 0);
-//     }
-//     else
-//     {
-//         switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
-//         {
-//         case SCREEN_SECONDARY_MODE_NONE:
-//             switch ((screen_main_mode_e)screen->internal.main_mode)
-//             {
-//             case SCREEN_MODE_MAIN:
-//                 screen_draw_main(screen);
-//                 break;
-//             case SCREEN_MODE_CHANNELS:
-//                 screen_draw_channels(screen);
-//                 break;
-//             case SCREEN_MODE_TELEMETRY:
-//                 screen_draw_telemetry(screen);
-//                 break;
-//             }
-//             break;
-//         case SCREEN_SECONDARY_MODE_FREQUENCIES:
-//             screen_draw_frequencies(screen);
-//             break;
-//         case SCREEN_SECONDARY_MODE_DEBUG_INFO:
-//             screen_draw_debug_info(screen);
-//             break;
-//         }
-//     }
-// }
+    // There's nothing overriding the screen, draw the normal interface
+    // while (menu == &menu_empty || menu == &menu_bind_req || menu == &menu_bind_info || menu == &menu_alt_pairings)
+    // {
+    //     menu_pop_active();
+    //     menu = menu_get_active();
+    // }
+    // if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
+    // {
+    //     screen_draw_menu(screen, menu, 0);
+    // }
+    // else
+    // {
+    //     switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
+    //     {
+    //     case SCREEN_SECONDARY_MODE_NONE:
+    //         switch ((screen_main_mode_e)screen->internal.main_mode)
+    //         {
+    //         case SCREEN_MODE_MAIN:
+    //             screen_draw_main(screen);
+    //             break;
+    //         case SCREEN_MODE_CHANNELS:
+    //             screen_draw_channels(screen);
+    //             break;
+    //         case SCREEN_MODE_TELEMETRY:
+    //             screen_draw_telemetry(screen);
+    //             break;
+    //         }
+    //         break;
+    //     case SCREEN_SECONDARY_MODE_FREQUENCIES:
+    //         screen_draw_frequencies(screen);
+    //         break;
+    //     case SCREEN_SECONDARY_MODE_DEBUG_INFO:
+    //         screen_draw_debug_info(screen);
+    //         break;
+    //     }
+    // }
+
+    switch ((screen_secondary_mode_e)screen->internal.secondary_mode) {
+        case SCREEN_SECONDARY_MODE_NONE:
+            switch ((screen_main_mode_e)screen->internal.main_mode)
+            {
+            case SCREEN_MODE_MAIN:
+                //screen_draw_main(screen);
+                break;
+            case SCREEN_MODE_WAIT_CONNECT:
+                screen_draw_wait_connect(screen);
+                break;
+
+            }
+            break;
+        case SCREEN_SECONDARY_MODE_FREQUENCIES:
+            //screen_draw_frequencies(screen);
+            break;
+        case SCREEN_SECONDARY_MODE_DEBUG_INFO:
+            //screen_draw_debug_info(screen);
+            break;
+    }
+}
 
 void screen_update(screen_t *screen)
 {
@@ -1322,7 +1380,7 @@ void screen_update(screen_t *screen)
     screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
     screen->internal.buf = buf;
     u8g2_ClearBuffer(&u8g2);
-    // screen_draw(screen);
+    screen_draw(screen);
     u8g2_SendBuffer(&u8g2);
 }
 

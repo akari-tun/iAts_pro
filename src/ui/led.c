@@ -68,13 +68,13 @@ static const led_stage_t bind_stages[] = {
 };
 LED_PATTERN(bind_pattern, bind_stages, LED_REPEAT_FOREVER);
 
-static const led_stage_t bind_with_request_stages[] = {
-    LED_STAGE(255, HAL_WS2812_BLUE, 150, 150),
-    LED_STAGE_OFF(200, 0),
-    LED_STAGE(255, HAL_WS2812_BLUE, 150, 150),
-    LED_STAGE_OFF(1000, 150),
+static const led_stage_t wait_connect_stages[] = {
+    LED_STAGE(255, HAL_WS2812_BLUE, 100, 500),
+    LED_STAGE_OFF(50, 500),
+    LED_STAGE(255, HAL_WS2812_RED, 100, 500),
+    LED_STAGE_OFF(50, 500),
 };
-LED_PATTERN(bind_with_request_pattern, bind_with_request_stages, LED_REPEAT_FOREVER);
+LED_PATTERN(wait_connect_pattern, wait_connect_stages, LED_REPEAT_FOREVER);
 
 static const led_stage_t boot_stages[] = {
     LED_STAGE(255, HAL_WS2812_WHITE, 3000, 3000),
@@ -89,11 +89,11 @@ static const led_stage_t boot_stages[] = {
 LED_PATTERN(boot_pattern, boot_stages, 1);
 
 static const led_stage_t easing_stages[] = {
-    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
     LED_STAGE_OFF(50, 0),
-    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
     LED_STAGE_OFF(50, 0),
-    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
     LED_STAGE_OFF(50, 0),
 };
 LED_PATTERN(easing_pattern, easing_stages, 1);
@@ -102,7 +102,7 @@ static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
     [LED_MODE_FAILSAFE] = &failsafe_pattern,
     [LED_MODE_BIND] = &bind_pattern,
-    [LED_MODE_BIND_WITH_REQUEST] = &bind_with_request_pattern,
+    [LED_MODE_WAIT_CONNECT] = &wait_connect_pattern,
     [LED_MODE_EASING] = &easing_pattern,
     [LED_MODE_BOOT] = &boot_pattern,
 };
@@ -426,4 +426,9 @@ void led_mode_add(led_mode_e mode)
 void led_mode_remove(led_mode_e mode)
 {
     led_mode_set(mode, false);
+}
+
+bool led_mode_is_enable(led_mode_e mode)
+{
+    return enabled_modes[mode];
 }

@@ -11,8 +11,7 @@
 typedef enum
 {
     SCREEN_MODE_MAIN,
-    SCREEN_MODE_CHANNELS,
-    SCREEN_MODE_TELEMETRY,
+    SCREEN_MODE_WAIT_CONNECT,
 } screen_main_mode_e;
 
 typedef enum

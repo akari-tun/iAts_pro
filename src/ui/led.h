@@ -80,7 +80,7 @@ typedef enum
     LED_MODE_FAILSAFE,
 
     LED_MODE_BIND,
-    LED_MODE_BIND_WITH_REQUEST,
+    LED_MODE_WAIT_CONNECT,
 
     LED_MODE_BOOT,
 
@@ -102,3 +102,4 @@ void led_start_pattern(led_id_e led_id, const led_pattern_t *pattern);
 void led_mode_set(led_mode_e mode, bool set);
 void led_mode_add(led_mode_e mode);
 void led_mode_remove(led_mode_e mode);
+bool led_mode_is_enable(led_mode_e mode);
