@@ -5,12 +5,12 @@
 
 /*
     use 15bit resolution from max value is 32767.
-    at 50hz frequency is 20ms(20000us) an map to pwm value 500us ~ 2500us is (32767 * (500 / 20000)) ~ (32767 * (2500 / 20000)).
+    at 50hz frequency is 20ms(20000us) and map to pwm value 500us ~ 2500us is (32767 * (500 / 20000)) ~ (32767 * (2500 / 20000)).
 */
 #define SERVO_PWM_RESOLUTION 15
 #define SERVO_PWM_DUTY_MAX_VALUE ((1 << SERVO_PWM_RESOLUTION) - 1)
-#define SERVO_PWM_MIN_VALUE (SERVO_PWM_DUTY_MAX_VALUE * 0.025f)
-#define SERVO_PWM_MAX_VALUE (SERVO_PWM_DUTY_MAX_VALUE * 0.125f)
+#define SERVO_PWM_MIN_VALUE (SERVO_PWM_DUTY_MAX_VALUE * (DEFAULT_SERVO_MIN_PLUSEWIDTH / 20000.00f))
+#define SERVO_PWM_MAX_VALUE (SERVO_PWM_DUTY_MAX_VALUE * (DEFAULT_SERVO_MAX_PLUSEWIDTH / 20000.00f))
 
 #define SERVO_PWM_CHANNEL_RANGE (DEFAULT_SERVO_MAX_PLUSEWIDTH - DEFAULT_SERVO_MIN_PLUSEWIDTH)
 
@@ -61,3 +61,6 @@ uint16_t servo_pwmc_tilt_per_degree_cal(servo_pwmc_config_t *config, uint16_t de
 uint16_t servo_pwmc_ease_cal(ease_config_t *ease_config, servo_pwmc_status_t *status);
 void servo_pwmc_out(servo_pwmc_status_t *status, uint16_t pulsewidth);
 void servo_pwmc_control(servo_pwmc_status_t *status, ease_config_t *ease_config);
+uint16_t servo_get_degree(servo_pwmc_status_t *status);
+uint32_t servo_get_pulsewidth(servo_pwmc_status_t *status);
+uint8_t servo_get_per_pulsewidth(servo_pwmc_status_t *status);

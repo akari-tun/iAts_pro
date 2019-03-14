@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <hal/log.h>
 
 #include <u8g2.h>
 
@@ -16,6 +17,7 @@
 #include "util/version.h"
 
 #include "screen.h"
+#include "servo/servo_pwmc.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
 #define ANIMATION_FRAME_DURATION_MS 450
@@ -41,12 +43,12 @@ typedef enum
 
 static u8g2_t u8g2;
 
-bool screen_init(screen_t *screen, screen_i2c_config_t *cfg)
+bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_pwmc_t *servo)
 {
     memset(screen, 0, sizeof(*screen));
     screen->internal.available = screen_i2c_init(cfg, &u8g2);
     screen->internal.cfg = *cfg;
-    // screen->internal.rc = rc;
+    screen->internal.servo = servo;
     return screen->internal.available;
 }
 
@@ -88,19 +90,22 @@ static void screen_splash_task(void *arg)
 
     for (int ii = 0; ii < AF_LOGO_ANIMATION_REPEAT + 1; ii++)
     {
-        if (ii < AF_LOGO_ANIMATION_REPEAT) {
+        if (ii < AF_LOGO_ANIMATION_REPEAT)
+        {
             // Draw logo by animation
             for (int jj = 0; jj < AF_LOGO_ANIMATION_COUNT; jj++)
             {
                 u8g2_ClearBuffer(&u8g2);
 
-                u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH, AF_LOGO_HEIGHT,  (uint8_t *)af_logo_images[jj]);
+                u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH, AF_LOGO_HEIGHT, (uint8_t *)af_logo_images[jj]);
 
                 u8g2_SendBuffer(&u8g2);
                 time_millis_delay(ANIMATION_FRAME_DURATION_MS);
             }
-        } else {
-            // Draw all startup info 
+        }
+        else
+        {
+            // Draw all startup info
             u8g2_ClearBuffer(&u8g2);
 
             u8g2_SetFontPosTop(&u8g2);
@@ -119,7 +124,7 @@ static void screen_splash_task(void *arg)
             uint16_t bw = u8g2_GetStrWidth(&u8g2, SPLASH_AUTHOR_LABEL);
             u8g2_DrawStr(&u8g2, (w - bw) / 2, h, SPLASH_AUTHOR_LABEL);
 
-            u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH,AF_LOGO_HEIGHT,  AF_LOGO);
+            u8g2_DrawXBM(&u8g2, anim_x, anim_y, AF_LOGO_WIDTH, AF_LOGO_HEIGHT, AF_LOGO);
 
             u8g2_SendBuffer(&u8g2);
             time_millis_delay(ANIMATION_FRAME_DURATION_MS);
@@ -749,6 +754,79 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
 //     }
 // }
 
+static void screen_draw_main(screen_t *s)
+{
+    u8g2_SetDrawColor(&u8g2, 1);
+
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+    uint16_t per_h = h / 8;
+    uint8_t frame_height = 7;
+
+    u8g2_SetFontPosTop(&u8g2);
+
+    char *buf = SCREEN_BUF(s);
+
+#ifdef USE_BATTERY_MEASUREMENT
+    uint8_t battery_box_width = 13;
+    //battery ico
+    u8g2_DrawXBM(&u8g2, w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
+    float voltage = battery_get_voltage(s->internal.battery) / BATTEYR_PARTIAL_PRESSURE_VALUE;
+    int per_voltage = 0;
+    if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
+    {
+        per_voltage = ((voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) + 0.5) * battery_box_width;
+    }
+    else if (voltage >= DEFAULT_BATTERY_MIN_VOLTAGE)
+    {
+        per_voltage = ((voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE) - 0.5) * battery_box_width;
+    }
+    u8g2_DrawBox(&u8g2, w - BATTERY_WIDTH + 1, 1, per_voltage, frame_height);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
+    u8g2_DrawStr(&u8g2, 80, 0, buf);
+#endif
+
+    uint16_t bar_width = 90;
+    const char *ptr_tilt = "T";
+    uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.servo->internal.tilt);
+    uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
+    // label
+    u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+    u8g2_DrawStr(&u8g2, 0, per_h * 2, ptr_tilt);
+    // pluse width and degree
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
+             servo_get_pulsewidth(&s->internal.servo->internal.tilt), servo_get_degree(&s->internal.servo->internal.tilt));
+    u8g2_DrawStr(&u8g2, 13, per_h * 2, buf);
+    // percent pulse width
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);
+    u8g2_DrawStr(&u8g2, 105, per_h * 3, buf);
+    // frame
+    u8g2_DrawFrame(&u8g2, 13, per_h * 3, bar_width, frame_height);
+    // box
+    u8g2_DrawBox(&u8g2, 13, per_h * 3, tilt_box_width, frame_height);
+
+    const char *ptr_pan = "P";
+    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.servo->internal.pan);
+    uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
+    // label
+    u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+    u8g2_DrawStr(&u8g2, 0, per_h * 4, ptr_pan);
+    // pluse width and degree
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
+             servo_get_pulsewidth(&s->internal.servo->internal.pan), servo_get_degree(&s->internal.servo->internal.pan));
+    u8g2_DrawStr(&u8g2, 13, per_h * 4, buf);
+    // percent pulse width
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
+    u8g2_DrawStr(&u8g2, 105, per_h * 5, buf);
+    // frame
+    u8g2_DrawFrame(&u8g2, 13, per_h * 5, bar_width, frame_height);
+    // box
+    u8g2_DrawBox(&u8g2, 13, per_h * 5, pan_box_width, frame_height);
+}
+
 uint8_t wifi_index = 0;
 bool last_flash = true;
 
@@ -763,13 +841,15 @@ static void screen_draw_wait_connect(screen_t *s)
 
     bool flash = TIME_CYCLE_EVERY_MS(400, 2) == 0;
 
-    if (last_flash != flash) {
+    if (last_flash != flash)
+    {
         wifi_index++;
         last_flash = flash;
     }
-    if (wifi_index > 3) wifi_index = 0;
+    if (wifi_index > 3)
+        wifi_index = 0;
 
-    u8g2_DrawXBM(&u8g2, 0 / 2, 0, WIFI_WIDTH, WIFI_HEIGHT,  (uint8_t *)wifi_images[wifi_index]);
+    u8g2_DrawXBM(&u8g2, 0 / 2, 0, WIFI_WIDTH, WIFI_HEIGHT, (uint8_t *)wifi_images[wifi_index]);
 
     u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
@@ -783,13 +863,14 @@ static void screen_draw_wait_connect(screen_t *s)
 
     bool wait_connect = TIME_CYCLE_EVERY_MS(800, 2) == 0;
 
-    if (wait_connect) {
+    if (wait_connect)
+    {
 
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
         const char *wait_conn = "WAITING CONNECT";
         uint16_t tw = u8g2_GetStrWidth(&u8g2, wait_conn);
-        u8g2_DrawStr(&u8g2,  (w - tw) / 2, h - (h / 4), wait_conn);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4), wait_conn);
     }
 
     // uint16_t box_w = 100;
@@ -1344,25 +1425,25 @@ static void screen_draw(screen_t *screen)
     //     }
     // }
 
-    switch ((screen_secondary_mode_e)screen->internal.secondary_mode) {
-        case SCREEN_SECONDARY_MODE_NONE:
-            switch ((screen_main_mode_e)screen->internal.main_mode)
-            {
-            case SCREEN_MODE_MAIN:
-                //screen_draw_main(screen);
-                break;
-            case SCREEN_MODE_WAIT_CONNECT:
-                screen_draw_wait_connect(screen);
-                break;
-
-            }
+    switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
+    {
+    case SCREEN_SECONDARY_MODE_NONE:
+        switch ((screen_main_mode_e)screen->internal.main_mode)
+        {
+        case SCREEN_MODE_MAIN:
+            screen_draw_main(screen);
             break;
-        case SCREEN_SECONDARY_MODE_FREQUENCIES:
-            //screen_draw_frequencies(screen);
+        case SCREEN_MODE_WAIT_CONNECT:
+            screen_draw_wait_connect(screen);
             break;
-        case SCREEN_SECONDARY_MODE_DEBUG_INFO:
-            //screen_draw_debug_info(screen);
-            break;
+        }
+        break;
+    case SCREEN_SECONDARY_MODE_FREQUENCIES:
+        //screen_draw_frequencies(screen);
+        break;
+    case SCREEN_SECONDARY_MODE_DEBUG_INFO:
+        //screen_draw_debug_info(screen);
+        break;
     }
 }
 

@@ -7,6 +7,12 @@
 
 #include "ui/button.h"
 #include "ui/screen_i2c.h"
+#ifdef USE_BATTERY_MEASUREMENT
+#include "ui/battery.h"
+#endif
+
+
+typedef struct servo_pwmc_s servo_pwmc_t;
 
 typedef enum
 {
@@ -59,6 +65,10 @@ typedef struct screen_s
     struct
     {
         screen_i2c_config_t cfg;
+        servo_pwmc_t *servo;
+#ifdef USE_BATTERY_MEASUREMENT
+        battery_t *battery;
+#endif
         bool available;
         int8_t main_mode;      // from screen_main_mode_e
         int8_t secondary_mode; // from screen_secondary_mode_e
@@ -75,7 +85,7 @@ typedef struct screen_s
     } internal;
 } screen_t;
 
-bool screen_init(screen_t *screen, screen_i2c_config_t *cfg);
+bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_pwmc_t *servo);
 bool screen_is_available(const screen_t *screen);
 void screen_shutdown(screen_t *screen);
 void screen_power_on(screen_t *screen);

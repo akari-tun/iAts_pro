@@ -13,6 +13,8 @@
 #include "Wifi_2.xbm"
 #include "Wifi_3.xbm"
 
+#include "Battery.xbm"
+
 
 #define AF_LOGO_WIDTH 39
 #define AF_LOGO_HEIGHT 31
@@ -43,3 +45,8 @@ static const char *wifi_images[] = {
     Wifi_2_bits,
     Wifi_3_bits,
 };
+
+#define BATTERY_WIDTH 16
+#define BATTERY_HEIGHT 8
+
+static const uint8_t *BATTERY_IMG = (uint8_t *)Battery_bits;

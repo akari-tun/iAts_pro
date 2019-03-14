@@ -7,15 +7,19 @@
 
 #include "ui/led.h"
 #include "ui/screen.h"
+#include "ui/ui.h"
 
 #include "util/macros.h"
 
-#include "ui/ui.h"
 
 #ifdef USE_SCREEN
 // We don't log anything without a screen, so this would
 // produce a warning if we didn't guard it
 static const char *TAG = "UI";
+#endif
+
+#ifdef USE_BATTERY_MEASUREMENT
+static battery_t battery;
 #endif
 
 static void ui_beep(ui_t *ui)
@@ -130,12 +134,12 @@ static void ui_update_beeper(ui_t *ui)
 }
 #endif
 
-void ui_init(ui_t *ui, ui_config_t *cfg)
+void ui_init(ui_t *ui, ui_config_t *cfg, servo_pwmc_t *servo)
 {
     led_init();
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
-    if (screen_init(&ui->internal.screen, &cfg->screen))
+    if (screen_init(&ui->internal.screen, &cfg->screen, servo))
     {
         button_callback = ui_handle_screen_button_event;
     }
@@ -183,6 +187,12 @@ void ui_init(ui_t *ui, ui_config_t *cfg)
     // menu_init(rc);
 #endif
     // settings_add_listener(ui_settings_handler, ui);
+
+    
+#ifdef USE_BATTERY_MEASUREMENT
+    battery_init(&battery);
+    ui->internal.screen.internal.battery = &battery;
+#endif
 }
 
 bool ui_screen_is_available(const ui_t *ui)

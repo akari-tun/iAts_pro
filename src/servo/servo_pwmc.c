@@ -8,7 +8,9 @@
 #include "ui/led.h"
 #include "ui/beeper.h"
 
-static beeper_t *beeper;
+#if defined(USE_BEEPER)
+    static beeper_t *beeper;
+#endif
 
 static const char *TAG = "servo_pwmc";
 
@@ -16,7 +18,9 @@ void servo_pwmc_init(servo_pwmc_t *servo_pwmc, ui_t *ui)
 {
     HAL_ERR_ASSERT_OK(hal_pwm_init());
 
+#if defined(USE_BEEPER)
     beeper = &ui->internal.beeper;
+#endif
 
     //pan
     servo_pwmc->internal.pan.pTr_pulsewidth_cal = &servo_pwmc_pan_per_degree_cal;
@@ -89,7 +93,6 @@ void servo_pwmc_out(servo_pwmc_status_t *status, uint16_t pulsewidth)
     status->last_pulsewidth = pulsewidth;
 }
 
-
 void servo_pwmc_update(servo_pwmc_t *servo)
 {
     //tilt
@@ -108,7 +111,9 @@ void servo_pwmc_control(servo_pwmc_status_t *status, ease_config_t *ease_config)
             status->is_easing = true;
             status->step_positon = 0;
             out_pulsewidth = servo_pwmc_ease_cal(ease_config, status);
+#if defined(USE_BEEPER)
             beeper_set_mode(beeper, BEEPER_MODE_EASING);
+#endif
 			led_mode_add(LED_MODE_EASING);
             ESP_LOGI(TAG, "servo easing...");
         } else {
@@ -119,4 +124,19 @@ void servo_pwmc_control(servo_pwmc_status_t *status, ease_config_t *ease_config)
     }
 
     servo_pwmc_out(status, out_pulsewidth);
+}
+
+uint16_t servo_get_degree(servo_pwmc_status_t *status)
+{
+    return status->currtent_degree;
+}
+
+uint32_t servo_get_pulsewidth(servo_pwmc_status_t *status)
+{
+    return status->currtent_pulsewidth;
+}
+
+uint8_t servo_get_per_pulsewidth(servo_pwmc_status_t *status)
+{
+    return (status->currtent_pulsewidth - status->config.min_pulsewidth) * 100 / (status->config.max_pulsewidth - status->config.min_pulsewidth);
 }

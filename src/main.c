@@ -3,7 +3,7 @@
 */
 #include <stdio.h>
 
-#include <esp_log.h>
+#include <hal/log.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_attr.h"
@@ -16,12 +16,15 @@
 
 //#include "servo/servo.h"
 #include "servo/servo_pwmc.h"
+
 #include "ui/ui.h"
 #include "ui/led.h"
 #include "ui/beeper.h"
 
 #include "util/time.h"
 #include "util/macros.h"
+
+//static const char *TAG = "MAIN";
 
 //static servo_t servo;
 static servo_pwmc_t servo;
@@ -65,15 +68,20 @@ void task_servo_pwmc(void *arg)
 	time_millis_t pan_tick = time_millis_now();
 	time_millis_t tilt_tick = time_millis_now();
 
-	time_millis_t wati = time_millis_now() + 15000;
+	time_millis_t wati = time_millis_now() + 5000;
 
 	while (1)
 	{
 		if (time_millis_now() < wati)
 		{
+#if defined(USE_BEEPER)
 			if (ui.internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
 			{
 				beeper_set_mode(&ui.internal.beeper, BEEPER_MODE_WAIT_CONNECT);
+			}
+#endif
+			if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+			{
 				led_mode_add(LED_MODE_WAIT_CONNECT);
 			}
 		}
@@ -121,9 +129,9 @@ void task_servo_pwmc(void *arg)
 			}
 		}
 
-		printf("[PAN pulse width: %dus degree: %d] [TILT pulse width: %dus degree: %d]\n",
-			   servo.internal.pan.currtent_pulsewidth, servo.internal.pan.currtent_degree,
-			   servo.internal.tilt.currtent_pulsewidth, servo.internal.tilt.currtent_degree);
+		// printf("[PAN pulse width: %dus degree: %d] [TILT pulse width: %dus degree: %d]\n",
+		// 	   servo.internal.pan.currtent_pulsewidth, servo.internal.pan.currtent_degree,
+		// 	   servo.internal.tilt.currtent_pulsewidth, servo.internal.tilt.currtent_degree);
 
 		if (servo.internal.tilt.is_easing || servo.internal.pan.is_easing)
 		{
@@ -163,8 +171,13 @@ void iats_ui_init(void)
 #endif
 	};
 
-	ui_init(&ui, &cfg);
+	ui_init(&ui, &cfg, &servo);
 	led_mode_add(LED_MODE_BOOT);
+}
+
+void iats_battery_init(void)
+{
+
 }
 
 void task_ui(void *arg)
@@ -175,7 +188,7 @@ void task_ui(void *arg)
 	{
 		ui_screen_splash(&ui);
 	}
-
+	
 	for (;;)
 	{
 		ui_update(&ui);
