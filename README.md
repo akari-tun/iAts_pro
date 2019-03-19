@@ -9,3 +9,11 @@ Through the project of [RavenLRS](https://github.com/RavenLRS), I got to know a 
 After I graduating from college, I never use C language to develop any project, using C language development this project is a big challenge to me, I need to relearn C language feature, and the need to better understand how to use of Point. 
 
 [RavenLRS](https://github.com/RavenLRS) project is built on ESP32 module, its also the realization of the function of some of its similar to some of my ideas, I learn by [RavenLRS](https://github.com/RavenLRS) project by learned a lot of of C language development experience, and use a lot of RavenLRS code to my project,Thanks to [RavenLRS](https://github.com/RavenLRS) author [fiam](https://github.com/fiam) open source for such an excellent project.
+
+### PCB LAYOUT
+
+#### PCB_LAYOUT_TOP
+![PCB_LAYOUT_TOP](doc/pcb/PCB_layout_top.png?raw=true "PCB_LAYOUT_TOP")
+
+#### PCB_LAYOUT_BOTTOM
+![PCB_LAYOUT_BOTTOM](doc/pcb/PCB_layout_bottom.png?raw=true "PCB_LAYOUT_BOTTOM")
