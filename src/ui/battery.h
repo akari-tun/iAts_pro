@@ -7,4 +7,4 @@ typedef struct battery_s {
 } battery_t;
 
 void battery_init(battery_t *battery);
-uint32_t battery_get_voltage(battery_t *battery);
+float battery_get_voltage(battery_t *battery);

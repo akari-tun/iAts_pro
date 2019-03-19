@@ -56,18 +56,6 @@ static const led_stage_t none_stages[] = {
 };
 LED_PATTERN(none_pattern, none_stages, LED_REPEAT_NONE);
 
-static const led_stage_t failsafe_stages[] = {
-    LED_STAGE(255, HAL_WS2812_RED, 50, 0),
-    LED_STAGE_OFF(50, 0),
-};
-LED_PATTERN(failsafe_pattern, failsafe_stages, LED_REPEAT_FOREVER);
-
-static const led_stage_t bind_stages[] = {
-    LED_STAGE(255, HAL_WS2812_BLUE, 500, 150),
-    LED_STAGE_OFF(500, 150),
-};
-LED_PATTERN(bind_pattern, bind_stages, LED_REPEAT_FOREVER);
-
 static const led_stage_t wait_connect_stages[] = {
     LED_STAGE(255, HAL_WS2812_BLUE, 100, 500),
     LED_STAGE_OFF(50, 500),
@@ -98,13 +86,18 @@ static const led_stage_t easing_stages[] = {
 };
 LED_PATTERN(easing_pattern, easing_stages, 1);
 
+static const led_stage_t tracking_stages[] = {
+    LED_STAGE(255, HAL_WS2812_TRACKING, 100, 500),
+    //LED_STAGE_OFF(500, 150),
+};
+LED_PATTERN_GRADUAL(tracking_pattern, tracking_stages, LED_REPEAT_FOREVER, true, 255);
+
 static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
-    [LED_MODE_FAILSAFE] = &failsafe_pattern,
-    [LED_MODE_BIND] = &bind_pattern,
     [LED_MODE_WAIT_CONNECT] = &wait_connect_pattern,
-    [LED_MODE_EASING] = &easing_pattern,
     [LED_MODE_BOOT] = &boot_pattern,
+    [LED_MODE_TRACKING] = &tracking_pattern,
+    [LED_MODE_EASING] = &easing_pattern,
 };
 
 _Static_assert(LED_MODE_COUNT == ARRAY_COUNT(patterns), "invalid number of LED patterns");
@@ -137,6 +130,10 @@ typedef struct led_s
     } colors;
 #endif
 } led_t;
+
+#if defined(LED_1_USE_WS2812)
+volatile static led_gradual_target_t *gradual_target;
+#endif
 
 #if defined(LED_1_GPIO)
 static led_t led1 = {
@@ -175,7 +172,11 @@ static void led_update_fading(led_t *led)
 }
 #endif
 
+#if defined(LED_USE_WS2812)
+static void led_set_level(led_t *led, uint8_t level, const hal_ws2812_color_t *color, unsigned fade_ms, bool is_gradual, uint8_t gradual_value)
+#else
 static void led_set_level(led_t *led, uint8_t level, const hal_ws2812_color_t *color, unsigned fade_ms)
+#endif
 {
 #if defined(LED_USE_WS2812)
     if (led->use_ws2812)
@@ -183,9 +184,21 @@ static void led_set_level(led_t *led, uint8_t level, const hal_ws2812_color_t *c
         hal_ws2812_color_t c;
         if (color)
         {
-            c.r = color->r * level / LED_LEVEL_MAX;
-            c.g = color->g * level / LED_LEVEL_MAX;
-            c.b = color->b * level / LED_LEVEL_MAX;
+            if (is_gradual)
+            {
+                c.r = (color->r + (gradual_value * (gradual_target->pan * 100 / 360) / 100)) % LED_LEVEL_MAX * level / LED_LEVEL_MAX;
+                c.g = color->g * level / LED_LEVEL_MAX;
+                c.b = (color->b + (gradual_value * (gradual_target->tilt * 100 / 90) / 100)) % LED_LEVEL_MAX * level / LED_LEVEL_MAX;
+
+                // printf("[PAN degree: %d] [TILT degree: %d]\n", gradual_target->pan, gradual_target->tilt);
+                // printf("[R: %d] [G: %d] [B: %d]\n", c.r, c.g, c.b);
+            }
+            else
+            {
+                c.r = color->r * level / LED_LEVEL_MAX;
+                c.g = color->g * level / LED_LEVEL_MAX;
+                c.b = color->b * level / LED_LEVEL_MAX;
+            }
         }
         else
         {
@@ -242,12 +255,20 @@ static void led_start_stage(led_t *led)
     if (led->pattern && led->stage < led->pattern->count)
     {
         const led_stage_t *stage = &led->pattern->stages[led->stage];
+#if defined(LED_USE_WS2812)
+        led_set_level(led, stage->level, LED_STAGE_COLOR(stage), LED_STAGE_FADE_DURATION(stage), led->pattern->gradual_change, led->pattern->gradual_value);
+#else
         led_set_level(led, stage->level, LED_STAGE_COLOR(stage), LED_STAGE_FADE_DURATION(stage));
+#endif
         led->next_update = time_ticks_now() + MILLIS_TO_TICKS(stage->duration);
     }
     else
     {
+#if defined(LED_USE_WS2812)
+        led_set_level(led, 0, NULL, 0, false, 0);
+#else
         led_set_level(led, 0, NULL, 0);
+#endif
         led->next_update = 0;
     }
 }
@@ -277,7 +298,11 @@ static void led_open_led(led_t *led)
 static void led_init_led(led_t *led)
 {
     led_open_led(led);
+#if defined(LED_USE_WS2812)
+    led_set_level(led, 0, NULL, 0, false, 0);
+#else
     led_set_level(led, 0, NULL, 0);
+#endif
     led->next_update = 0;
 }
 
@@ -320,7 +345,11 @@ static void led_led_start_pattern(led_t *led, const led_pattern_t *pattern)
     led->pattern = pattern;
     led->stage = 0;
     led->repeat = 0;
-    led_start_stage(led);
+
+    if (led->next_update == 0 || time_ticks_now() > led->next_update)
+    {
+        led_start_stage(led);
+    }
 }
 
 #endif
@@ -353,15 +382,24 @@ static void led_update_active_mode(bool force)
     }
     if (force || new_active_mode != active_mode)
     {
+        //printf("led_end_mode: %d\n", (int)active_mode);
         led_end_mode(active_mode);
         active_mode = new_active_mode;
         led_start_mode(new_active_mode);
+        //printf("led_start_mode: %d\n", (int)new_active_mode);
     }
 }
 
+#if defined(LED_1_USE_WS2812)
+void led_init(led_gradual_target_t *led_gradual_target)
+#else
 void led_init(void)
+#endif
 {
 #if defined(LED_1_GPIO)
+#if defined(LED_1_USE_WS2812)
+    gradual_target = led_gradual_target;
+#endif
     led_init_led(&led1);
 #endif
 }

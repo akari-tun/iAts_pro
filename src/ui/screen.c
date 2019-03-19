@@ -771,7 +771,7 @@ static void screen_draw_main(screen_t *s)
     uint8_t battery_box_width = 13;
     //battery ico
     u8g2_DrawXBM(&u8g2, w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
-    float voltage = battery_get_voltage(s->internal.battery) / BATTEYR_PARTIAL_PRESSURE_VALUE;
+    float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
     if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
     {
@@ -797,7 +797,7 @@ static void screen_draw_main(screen_t *s)
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.servo->internal.tilt), servo_get_degree(&s->internal.servo->internal.tilt));
+        servo_get_pulsewidth(&s->internal.servo->internal.tilt), servo_get_degree(&s->internal.servo->internal.tilt));
     u8g2_DrawStr(&u8g2, 13, per_h * 2, buf);
     // percent pulse width
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);

@@ -136,7 +136,12 @@ static void ui_update_beeper(ui_t *ui)
 
 void ui_init(ui_t *ui, ui_config_t *cfg, servo_pwmc_t *servo)
 {
+#if defined(LED_1_USE_WS2812)
+    led_init(&ui->internal.led_gradual_target);
+#else
     led_init();
+#endif
+
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
     if (screen_init(&ui->internal.screen, &cfg->screen, servo))

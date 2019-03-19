@@ -17,7 +17,7 @@ void battery_init(battery_t *battery)
     battery->vref = (uint32_t *)vref;
 }
 
-uint32_t battery_get_voltage(battery_t *battery)
+float battery_get_voltage(battery_t *battery)
 {   
     uint32_t voltage = get_adc_voltage(&battery->config);
     uint32_t avg_voltage = 0;
@@ -31,5 +31,6 @@ uint32_t battery_get_voltage(battery_t *battery)
     vref[0] = voltage;
     avg_voltage = (avg_voltage + voltage) / 10;
 
-    return avg_voltage;
+    //Calculate the correct voltage according to the partial voltage resistance ratio
+    return avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE; 
 }

@@ -39,9 +39,14 @@
 #define LED_PATTERN(var, s, r) \
     static const led_pattern_t var = ((led_pattern_t){.stages = s, .count = ARRAY_COUNT(s), .repeat = r})
 
+#if defined(LED_USE_WS2812)
+#define LED_PATTERN_GRADUAL(var, s, r, g, v) \
+    static const led_pattern_t var = ((led_pattern_t){.stages = s, .count = ARRAY_COUNT(s), .repeat = r, .gradual_change = g, .gradual_value = v})
+#endif
+
 typedef struct led_stage_s
 {
-    uint16_t duration;
+    uint16_t duration; 
 #if defined(LED_USE_FADING)
     uint16_t fade_duration;
 #endif
@@ -56,7 +61,19 @@ typedef struct led_pattern_s
     const led_stage_t *stages;
     uint8_t count;
     uint8_t repeat;
+#if defined(LED_USE_WS2812)
+    bool gradual_change;
+    uint8_t gradual_value;
+#endif
 } led_pattern_t;
+
+#if defined(LED_1_USE_WS2812)
+typedef struct led_gradual_target_s
+{
+    uint16_t pan;
+    uint16_t tilt;
+} led_gradual_target_t;
+#endif
 
 #if defined(LED_USE_WS2812)
 #define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .color = c, .fade_duration = f, .level = l})
@@ -77,19 +94,24 @@ typedef enum
 {
     LED_MODE_NONE,
 
-    LED_MODE_FAILSAFE,
-
-    LED_MODE_BIND,
     LED_MODE_WAIT_CONNECT,
 
     LED_MODE_BOOT,
 
+    LED_MODE_TRACKING,
+
     LED_MODE_EASING,
 
     LED_MODE_COUNT,
+
 } led_mode_e;
 
+#if defined(LED_1_USE_WS2812)
+void led_init(led_gradual_target_t *led_gradual_target);
+#else
 void led_init(void);
+#endif
+
 void led_update(void);
 
 void led_pause(void);

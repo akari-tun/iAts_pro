@@ -12,6 +12,10 @@
     static beeper_t *beeper;
 #endif
 
+// #if defined(LED_1_USE_WS2812)
+//     volatile static led_gradual_target_t *led_gradual_target;
+// #endif
+
 static const char *TAG = "servo_pwmc";
 
 void servo_pwmc_init(servo_pwmc_t *servo_pwmc, ui_t *ui)
@@ -21,6 +25,10 @@ void servo_pwmc_init(servo_pwmc_t *servo_pwmc, ui_t *ui)
 #if defined(USE_BEEPER)
     beeper = &ui->internal.beeper;
 #endif
+
+// #if defined(LED_1_USE_WS2812)
+//     led_gradual_target = &ui->internal.led_gradual_target;
+// #endif
 
     //pan
     servo_pwmc->internal.pan.pTr_pulsewidth_cal = &servo_pwmc_pan_per_degree_cal;

@@ -90,12 +90,15 @@ void task_servo_pwmc(void *arg)
 			if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
 			{
 				ui.internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
+				beeper_set_mode(&ui.internal.beeper, BEEPER_MODE_NONE);
 				led_mode_remove(LED_MODE_WAIT_CONNECT);
+				led_mode_add(LED_MODE_TRACKING);
 			}
 
 			if (time_millis_now() - tilt_tick > 240)
 			{
 				servo.internal.tilt.currtent_degree += isAdd ? 1 : -1;
+				ui.internal.led_gradual_target.tilt = servo.internal.tilt.currtent_degree;
 
 				if (servo.internal.tilt.currtent_degree >= 90)
 				{
@@ -121,6 +124,7 @@ void task_servo_pwmc(void *arg)
 				if (servo.internal.pan.currtent_degree > 359 || servo.internal.pan.currtent_degree <= 0)
 					servo.internal.pan.currtent_degree = 0;
 
+				ui.internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
 				servo.internal.pan.is_reverse = servo.internal.pan.currtent_degree > 180;
 
 				servo_pwmc_control(&servo.internal.pan, &servo.internal.ease_config);
@@ -141,6 +145,10 @@ void task_servo_pwmc(void *arg)
 		else
 		{
 			sleep = MILLIS_TO_TICKS(100);
+			// if (time_millis_now() > wati)
+			// {
+			// 	led_mode_add(LED_MODE_TRACKING);
+			// }
 		}
 
 		vTaskDelay(sleep);

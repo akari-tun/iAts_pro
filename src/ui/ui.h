@@ -7,6 +7,7 @@
 
 #include "../src/target/target.h"
 
+#include "ui/led.h"
 #include "ui/beeper.h"
 #include "ui/button.h"
 #include "ui/screen.h"
@@ -47,6 +48,9 @@ typedef struct ui_s
         ui_config_t cfg;
 #if defined(USE_BEEPER)
         beeper_t beeper;
+#endif
+#if defined(LED_1_USE_WS2812)
+        led_gradual_target_t led_gradual_target;
 #endif
         button_t buttons[UI_BUTTON_COUNT];
 #ifdef USE_SCREEN
