@@ -2,8 +2,11 @@
 #include <hal/log.h>
 #include "target/target.h"
 #include "battery.h"
+#include "util/kalman_filter.h"
 
 static uint32_t vref[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static kalman1_state_t kalman_state;
 
 void battery_init(battery_t *battery)
 {
@@ -15,6 +18,8 @@ void battery_init(battery_t *battery)
     HAL_ERR_ASSERT_OK(hal_adc_init(&battery->config));
 
     battery->vref = (uint32_t *)vref;
+
+    kalman1_init(&kalman_state, 0, 0);
 }
 
 float battery_get_voltage(battery_t *battery)
@@ -32,5 +37,5 @@ float battery_get_voltage(battery_t *battery)
     avg_voltage = (avg_voltage + voltage) / 10;
 
     //Calculate the correct voltage according to the partial voltage resistance ratio
-    return avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE; 
+    return kalman1_filter(&kalman_state, (avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE)); 
 }

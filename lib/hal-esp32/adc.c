@@ -4,7 +4,7 @@
 #include "hal/log.h"
 #include "hal/gpio.h"
 
-#define NO_OF_SAMPLES 10          //Multisampling
+#define NO_OF_SAMPLES 5           //Multisampling
 #define DEFAULT_VREF  1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 
 static const char *TAG = "ESP_ADC";

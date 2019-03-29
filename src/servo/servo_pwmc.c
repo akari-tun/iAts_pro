@@ -93,10 +93,13 @@ uint16_t servo_pwmc_ease_cal(ease_config_t *ease_config, servo_pwmc_status_t *st
 void servo_pwmc_out(servo_pwmc_status_t *status, uint16_t pulsewidth)
 {
     if (status->last_pulsewidth != pulsewidth) {
-
         uint32_t v = (SERVO_PWM_MAX_VALUE - SERVO_PWM_MIN_VALUE) * (pulsewidth - status->config.min_pulsewidth);
         uint32_t duty = (v / (status->config.max_pulsewidth - status->config.min_pulsewidth)) + SERVO_PWM_MIN_VALUE;
         hal_pwm_set_duty(status->gpio, duty);
+        if (!led_mode_is_enable(LED_MODE_TRACKING))
+        {
+            led_mode_add(LED_MODE_TRACKING);
+        }
     }
     status->last_pulsewidth = pulsewidth;
 }
@@ -122,8 +125,8 @@ void servo_pwmc_control(servo_pwmc_status_t *status, ease_config_t *ease_config)
 #if defined(USE_BEEPER)
             beeper_set_mode(beeper, BEEPER_MODE_EASING);
 #endif
-			led_mode_add(LED_MODE_EASING);
             ESP_LOGI(TAG, "servo easing...");
+			led_mode_add(LED_MODE_EASING);
         } else {
             out_pulsewidth = status->currtent_pulsewidth;
         }

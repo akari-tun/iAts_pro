@@ -20,6 +20,7 @@
 #include "ui/ui.h"
 #include "ui/led.h"
 #include "ui/beeper.h"
+#include "wifi/wifi.h"
 
 #include "util/time.h"
 #include "util/macros.h"
@@ -29,6 +30,7 @@
 //static servo_t servo;
 static servo_pwmc_t servo;
 static ui_t ui;
+static wifi_t wifi;
 
 void iats_servo_init(void)
 {
@@ -90,15 +92,16 @@ void task_servo_pwmc(void *arg)
 			if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
 			{
 				ui.internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
+#if defined(USE_BEEPER)
 				beeper_set_mode(&ui.internal.beeper, BEEPER_MODE_NONE);
+#endif
 				led_mode_remove(LED_MODE_WAIT_CONNECT);
-				led_mode_add(LED_MODE_TRACKING);
+				//led_mode_add(LED_MODE_TRACKING);
 			}
 
 			if (time_millis_now() - tilt_tick > 240)
 			{
 				servo.internal.tilt.currtent_degree += isAdd ? 1 : -1;
-				ui.internal.led_gradual_target.tilt = servo.internal.tilt.currtent_degree;
 
 				if (servo.internal.tilt.currtent_degree >= 90)
 				{
@@ -115,6 +118,9 @@ void task_servo_pwmc(void *arg)
 
 				servo_pwmc_control(&servo.internal.tilt, &servo.internal.ease_config);
 
+				ui.internal.led_gradual_target.tilt = servo.internal.tilt.currtent_degree;
+				ui.internal.led_gradual_target.tilt_pulsewidth = servo.internal.tilt.currtent_pulsewidth;
+
 				tilt_tick = time_millis_now();
 			}
 
@@ -124,10 +130,12 @@ void task_servo_pwmc(void *arg)
 				if (servo.internal.pan.currtent_degree > 359 || servo.internal.pan.currtent_degree <= 0)
 					servo.internal.pan.currtent_degree = 0;
 
-				ui.internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
 				servo.internal.pan.is_reverse = servo.internal.pan.currtent_degree > 180;
 
 				servo_pwmc_control(&servo.internal.pan, &servo.internal.ease_config);
+
+				ui.internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
+				ui.internal.led_gradual_target.pan_pulsewidth = servo.internal.pan.currtent_pulsewidth;
 
 				pan_tick = time_millis_now();
 			}
@@ -183,9 +191,9 @@ void iats_ui_init(void)
 	led_mode_add(LED_MODE_BOOT);
 }
 
-void iats_battery_init(void)
+void iats_wifi_init(void)
 {
-
+	wifi_init(&wifi);
 }
 
 void task_ui(void *arg)
@@ -208,10 +216,12 @@ void app_main()
 {
 	iats_ui_init();
 	iats_servo_init();
+	iats_wifi_init();
 
 	ui.internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
 	ui.internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
 
 	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 	xTaskCreatePinnedToCore(task_servo_pwmc, "SERVO", 4096, NULL, 1, NULL, 1);
+	xTaskCreatePinnedToCore(task_wifi, "WIFI", 4096, &wifi, 1, NULL, 1);
 }

@@ -8,7 +8,7 @@
 #define SCREEN_GPIO_SCL 33
 #define SCREEN_GPIO_RST 0
 
-#define USE_BEEPER
+//#define USE_BEEPER
 #define BEEPER_GPIO 13
 
 #define USE_BUTTON_5WAY
