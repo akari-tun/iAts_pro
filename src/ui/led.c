@@ -37,6 +37,8 @@
         }                                                             \
     } while (0)
 
+#define CALCULATE_GRADUAL(g, v, p, l) (g * (v * 100 / p) / 100) % LED_LEVEL_MAX * l / LED_LEVEL_MAX
+
 #if defined(LED_USE_WS2812)
 #define LED_STAGE_COLOR(s) (&s->color)
 #else
@@ -87,16 +89,16 @@ static const led_stage_t easing_stages[] = {
 LED_PATTERN(easing_pattern, easing_stages, 1);
 
 static const led_stage_t tracking_stages[] = {
-    LED_STAGE(255, HAL_WS2812_TRACKING, 100, 500),
-    //LED_STAGE_OFF(500, 150),
+    LED_STAGE(255, HAL_WS2812_TRACKING, 500, 250),
+    //LED_STAGE_OFF(50, 0),
 };
 LED_PATTERN_GRADUAL(tracking_pattern, tracking_stages, LED_REPEAT_FOREVER, true, 255);
 
 static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
+    [LED_MODE_TRACKING] = &tracking_pattern,
     [LED_MODE_WAIT_CONNECT] = &wait_connect_pattern,
     [LED_MODE_BOOT] = &boot_pattern,
-    [LED_MODE_TRACKING] = &tracking_pattern,
     [LED_MODE_EASING] = &easing_pattern,
 };
 
@@ -186,12 +188,16 @@ static void led_set_level(led_t *led, uint8_t level, const hal_ws2812_color_t *c
         {
             if (is_gradual)
             {
-                c.r = (color->r + (gradual_value * (gradual_target->pan * 100 / 360) / 100)) % LED_LEVEL_MAX * level / LED_LEVEL_MAX;
-                c.g = color->g * level / LED_LEVEL_MAX;
-                c.b = (color->b + (gradual_value * (gradual_target->tilt * 100 / 90) / 100)) % LED_LEVEL_MAX * level / LED_LEVEL_MAX;
-
+                c.r = color->r + CALCULATE_GRADUAL(gradual_value, gradual_target->pan, 360, level);
+                c.g = color->g;
+                // c.g = color->g + CALCULATE_GRADUAL(gradual_value, 
+                //     (gradual_target->pan_pulsewidth > gradual_target->tilt_pulsewidth ? gradual_target->tilt_pulsewidth : gradual_target->pan_pulsewidth), 
+                //     (gradual_target->pan_pulsewidth > gradual_target->tilt_pulsewidth ? gradual_target->pan_pulsewidth : gradual_target->tilt_pulsewidth), 
+                //     level);
+                c.b = color->b + CALCULATE_GRADUAL(gradual_value, gradual_target->tilt, 90, level);
+                
                 // printf("[PAN degree: %d] [TILT degree: %d]\n", gradual_target->pan, gradual_target->tilt);
-                // printf("[R: %d] [G: %d] [B: %d]\n", c.r, c.g, c.b);
+                //printf("[R: %d] [G: %d] [B: %d]\n", c.r, c.g, c.b);
             }
             else
             {
@@ -345,7 +351,7 @@ static void led_led_start_pattern(led_t *led, const led_pattern_t *pattern)
     led->pattern = pattern;
     led->stage = 0;
     led->repeat = 0;
-
+    
     if (led->next_update == 0 || time_ticks_now() > led->next_update)
     {
         led_start_stage(led);
@@ -380,13 +386,11 @@ static void led_update_active_mode(bool force)
             break;
         }
     }
-    if (force || new_active_mode != active_mode)
+    if ((force || new_active_mode != active_mode))
     {
-        //printf("led_end_mode: %d\n", (int)active_mode);
         led_end_mode(active_mode);
         active_mode = new_active_mode;
         led_start_mode(new_active_mode);
-        //printf("led_start_mode: %d\n", (int)new_active_mode);
     }
 }
 
@@ -399,6 +403,10 @@ void led_init(void)
 #if defined(LED_1_GPIO)
 #if defined(LED_1_USE_WS2812)
     gradual_target = led_gradual_target;
+    gradual_target->pan = DEFAULT_SERVO_MIN_DEGREE;
+    gradual_target->tilt = DEFAULT_SERVO_MIN_DEGREE;
+    gradual_target->pan_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
+    gradual_target->tilt_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
 #endif
     led_init_led(&led1);
 #endif

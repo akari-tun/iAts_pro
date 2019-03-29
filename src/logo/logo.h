@@ -15,6 +15,9 @@
 
 #include "Battery.xbm"
 
+#include "Pan_Icon.xbm"
+#include "Tilt_Icon.xbm"
+
 
 #define AF_LOGO_WIDTH 39
 #define AF_LOGO_HEIGHT 31
@@ -48,5 +51,10 @@ static const char *wifi_images[] = {
 
 #define BATTERY_WIDTH 16
 #define BATTERY_HEIGHT 8
+#define BATTERY_BOX_WIDTH BATTERY_WIDTH - 3
+#define BATTERY_BOX_HEIGHT BATTERY_HEIGHT - 2
 
 static const uint8_t *BATTERY_IMG = (uint8_t *)Battery_bits;
+
+static const uint8_t *PAN_ICON = (uint8_t *)Pan_Icon_bits;
+static const uint8_t *TILT_ICON = (uint8_t *)Tilt_Icon_bits;

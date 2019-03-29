@@ -72,6 +72,8 @@ typedef struct led_gradual_target_s
 {
     uint16_t pan;
     uint16_t tilt;
+    uint16_t pan_pulsewidth;
+    uint16_t tilt_pulsewidth;
 } led_gradual_target_t;
 #endif
 
@@ -94,11 +96,11 @@ typedef enum
 {
     LED_MODE_NONE,
 
+    LED_MODE_TRACKING,
+
     LED_MODE_WAIT_CONNECT,
 
     LED_MODE_BOOT,
-
-    LED_MODE_TRACKING,
 
     LED_MODE_EASING,
 
