@@ -27,6 +27,7 @@ typedef struct wifi_s
 
 #define WIFI_CONNECTED_BIT BIT0
 #define UDP_CONNCETED_SUCCESS BIT1
+#define ESPTOUCH_DONE_BIT BIT1
 
 void wifi_init(wifi_t *wifi);
 void task_wifi(void *arg);
