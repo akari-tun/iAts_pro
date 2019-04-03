@@ -21,6 +21,7 @@
 #include "ui/led.h"
 #include "ui/beeper.h"
 #include "wifi/wifi.h"
+#include "config/settings.h"
 
 #include "util/time.h"
 #include "util/macros.h"
@@ -70,11 +71,11 @@ void task_servo_pwmc(void *arg)
 	time_millis_t pan_tick = time_millis_now();
 	time_millis_t tilt_tick = time_millis_now();
 
-	time_millis_t wati = time_millis_now() + 5000;
+	// time_millis_t wati = time_millis_now() + 5000;
 
 	while (1)
 	{
-		if (time_millis_now() < wati)
+		if (wifi.status != WIFI_STATUS_CONNECTED)
 		{
 #if defined(USE_BEEPER)
 			if (ui.internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
@@ -191,10 +192,13 @@ void iats_ui_init(void)
 	led_mode_add(LED_MODE_BOOT);
 }
 
+#if defined(USE_WIFI)
 void iats_wifi_init(void)
 {
 	wifi_init(&wifi);
+	ui.internal.screen.internal.wifi = &wifi;
 }
+#endif
 
 void task_ui(void *arg)
 {
@@ -214,14 +218,17 @@ void task_ui(void *arg)
 
 void app_main()
 {
+	settings_init();
 	iats_ui_init();
 	iats_servo_init();
-	iats_wifi_init();
 
 	ui.internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
 	ui.internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
 
 	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 	xTaskCreatePinnedToCore(task_servo_pwmc, "SERVO", 4096, NULL, 1, NULL, 1);
+#if defined(USE_WIFI)
+	iats_wifi_init();
 	xTaskCreatePinnedToCore(task_wifi, "WIFI", 4096, &wifi, 1, NULL, 1);
+#endif
 }

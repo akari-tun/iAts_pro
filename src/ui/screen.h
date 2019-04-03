@@ -12,6 +12,10 @@
 #endif
 
 
+#ifdef USE_WIFI
+typedef struct wifi_s wifi_t;
+#endif
+
 typedef struct servo_pwmc_s servo_pwmc_t;
 
 typedef enum
@@ -66,7 +70,10 @@ typedef struct screen_s
     {
         screen_i2c_config_t cfg;
         servo_pwmc_t *servo;
-#ifdef USE_BATTERY_MEASUREMENT
+#if defined(USE_WIFI)
+        wifi_t *wifi;
+#endif
+#if defined(USE_BATTERY_MEASUREMENT)
         battery_t *battery;
 #endif
         bool available;

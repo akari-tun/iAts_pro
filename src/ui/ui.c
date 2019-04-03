@@ -150,15 +150,16 @@ void ui_init(ui_t *ui, ui_config_t *cfg, servo_pwmc_t *servo)
     }
 #endif
 
-    for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
-    {
-        ui->internal.buttons[ii].user_data = ui;
-        ui->internal.buttons[ii].callback = button_callback;
-    }
+    // for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
+    // {
+    //     ui->internal.buttons[ii].user_data = ui;
+    //     ui->internal.buttons[ii].callback = button_callback;
+    // }
 
     // ui->internal.rc = rc;
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
+        ui->internal.buttons[ii].callback = button_callback;
         ui->internal.buttons[ii].user_data = ui;
         ui->internal.buttons[ii].id = ii;
         ui->internal.buttons[ii].cfg = cfg->buttons[ii];

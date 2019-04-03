@@ -59,6 +59,7 @@ typedef struct ui_s
         bool screen_is_off;
         screen_t screen;
 #endif
+
     } internal;
 } ui_t;
 

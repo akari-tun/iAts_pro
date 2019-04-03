@@ -18,6 +18,7 @@
 
 #include "screen.h"
 #include "servo/servo_pwmc.h"
+#include "wifi/wifi.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
 #define ANIMATION_FRAME_DURATION_MS 450
@@ -234,25 +235,36 @@ static void screen_draw_main(screen_t *s)
 
     uint16_t w = u8g2_GetDisplayWidth(&u8g2);
     uint16_t h = u8g2_GetDisplayHeight(&u8g2);
-    uint16_t per_h = h / 8;
-    uint8_t frame_height = 7;
+    const uint16_t per_h = h / 8;
+    const uint8_t frame_height = 7;
 
     u8g2_SetFontPosTop(&u8g2);
 
     char *buf = SCREEN_BUF(s);
 
+#ifdef USE_WIFI
+    // wifi icon
+    u8g2_DrawXBM(&u8g2, 0, 0, WIFI_ICON_WIDTH, WIFI_ICON_HEIGHT, WIFI_IMG);
+    u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+    // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
+    u8g2_DrawStr(&u8g2, WIFI_ICON_WIDTH + 2, 2, (char *)&s->internal.wifi->config->sta.ssid);
+    // u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+    // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
+    // u8g2_DrawStr(&u8g2, 0, per_h * 7, (char *)&s->internal.wifi->config->sta.password);
+#endif
+
 #ifdef USE_BATTERY_MEASUREMENT
-    //battery ico
+    // battery icon
     u8g2_DrawXBM(&u8g2, w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
     float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
     if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
     {
-        per_voltage = (((voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
+        per_voltage = (((int)(voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
     }
     else if (voltage >= DEFAULT_BATTERY_MIN_VOLTAGE)
     {
-        per_voltage = ((voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
+        per_voltage = ((int)(voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
     }
     u8g2_DrawBox(&u8g2, w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
@@ -260,22 +272,23 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawStr(&u8g2, 80, 0, buf);
 #endif
 
-    uint16_t bar_width = 85;
-    uint8_t bar_start_x = 18;
+    const uint16_t bar_width = 85;
+    const uint8_t bar_start_x = 18;
+    const uint8_t per_start_x = 105;
     uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.servo->internal.tilt);
     uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
     // icon
     u8g2_DrawXBM(&u8g2, 0, per_h * 2, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, TILT_ICON);
-    //u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
-    //u8g2_DrawStr(&u8g2, 0, per_h * 2, ptr_tilt);
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
         servo_get_pulsewidth(&s->internal.servo->internal.tilt), servo_get_degree(&s->internal.servo->internal.tilt));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
     // percent pulse width
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);
-    u8g2_DrawStr(&u8g2, 105, per_h * 3, buf);
+    u8g2_DrawStr(&u8g2, per_start_x, per_h * 3, buf);
     // frame
     u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 3, bar_width, frame_height);
     // box
@@ -285,16 +298,16 @@ static void screen_draw_main(screen_t *s)
     uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
     // label
     u8g2_DrawXBM(&u8g2, 0, per_h * 4, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
-    // u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
-    // u8g2_DrawStr(&u8g2, 0, per_h * 4, ptr_pan);
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
              servo_get_pulsewidth(&s->internal.servo->internal.pan), servo_get_degree(&s->internal.servo->internal.pan));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);
     // percent pulse width
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
-    u8g2_DrawStr(&u8g2, 105, per_h * 5, buf);
+    u8g2_DrawStr(&u8g2, per_start_x, per_h * 5, buf);
     // frame
     u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 5, bar_width, frame_height);
     // box
@@ -312,6 +325,7 @@ static void screen_draw_wait_connect(screen_t *s)
 
     uint16_t w = u8g2_GetDisplayWidth(&u8g2);
     uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+    char *buf = SCREEN_BUF(s);
 
     bool flash = TIME_CYCLE_EVERY_MS(400, 2) == 0;
 
@@ -328,21 +342,22 @@ static void screen_draw_wait_connect(screen_t *s)
     u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
 
-    const char *ptr_ssid = "SSID:iAts_wifi";
-    //uint16_t tw = u8g2_GetStrWidth(&u8g2, ptr_ssid);
-    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT / 2 + 5, ptr_ssid);
+    
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SSID:%s", (char *)&s->internal.wifi->config->sta.ssid);
+    //const char *ptr_ssid = "SSID:iAts_wifi";
+    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT / 2 + 5, buf);
 
-    const char *ptr_pwd = " PWD:12345678";
-    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT, ptr_pwd);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "PWD:%s", (char *)&s->internal.wifi->config->sta.password);
+    //const char *ptr_pwd = " PWD:12345678";
+    u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT, buf);
 
     bool wait_connect = TIME_CYCLE_EVERY_MS(800, 2) == 0;
 
     if (wait_connect)
     {
-
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-        const char *wait_conn = "WAITING CONNECT";
+        const char *wait_conn = "CONNECTING";
         uint16_t tw = u8g2_GetStrWidth(&u8g2, wait_conn);
         u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4), wait_conn);
     }
