@@ -134,7 +134,7 @@ static void ui_update_beeper(ui_t *ui)
 }
 #endif
 
-void ui_init(ui_t *ui, ui_config_t *cfg, servo_pwmc_t *servo)
+void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
 {
 #if defined(LED_1_USE_WS2812)
     led_init(&ui->internal.led_gradual_target);

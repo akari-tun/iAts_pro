@@ -63,7 +63,7 @@ typedef struct ui_s
     } internal;
 } ui_t;
 
-void ui_init(ui_t *ui, ui_config_t *cfg, servo_pwmc_t *servo);
+void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo);
 bool ui_screen_is_available(const ui_t *ui);
 void ui_screen_splash(ui_t *ui);
 bool ui_is_animating(const ui_t *ui);

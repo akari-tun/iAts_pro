@@ -1,5 +1,7 @@
+#include "target/target.h"
+
+#if defined(USE_PWMC)
 #include "ease.h"
-#include "ui/ui.h"
 
 #define SERVO_PWM_FREQUENCY_HZ 50
 
@@ -19,6 +21,9 @@
 
 typedef struct servo_pwmc_config_s
 {
+    //gpio
+    uint8_t gpio;
+
     uint16_t min_pulsewidth;
     uint16_t max_pulsewidth;
     uint16_t max_degree;
@@ -27,9 +32,6 @@ typedef struct servo_pwmc_config_s
 
 typedef struct servo_pwmc_status_s
 {
-    //gpio
-    uint8_t gpio;
-
     uint16_t currtent_degree;
     uint32_t currtent_pulsewidth;
     uint32_t last_pulsewidth;
@@ -53,14 +55,7 @@ typedef struct servo_pwmc_s
     } internal;
 } servo_pwmc_t;
 
-void servo_pwmc_init(servo_pwmc_t *servo_pwmc, ui_t *ui);
-void servo_pwmc_update(servo_pwmc_t *servo_pwmc);
-void servo_pwmc_config(servo_pwmc_status_t *status, hal_gpio_t gpio);
-uint16_t servo_pwmc_pan_per_degree_cal(servo_pwmc_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
-uint16_t servo_pwmc_tilt_per_degree_cal(servo_pwmc_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
-uint16_t servo_pwmc_ease_cal(ease_config_t *ease_config, servo_pwmc_status_t *status);
-void servo_pwmc_out(servo_pwmc_status_t *status, uint16_t pulsewidth);
-void servo_pwmc_control(servo_pwmc_status_t *status, ease_config_t *ease_config);
-uint16_t servo_get_degree(servo_pwmc_status_t *status);
-uint32_t servo_get_pulsewidth(servo_pwmc_status_t *status);
-uint8_t servo_get_per_pulsewidth(servo_pwmc_status_t *status);
+void servo_pwm_initialize(servo_pwmc_t *servo_pwmc);
+void servo_pwm_configuration(servo_pwmc_status_t *status, hal_gpio_t gpio);
+void servo_pwm_out(servo_pwmc_status_t *status, uint16_t pulsewidth);
+#endif

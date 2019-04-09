@@ -14,8 +14,8 @@
 
 #include "target/target.h"
 
-//#include "servo/servo.h"
-#include "servo/servo_pwmc.h"
+#include "servo/servo.h"
+//#include "servo/servo_pwmc.h"
 
 #include "ui/ui.h"
 #include "ui/led.h"
@@ -26,10 +26,9 @@
 #include "util/time.h"
 #include "util/macros.h"
 
-//static const char *TAG = "MAIN";
+// static const char *TAG = "MAIN";
 
-//static servo_t servo;
-static servo_pwmc_t servo;
+static servo_t servo;
 static ui_t ui;
 static wifi_t wifi;
 
@@ -43,16 +42,24 @@ void iats_servo_init(void)
 
 	servo.internal.ease_config = e_cfg;
 
-	servo_pwmc_config_t s_cfg = {
-		.min_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH,
-		.max_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH,
-		.max_degree = DEFAULT_SERVO_MAX_DEGREE,
-		.min_degree = DEFAULT_SERVO_MIN_DEGREE,
-	};
+	// servo_config_t s_cfg = {
+	// 	.min_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH,
+	// 	.max_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH,
+	// 	.max_degree = DEFAULT_SERVO_MAX_DEGREE,
+	// 	.min_degree = DEFAULT_SERVO_MIN_DEGREE,
+	// };
 
-	servo.internal.tilt.config = s_cfg;
-	servo.internal.pan.config = s_cfg;
-	servo_pwmc_init(&servo, &ui);
+	// servo.internal.tilt.config.min_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
+	// servo.internal.tilt.config.max_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH;
+	// servo.internal.tilt.config.max_degree = DEFAULT_SERVO_MAX_DEGREE;
+	// servo.internal.tilt.config.min_degree = DEFAULT_SERVO_MIN_DEGREE;
+
+	// servo.internal.tilt.config.min_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
+	// servo.internal.tilt.config.max_pulsewidth = DEFAULT_SERVO_MAX_PLUSEWIDTH;
+	// servo.internal.tilt.config.max_degree = DEFAULT_SERVO_MAX_DEGREE;
+	// servo.internal.tilt.config.min_degree = DEFAULT_SERVO_MIN_DEGREE;
+
+	servo_init(&servo, &ui);
 }
 
 void task_servo_pwmc(void *arg)
@@ -61,11 +68,11 @@ void task_servo_pwmc(void *arg)
 
 	time_ticks_t sleep;
 
-	servo_pwmc_out(&servo.internal.pan, servo.internal.pan.config.max_pulsewidth);
-	servo_pwmc_out(&servo.internal.tilt, servo.internal.pan.config.max_pulsewidth);
+	servo_pulsewidth_out(&servo.internal.pan, servo.internal.pan.config.max_pulsewidth);
+	servo_pulsewidth_out(&servo.internal.tilt, servo.internal.pan.config.max_pulsewidth);
 	vTaskDelay(MILLIS_TO_TICKS(3000));
-	servo_pwmc_out(&servo.internal.pan, servo.internal.pan.config.min_pulsewidth);
-	servo_pwmc_out(&servo.internal.tilt, servo.internal.pan.config.min_pulsewidth);
+	servo_pulsewidth_out(&servo.internal.pan, servo.internal.pan.config.min_pulsewidth);
+	servo_pulsewidth_out(&servo.internal.tilt, servo.internal.pan.config.min_pulsewidth);
 	
 	bool isAdd = true;
 	time_millis_t pan_tick = time_millis_now();
@@ -100,7 +107,7 @@ void task_servo_pwmc(void *arg)
 				//led_mode_add(LED_MODE_TRACKING);
 			}
 
-			if (time_millis_now() - tilt_tick > 240)
+			if (time_millis_now() - tilt_tick > 80)
 			{
 				servo.internal.tilt.currtent_degree += isAdd ? 1 : -1;
 
@@ -116,8 +123,7 @@ void task_servo_pwmc(void *arg)
 				}
 
 				servo.internal.tilt.is_reverse = servo.internal.pan.currtent_degree > 180;
-
-				servo_pwmc_control(&servo.internal.tilt, &servo.internal.ease_config);
+				servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
 
 				ui.internal.led_gradual_target.tilt = servo.internal.tilt.currtent_degree;
 				ui.internal.led_gradual_target.tilt_pulsewidth = servo.internal.tilt.currtent_pulsewidth;
@@ -125,15 +131,14 @@ void task_servo_pwmc(void *arg)
 				tilt_tick = time_millis_now();
 			}
 
-			if (time_millis_now() - pan_tick > 100)
+			if (time_millis_now() - pan_tick > 50)
 			{
 				servo.internal.pan.currtent_degree += 1;
 				if (servo.internal.pan.currtent_degree > 359 || servo.internal.pan.currtent_degree <= 0)
 					servo.internal.pan.currtent_degree = 0;
 
 				servo.internal.pan.is_reverse = servo.internal.pan.currtent_degree > 180;
-
-				servo_pwmc_control(&servo.internal.pan, &servo.internal.ease_config);
+				servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
 
 				ui.internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
 				ui.internal.led_gradual_target.pan_pulsewidth = servo.internal.pan.currtent_pulsewidth;
@@ -149,11 +154,11 @@ void task_servo_pwmc(void *arg)
 		if (servo.internal.tilt.is_easing || servo.internal.pan.is_easing)
 		{
 			sleep = MILLIS_TO_TICKS(10);
-			servo_pwmc_update(&servo);
+			servo_update(&servo);
 		}
 		else
 		{
-			sleep = MILLIS_TO_TICKS(100);
+			sleep = MILLIS_TO_TICKS(10);
 			// if (time_millis_now() > wati)
 			// {
 			// 	led_mode_add(LED_MODE_TRACKING);

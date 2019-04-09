@@ -1,5 +1,9 @@
+#include <driver/adc.h>
 #include <hal/gpio.h>
 #include "default.h"
+
+#define USE_MCPWM
+//#define USE_PWMC
 
 #define USE_SCREEN
 #define SCREEN_I2C_BUS I2C_NUM_1
@@ -54,14 +58,14 @@
     ADC2_CHANNEL_9,     !< ADC2 channel 9 is GPIO26 
     ADC2_CHANNEL_MAX,
 */
-#define BATTERY_ADC_CHAENNL 0
+#define BATTERY_ADC_CHAENNL ADC1_CHANNEL_0
 /*
     ADC_ATTEN_DB_0   = 0,  !<The input voltage of ADC will be reduced to about 1/1 
     ADC_ATTEN_DB_2_5 = 1,  !<The input voltage of ADC will be reduced to about 1/1.34 
     ADC_ATTEN_DB_6   = 2,  !<The input voltage of ADC will be reduced to about 1/2 
     ADC_ATTEN_DB_11  = 3,  !<The input voltage of ADC will be reduced to about 1/3.6
 */
-#define BATTERY_ADC_ATTEN 1
+#define BATTERY_ADC_ATTEN ADC_ATTEN_DB_2_5
 /*
     ADC_UNIT_1 = 1,          !< SAR ADC 1
     ADC_UNIT_2 = 2,          !< SAR ADC 2, not supported yet
@@ -69,7 +73,7 @@
     ADC_UNIT_ALTER = 7,      !< SAR ADC 1 and 2 alternative mode, not supported yet 
     ADC_UNIT_MAX,
 */
-#define BATTERY_ADC_UNIT 1
+#define BATTERY_ADC_UNIT ADC_UNIT_1
 /*
  *   ADC_WIDTH_BIT_9  = 0, !< ADC capture width is 9Bit
  *   ADC_WIDTH_BIT_10 = 1, !< ADC capture width is 10Bit
@@ -77,4 +81,4 @@
  *   ADC_WIDTH_BIT_12 = 3, !< ADC capture width is 12Bit
  *   ADC_WIDTH_MAX
 */
-#define BATTERY_ADC_WIDTH 3
+#define BATTERY_ADC_WIDTH ADC_WIDTH_BIT_12

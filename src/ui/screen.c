@@ -17,7 +17,7 @@
 #include "util/version.h"
 
 #include "screen.h"
-#include "servo/servo_pwmc.h"
+#include "servo/servo.h"
 #include "wifi/wifi.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
@@ -44,7 +44,7 @@ typedef enum
 
 static u8g2_t u8g2;
 
-bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_pwmc_t *servo)
+bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo)
 {
     memset(screen, 0, sizeof(*screen));
     screen->internal.available = screen_i2c_init(cfg, &u8g2);
