@@ -37,9 +37,6 @@ After I graduating from college, I never use C language to develop any project, 
 #### Setup 4
 <img src="doc/design_sketch/image/IMG_1730.JPG?raw=true " width="480" height="640" alt="TX">
 
-#### Setup 4
-<img src="doc/design_sketch/image/IMG_1730.JPG?raw=true " width="480" height="640" alt="TX">
-
 #### Setup 5
 <img src="doc/design_sketch/image/IMG_1731.JPG?raw=true " width="480" height="640" alt="TX">
 
