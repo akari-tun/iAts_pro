@@ -1,5 +1,7 @@
 # iAts_pro(Antenna automatic tracking system pro)
 
+## Development is on the way...
+
 Not long ago, I created an automatic tracking system that supports bluetooth connection and parameter configuration based on the open source project [amv-open360tracker](https://github.com/raul-ortega/amv-open360tracker/) (You can find my project at [here](https://github.com/akari-tun/iAts)).
 
 This project was built with Ateml 328p. As it is an 8-bit chip, its performance was low, so I couldn't implement more functions on it.Therefore, I came up with the idea of redeveloping it built on chips with higher performance.
