@@ -17,3 +17,29 @@ After I graduating from college, I never use C language to develop any project, 
 
 #### PCB_LAYOUT_BOTTOM
 ![PCB_LAYOUT_BOTTOM](doc/pcb/PCB_layout_bottom.png?raw=true "PCB_LAYOUT_BOTTOM")
+
+### DESIGN IMAGE
+
+#### 3D Printed
+<img src="doc/design_sketch/image/IMG_1726.JPG?raw=true " width="480" height="640" alt="TX">
+
+#### Setup 1
+<img src="doc/design_sketch/image/IMG_1727.JPG?raw=true " width="480" height="640" alt="TX">
+
+#### Setup 2
+<img src="doc/design_sketch/image/IMG_1728.JPG?raw=true " width="640" height="480" alt="TX">
+
+#### Setup 3
+<img src="doc/design_sketch/image/IMG_1729.JPG?raw=true " width="640" height="480" alt="TX">
+
+#### Setup 4
+<img src="doc/design_sketch/image/IMG_1730.JPG?raw=true " width="480" height="640" alt="TX">
+
+#### Setup 4
+<img src="doc/design_sketch/image/IMG_1730.JPG?raw=true " width="480" height="640" alt="TX">
+
+#### Setup 5
+<img src="doc/design_sketch/image/IMG_1731.JPG?raw=true " width="480" height="640" alt="TX">
+
+#### Setup 6
+<img src="doc/design_sketch/image/IMG_1886.JPG?raw=true " width="480" height="640" alt="TX">
