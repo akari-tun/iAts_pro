@@ -20,6 +20,14 @@ After I graduating from college, I never use C language to develop any project, 
 #### PCB_LAYOUT_BOTTOM
 ![PCB_LAYOUT_BOTTOM](doc/pcb/PCB_layout_bottom.png?raw=true "PCB_LAYOUT_BOTTOM")
 
+### 3D PCB LAYOUT
+
+#### 3D_PCB_LAYOUT_TOP
+![3D_PCB_LAYOUT_TOP](doc/pcb/3D_PCB_layout_top.png?raw=true "3D_PCB_LAYOUT_TOP")
+
+#### 3D_PCB_LAYOUT_BOTTOM
+![3D_PCB_LAYOUT_BOTTOM](doc/pcb/3D_PCB_layout_bottom.png?raw=true "3D_PCB_LAYOUT_BOTTOM")
+
 ### DESIGN IMAGE
 
 #### 3D Printed
