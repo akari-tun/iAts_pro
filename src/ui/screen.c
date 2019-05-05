@@ -17,7 +17,7 @@
 #include "util/version.h"
 
 #include "screen.h"
-#include "servo/servo.h"
+#include "tracker/tracker.h"
 #include "wifi/wifi.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
@@ -44,12 +44,14 @@ typedef enum
 
 static u8g2_t u8g2;
 
-bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo)
+// bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo)
+bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker)
 {
     memset(screen, 0, sizeof(*screen));
     screen->internal.available = screen_i2c_init(cfg, &u8g2);
     screen->internal.cfg = *cfg;
-    screen->internal.servo = servo;
+    // screen->internal.servo = servo;
+    screen->internal.tracker = tracker;
     return screen->internal.available;
 }
 
@@ -133,6 +135,10 @@ static void screen_splash_task(void *arg)
     }
 
     time_millis_delay(ANIMATION_FRAME_DURATION_MS);
+
+    screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTING);
+    wifi_start(screen->internal.wifi);
+
     screen->internal.splashing = false;
 
     vTaskDelete(NULL);
@@ -275,14 +281,14 @@ static void screen_draw_main(screen_t *s)
     const uint16_t bar_width = 85;
     const uint8_t bar_start_x = 18;
     const uint8_t per_start_x = 105;
-    uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.servo->internal.tilt);
+    uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.tilt);
     uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
     // icon
     u8g2_DrawXBM(&u8g2, 0, per_h * 2, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, TILT_ICON);
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-        servo_get_pulsewidth(&s->internal.servo->internal.tilt), servo_get_degree(&s->internal.servo->internal.tilt));
+        servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
@@ -294,14 +300,14 @@ static void screen_draw_main(screen_t *s)
     // box
     u8g2_DrawBox(&u8g2, bar_start_x, per_h * 3, tilt_box_width, frame_height);
 
-    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.servo->internal.pan);
+    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.pan);
     uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
     // label
     u8g2_DrawXBM(&u8g2, 0, per_h * 4, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.servo->internal.pan), servo_get_degree(&s->internal.servo->internal.pan));
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_degree(&s->internal.tracker->servo->internal.pan));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);
@@ -341,7 +347,6 @@ static void screen_draw_wait_connect(screen_t *s)
 
     u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-
     
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SSID:%s", (char *)&s->internal.wifi->config->sta.ssid);
     //const char *ptr_ssid = "SSID:iAts_wifi";
@@ -392,6 +397,15 @@ void screen_update(screen_t *screen)
     if (screen->internal.splashing)
     {
         return;
+    }
+
+    if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED && screen->internal.tracker->internal.status == TRACKER_STATUS_CONNECTING) 
+    {
+        screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTED);
+    } 
+    else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) && screen->internal.tracker->internal.status != TRACKER_STATUS_CONNECTING)
+    {
+        screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTING);
     }
 
     char buf[SCREEN_DRAW_BUF_SIZE];

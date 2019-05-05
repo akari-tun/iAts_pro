@@ -1,22 +1,23 @@
 #include <hal/log.h>
 #include "servo.h"
 
-#include "ui/led.h"
-#include "ui/beeper.h"
+// #include "ui/led.h"
+// #include "ui/beeper.h"
 
-#if defined(USE_BEEPER)
-    static beeper_t *beeper;
-#endif
+// #if defined(USE_BEEPER)
+//     static beeper_t *beeper;
+// #endif
 
-static const char *TAG = "servo";
+// static const char *TAG = "servo";
 
-void servo_init(servo_t *servo, ui_t *ui)
+// void servo_init(servo_t *servo, ui_t *ui)
+void servo_init(servo_t *servo)
 {
     servo_pwm_initialize(servo);
 
-#if defined(USE_BEEPER)
-    beeper = &ui->internal.beeper;
-#endif
+// #if defined(USE_BEEPER)
+//     beeper = &ui->internal.beeper;
+// #endif
 
     servo->internal.pan.pTr_pulsewidth_cal = &servo_pan_per_degree_cal;
     servo->internal.tilt.pTr_pulsewidth_cal = &servo_tilt_per_degree_cal;
@@ -36,12 +37,12 @@ void servo_pulsewidth_out(servo_status_t *status, uint16_t pulsewidth)
 {
     if (status->last_pulsewidth != pulsewidth) {
         servo_pwm_out(status, pulsewidth);
-#if defined(USE_TRACKING_LED) 
-        if (!led_mode_is_enable(LED_MODE_TRACKING))
-        {
-            led_mode_add(LED_MODE_TRACKING);
-        }
-#endif
+// #if defined(USE_TRACKING_LED) 
+//         if (!led_mode_is_enable(LED_MODE_TRACKING))
+//         {
+//             led_mode_add(LED_MODE_TRACKING);
+//         }
+// #endif
     }
     status->last_pulsewidth = pulsewidth;
 }
@@ -56,11 +57,11 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
             status->is_easing = true;
             status->step_positon = 0;
             out_pulsewidth = servo_ease_cal(ease_config, status);
-#if defined(USE_BEEPER)
-            beeper_set_mode(beeper, BEEPER_MODE_EASING);
-#endif
-            LOG_I(TAG, "servo easing...");
-			led_mode_add(LED_MODE_EASING);
+// #if defined(USE_BEEPER)
+//             beeper_set_mode(beeper, BEEPER_MODE_EASING);
+// #endif
+//             LOG_I(TAG, "servo easing...");
+// 			led_mode_add(LED_MODE_EASING);
         } else {
             out_pulsewidth = status->currtent_pulsewidth;
         }

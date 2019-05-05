@@ -4,6 +4,7 @@
 
 #define USE_MCPWM
 //#define USE_PWMC
+//#define USE_TRACKING_LED
 
 #define USE_SCREEN
 #define SCREEN_I2C_BUS I2C_NUM_1
@@ -12,7 +13,7 @@
 #define SCREEN_GPIO_SCL 33
 #define SCREEN_GPIO_RST 0
 
-//#define USE_BEEPER
+#define USE_BEEPER
 #define BEEPER_GPIO 13
 
 #define USE_BUTTON_5WAY

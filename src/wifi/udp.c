@@ -40,6 +40,17 @@ static int show_socket_error_reason(int socket)
 	return err;
 }
 
+static void setnonblocking(int sockfd) {
+    int flag = fcntl(sockfd, F_GETFL, 0);
+    if (flag < 0) {
+        // Perror("fcntl F_GETFL fail");
+        return;
+    }
+    if (fcntl(sockfd, F_SETFL, flag | O_NONBLOCK) < 0) {
+        // Perror("fcntl F_SETFL fail");
+    }
+}
+
 //create a udp client socket. return ESP_OK:success ESP_FAIL:error
 esp_err_t wifi_create_udp_client() {
 
@@ -81,10 +92,13 @@ esp_err_t wifi_create_udp_server() {
 		show_socket_error_reason(udp.socket_obj);
 		return ESP_FAIL;
 	}
+
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(udp.server_port);
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	setnonblocking(udp.socket_obj);
 
 	if (bind(udp.socket_obj, (struct sockaddr *) &server_addr, sizeof(server_addr))
 			< 0) {
@@ -124,6 +138,7 @@ int wifi_udp_receive(char *buffer, int length)
 	int len = 0;
 	socklen = sizeof(remote_addr);
 	memset(buffer, 0x00, length);
+
 	// start recive
 	len = recvfrom(udp.socket_obj, buffer, length, 0, (struct sockaddr *) &remote_addr, &socklen);
 	// print recived data

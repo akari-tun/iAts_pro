@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(USE_BEEPER)
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -18,7 +20,8 @@ typedef enum
     BEEPER_MODE_FAILSAFE,
     BEEPER_MODE_STARTUP,
     BEEPER_MODE_WAIT_CONNECT,
-    BEEPER_MODE_EASING,
+    BEEPER_MODE_REVERSING,
+    BEEPER_MODE_SETED,
 
     BEEPER_MODE_COUNT,
 } beeper_mode_e;
@@ -41,3 +44,5 @@ void beeper_init(beeper_t *beeper, hal_gpio_t gpio);
 void beeper_update(beeper_t *beeper);
 void beeper_beep(beeper_t *beeper);
 void beeper_set_mode(beeper_t *beeper, beeper_mode_e mode);
+
+#endif

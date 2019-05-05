@@ -1,20 +1,27 @@
 #include "esp_wifi.h"
 
+#define DEFAULT_RSSI -127
+#define CHAR_DOT '.'
+#define BUFFER_LENGHT 512
+
 typedef enum 
 {
-    WIFI_STATUS_NONE,
-    WIFI_STATUS_SMARTCONFIG,
-    WIFI_STATUS_CONNECTING,
-    WIFI_STATUS_CONNECTED,
-    WIFI_STATUS_DISCONNECTED,
+    WIFI_STATUS_NONE = 0,
+    WIFI_STATUS_SMARTCONFIG = 1,
+    WIFI_STATUS_DISCONNECTED = 2,
+    WIFI_STATUS_CONNECTING = 3,
+    WIFI_STATUS_CONNECTED = 4,
+    WIFI_STATUS_UDP_CONNECTED = 5,
 } iats_wifi_status_e;
 
-typedef void (*pTr_Analysis)(char *buffer[]);
+typedef void (*pTr_Analysis)(void *data, int offset, int len);
 
 typedef struct wifi_s
 {
+    bool reciving;
     iats_wifi_status_e status;
-    char *buffer;
+    char *buffer_received;
+    char *buffer_send;
     char *ip;
     wifi_config_t *config;
     pTr_Analysis callback;
@@ -27,4 +34,5 @@ typedef struct wifi_s
 #define UDP_CONNCETED_SUCCESS BIT4
 
 void wifi_init(wifi_t *wifi);
-void task_wifi(void *arg);
+void wifi_start(wifi_t *wifi);
+// void task_wifi(void *arg);

@@ -11,15 +11,17 @@
 #include "ui/battery.h"
 #endif
 
+typedef struct tracker_s tracker_t;
+
 #ifdef USE_WIFI
 typedef struct wifi_s wifi_t;
 #endif
 
-#if defined(ESP32) && defined(USE_MCPWM)
-typedef struct servo_mcpwm_s servo_t;
-#else
-typedef struct servo_pwmc_s servo_t;
-#endif
+// #if defined(ESP32) && defined(USE_MCPWM)
+// typedef struct servo_mcpwm_s servo_t;
+// #else
+// typedef struct servo_pwmc_s servo_t;
+// #endif
 
 typedef enum
 {
@@ -72,7 +74,8 @@ typedef struct screen_s
     struct
     {
         screen_i2c_config_t cfg;
-        servo_t *servo;
+        tracker_t *tracker;
+        // servo_t *servo;
 #if defined(USE_WIFI)
         wifi_t *wifi;
 #endif
@@ -95,7 +98,8 @@ typedef struct screen_s
     } internal;
 } screen_t;
 
-bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo);
+// bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo);
+bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker);
 bool screen_is_available(const screen_t *screen);
 void screen_shutdown(screen_t *screen);
 void screen_power_on(screen_t *screen);

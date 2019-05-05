@@ -8,9 +8,9 @@
 #include "ui/led.h"
 #include "ui/screen.h"
 #include "ui/ui.h"
+#include "tracker/tracker.h"
 
 #include "util/macros.h"
-
 
 #ifdef USE_SCREEN
 // We don't log anything without a screen, so this would
@@ -21,6 +21,61 @@ static const char *TAG = "UI";
 #ifdef USE_BATTERY_MEASUREMENT
 static battery_t battery;
 #endif
+
+static Observer ui_status_observer;
+static Observer ui_flag_observer;
+
+
+static void ui_status_updated(void *notifier, void *s)
+{
+    Observer *obs = (Observer *)notifier;
+    tracker_status_e *status = (tracker_status_e *)s;
+    ui_t *ui = (ui_t *)obs->Obj;
+
+    switch (*status)
+    {
+    case TRACKER_STATUS_BOOTING:
+        break;
+    case TRACKER_STATUS_CONNECTING:
+#if defined(USE_BEEPER)
+        if (ui->internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
+        {
+            beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
+        }
+#endif
+        if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+		{
+			led_mode_add(LED_MODE_WAIT_CONNECT);
+		}
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
+#endif
+        break;
+    case TRACKER_STATUS_CONNECTED:
+#if defined(USE_BEEPER)
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
+#endif
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
+#endif
+        if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+		{
+			led_mode_remove(LED_MODE_WAIT_CONNECT);
+		}
+        break;
+    }
+}
+
+static void ui_flag_updated(void *notifier, void *f)
+{
+    Observer *obs = (Observer *)notifier;
+    uint8_t *flag = (uint8_t *)f;
+    ui_t *ui = (ui_t *)obs->Obj;
+
+#if defined(USE_BEEPER)
+    if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED)) beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
+#endif
+}
 
 static void ui_beep(ui_t *ui)
 {
@@ -134,8 +189,21 @@ static void ui_update_beeper(ui_t *ui)
 }
 #endif
 
-void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
+// void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
+void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
 {
+    ui->internal.tracker = tracker;
+    
+    ui_status_observer.Obj = ui;
+    ui_status_observer.Name = "UI status observer";
+    ui_status_observer.Update = ui_status_updated;
+    tracker->internal.status_changed_notifier->mSubject.Attach(tracker->internal.status_changed_notifier, &ui_status_observer);
+
+    ui_flag_observer.Obj = ui;
+    ui_flag_observer.Name = "UI flag observer";
+    ui_flag_observer.Update = ui_flag_updated;
+    tracker->internal.flag_changed_notifier->mSubject.Attach(tracker->internal.flag_changed_notifier, &ui_flag_observer);
+
 #if defined(LED_1_USE_WS2812)
     led_init(&ui->internal.led_gradual_target);
 #else
@@ -144,7 +212,8 @@ void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
 
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
-    if (screen_init(&ui->internal.screen, &cfg->screen, servo))
+    // if (screen_init(&ui->internal.screen, &cfg->screen, servo))
+    if (screen_init(&ui->internal.screen, &cfg->screen, tracker))
     {
         button_callback = ui_handle_screen_button_event;
     }

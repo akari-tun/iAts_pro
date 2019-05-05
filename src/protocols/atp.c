@@ -3,7 +3,7 @@
 #include "atp.h"
 #include "tracker/tracker.h"
 
-static const char *TAG = "atp";
+// static const char *TAG = "atp";
 static atp_frame_t atp_frame;
 static tracker_t *tracker;
 
@@ -314,8 +314,9 @@ static void atp_tag_analysis(atp_frame_t *frame)
     }
 }
 
-static void atp_frame_decode(uint8_t *buffer, int offset, int len)
+static void atp_frame_decode(void *data, int offset, int len)
 {
+    uint8_t *buffer = (uint8_t *)data;
     atp_frame_status_e state = IDLE;
 
     for (int i = offset; i < offset + len; i++)
@@ -378,7 +379,7 @@ void atp_init(tracker_t *t)
 {
     tracker = t;
     // tracker->wifi->callback = atp_frame_decode;
-    tracker->internal.atp_decode = &atp_frame_decode;
+    tracker->internal.atp_decode = atp_frame_decode;
     tracker->home_tags = (telemetry_t *)&home_tags;
     tracker->plane_tags = (telemetry_t *)&plane_tags;
     tracker->param_tags = (telemetry_t *)&param_tags;

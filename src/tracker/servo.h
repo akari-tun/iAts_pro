@@ -5,7 +5,7 @@
 #include "soc/mcpwm_struct.h"
 
 #include "target/target.h"
-#include "ui/ui.h"
+// #include "ui/ui.h"
 
 #if defined(ESP32) && defined(USE_MCPWM)
 #include "servo_mcpwm.h"
@@ -19,7 +19,8 @@ typedef struct servo_pwmc_config_s servo_config_t;
 typedef struct servo_pwmc_status_s servo_status_t;
 #endif
 
-void servo_init(servo_t *servo_pwmc, ui_t *ui);
+// void servo_init(servo_t *servo_pwmc, ui_t *ui);
+void servo_init(servo_t *servo_pwmc);
 void servo_update(servo_t *servo_pwmc);
 void servo_pulsewidth_out(servo_status_t *status, uint16_t pulsewidth);
 void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config);

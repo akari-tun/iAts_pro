@@ -52,6 +52,8 @@ typedef struct servo_mcpwm_status_s
 
 typedef struct servo_mcpwm_s
 {
+    bool is_reversing;
+
     struct 
     { 
         servo_mcpwm_status_t pan;
