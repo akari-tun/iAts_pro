@@ -19,6 +19,8 @@
 #include "Pan_Icon.xbm"
 #include "Tilt_Icon.xbm"
 
+#include "Phone.xbm"
+#include "Tracker.xbm"
 
 #define AF_LOGO_WIDTH 39
 #define AF_LOGO_HEIGHT 31
@@ -62,3 +64,11 @@ static const uint8_t *BATTERY_IMG = (uint8_t *)Battery_bits;
 
 static const uint8_t *PAN_ICON = (uint8_t *)Pan_Icon_bits;
 static const uint8_t *TILT_ICON = (uint8_t *)Tilt_Icon_bits;
+
+#define PHONE_WIDTH Phone_width
+#define PHONE_HEIGHT Phone_height
+static const uint8_t *PHONE_IMG = (uint8_t *)Phone_bits;
+
+#define TRACKER_WIDTH Tracker_width
+#define TRACKER_HEIGHT Tracker_height
+static const uint8_t *TRACKER_IMG = (uint8_t *)Tracker_bits;
