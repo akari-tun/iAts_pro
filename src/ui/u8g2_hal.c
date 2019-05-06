@@ -2,8 +2,6 @@
 
 #include <os.h>
 
-#include <u8g2.h>
-
 #include "../src/target/target.h"
 
 #ifdef USE_SCREEN

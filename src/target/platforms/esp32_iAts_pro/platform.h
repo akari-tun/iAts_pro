@@ -35,7 +35,7 @@
 #define SERVO_TILT_GPIO 26
 
 #define USE_BATTERY_MEASUREMENT
-/* The ratio of partial voltage resistors */
+/* The ratio of voltage resistors */
 #define BATTEYR_PARTIAL_PRESSURE_VALUE 89.48f
 /*
     ADC1_CHANNEL_0 = 0, !< ADC1 channel 0 is GPIO36 

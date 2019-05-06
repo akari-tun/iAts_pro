@@ -14,8 +14,12 @@ typedef struct _Notifier notifier_t;
 typedef enum
 {
     TRACKER_STATUS_BOOTING = 1,
-    TRACKER_STATUS_CONNECTING,
-    TRACKER_STATUS_CONNECTED,
+    TRACKER_STATUS_WIFI_SMART_CONFIG,
+    TRACKER_STATUS_WIFI_CONNECTING,
+    TRACKER_STATUS_WIFI_CONNECTED,
+    TRACKER_STATUS_SERVER_CONNECTING,
+    TRACKER_STATUS_TRACKING,
+    TRACKER_STATUS_MANUAL,
 } tracker_status_e;
 
 typedef enum
@@ -29,7 +33,7 @@ typedef enum
 
 typedef enum
 {
-    TRACKER_MODE_TRACKING = 1,
+    TRACKER_MODE_AUTO = 1,
     TRACKER_MODE_MANUAL,
     TRACKER_MODE_DEBUG,
 } tracker_mode_e;
@@ -48,7 +52,6 @@ typedef struct tracker_s
 
     struct
     {
-
         uint8_t flag;
         tracker_status_e status;
         tracker_mode_e mode;

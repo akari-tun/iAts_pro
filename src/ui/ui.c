@@ -25,7 +25,6 @@ static battery_t battery;
 static Observer ui_status_observer;
 static Observer ui_flag_observer;
 
-
 static void ui_status_updated(void *notifier, void *s)
 {
     Observer *obs = (Observer *)notifier;
@@ -36,32 +35,57 @@ static void ui_status_updated(void *notifier, void *s)
     {
     case TRACKER_STATUS_BOOTING:
         break;
-    case TRACKER_STATUS_CONNECTING:
-#if defined(USE_BEEPER)
-        if (ui->internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
-        {
-            beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
-        }
-#endif
-        if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
-		{
-			led_mode_add(LED_MODE_WAIT_CONNECT);
-		}
-#if defined(USE_SCREEN)
-        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
-#endif
-        break;
-    case TRACKER_STATUS_CONNECTED:
+    case TRACKER_STATUS_WIFI_SMART_CONFIG:
+        if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+            led_mode_remove(LED_MODE_WAIT_CONNECT);
+        if (!led_mode_is_enable(LED_MODE_SMART_CONFIG))
+            led_mode_add(LED_MODE_SMART_CONFIG);
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
 #endif
 #if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WIFI_CONFIG;
+#endif
+        break;
+    case TRACKER_STATUS_WIFI_CONNECTING:
+#if defined(USE_BEEPER)
+        if (ui->internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
+            beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
+#endif
+        if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
+            led_mode_remove(LED_MODE_SMART_CONFIG);
+        if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+            led_mode_add(LED_MODE_WAIT_CONNECT);
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
+#endif
+        break;
+    case TRACKER_STATUS_WIFI_CONNECTED:
+#if defined(USE_BEEPER)
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
+#endif
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
+#endif
+        if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
+            led_mode_remove(LED_MODE_SMART_CONFIG);
+        if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+            led_mode_remove(LED_MODE_WAIT_CONNECT);
+        break;
+    case TRACKER_STATUS_SERVER_CONNECTING:
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
+#endif
+        break;
+    case TRACKER_STATUS_TRACKING:
+    case TRACKER_STATUS_MANUAL:
+#if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
 #endif
+        if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
+            led_mode_remove(LED_MODE_SMART_CONFIG);
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
-		{
-			led_mode_remove(LED_MODE_WAIT_CONNECT);
-		}
+            led_mode_remove(LED_MODE_WAIT_CONNECT);
         break;
     }
 }
@@ -73,7 +97,8 @@ static void ui_flag_updated(void *notifier, void *f)
     ui_t *ui = (ui_t *)obs->Obj;
 
 #if defined(USE_BEEPER)
-    if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED)) beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
+    if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
 #endif
 }
 
@@ -122,10 +147,10 @@ static void ui_handle_screen_button_event(const button_event_t *ev, void *user_d
     // {
     //     handled |= menu_handle_button_event(ev);
     // }
-    if (!handled)
-    {
-        handled |= screen_handle_button_event(&ui->internal.screen, false, ev);
-    }
+    // if (!handled)
+    // {
+    //     handled |= screen_handle_button_event(&ui->internal.screen, false, ev);
+    // }
     if (handled)
     {
         ui_beep(ui);
@@ -180,7 +205,7 @@ static void ui_update_beeper(ui_t *ui)
     // {
     //     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_BIND);
     // }
-    // else 
+    // else
     // if (ui->internal.beeper.mode != BEEPER_MODE_STARTUP)
     // {
     //     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
@@ -189,11 +214,43 @@ static void ui_update_beeper(ui_t *ui)
 }
 #endif
 
+//manual mode handl
+static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
+{
+    if (btn->id == BUTTON_ID_ENTER) return;
+    if (!btn->state.is_down) return;
+
+    if (ui->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
+    {
+        switch (btn->id)
+        {
+        case BUTTON_ID_ENTER:
+            break;
+        case BUTTON_ID_LEFT:
+            if (ui->internal.tracker->servo->internal.pan.currtent_degree >= 359) ui->internal.tracker->servo->internal.pan.currtent_degree = 0;
+            ui->internal.tracker->servo->internal.pan.currtent_degree++;
+            break;
+        case BUTTON_ID_RIGHT:
+            if (ui->internal.tracker->servo->internal.pan.currtent_degree == 0) ui->internal.tracker->servo->internal.pan.currtent_degree = 359;
+            ui->internal.tracker->servo->internal.pan.currtent_degree--;
+            break;
+        case BUTTON_ID_UP:
+            ui->internal.tracker->servo->internal.tilt.currtent_degree++;
+            if (ui->internal.tracker->servo->internal.tilt.currtent_degree > 90) ui->internal.tracker->servo->internal.tilt.currtent_degree = 90;
+            break;
+        case BUTTON_ID_DOWN:
+            if (ui->internal.tracker->servo->internal.tilt.currtent_degree <= 1) ui->internal.tracker->servo->internal.tilt.currtent_degree = 1;
+            ui->internal.tracker->servo->internal.tilt.currtent_degree--;
+            break;
+        }
+    }
+}
+
 // void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
 void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
 {
     ui->internal.tracker = tracker;
-    
+
     ui_status_observer.Obj = ui;
     ui_status_observer.Name = "UI status observer";
     ui_status_observer.Update = ui_status_updated;
@@ -246,14 +303,14 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
     {
         LOG_I(TAG, "Screen detected");
         system_add_flag(SYSTEM_FLAG_SCREEN);
-// #if defined(SCREEN_FIXED_ORIENTATION)
-//         screen_orientation_e screen_orientation = SCREEN_ORIENTATION_DEFAULT;
-// #else
-//         screen_orientation_e screen_orientation = settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION);
-// #endif
-//         screen_set_orientation(&ui->internal.screen, screen_orientation);
-//         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
-//         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
+        // #if defined(SCREEN_FIXED_ORIENTATION)
+        //         screen_orientation_e screen_orientation = SCREEN_ORIENTATION_DEFAULT;
+        // #else
+        //         screen_orientation_e screen_orientation = settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION);
+        // #endif
+        //         screen_set_orientation(&ui->internal.screen, screen_orientation);
+        //         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
+        //         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
     }
     else
     {
@@ -263,7 +320,6 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
 #endif
     // settings_add_listener(ui_settings_handler, ui);
 
-    
 #ifdef USE_BATTERY_MEASUREMENT
     battery_init(&battery);
     ui->internal.screen.internal.battery = &battery;
@@ -303,6 +359,7 @@ void ui_update(ui_t *ui)
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
         button_update(&ui->internal.buttons[ii]);
+        ui_handle_manual_mode(ui, &ui->internal.buttons[ii]);
     }
     // led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
     led_update();

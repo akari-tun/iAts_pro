@@ -99,6 +99,8 @@ typedef enum
     LED_MODE_TRACKING,
 
     LED_MODE_WAIT_CONNECT,
+    
+    LED_MODE_SMART_CONFIG,
 
     LED_MODE_BOOT,
 
