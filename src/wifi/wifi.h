@@ -35,4 +35,5 @@ typedef struct wifi_s
 
 void wifi_init(wifi_t *wifi);
 void wifi_start(wifi_t *wifi);
+void wifi_smartconfig_stop(wifi_t *wifi);
 // void task_wifi(void *arg);

@@ -26,7 +26,9 @@ typedef struct wifi_s wifi_t;
 typedef enum
 {
     SCREEN_MODE_MAIN,
+    SCREEN_MODE_WIFI_CONFIG,
     SCREEN_MODE_WAIT_CONNECT,
+    SCREEN_MODE_WAIT_SERVER,
 } screen_main_mode_e;
 
 typedef enum

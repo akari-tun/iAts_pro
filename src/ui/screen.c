@@ -21,7 +21,7 @@
 #include "wifi/wifi.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
-#define ANIMATION_FRAME_DURATION_MS 450
+#define ANIMATION_FRAME_DURATION_MS 500
 #define ANIMATION_TOTAL_DURATION_MS (ANIMATION_REPEAT * ANIMATION_COUNT * ANIMATION_FRAME_DURATION_MS)
 
 typedef enum
@@ -136,7 +136,7 @@ static void screen_splash_task(void *arg)
 
     time_millis_delay(ANIMATION_FRAME_DURATION_MS);
 
-    screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTING);
+    screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
     wifi_start(screen->internal.wifi);
 
     screen->internal.splashing = false;
@@ -203,36 +203,172 @@ bool screen_is_animating(const screen_t *screen)
     return false;
 }
 
-bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
+static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev)
 {
-    if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
+    switch (ev->type)
     {
-        screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+    case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        break;
+    case BUTTON_EVENT_TYPE_LONG_PRESS:
+        if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
+        {
+            screen->internal.wifi->status = WIFI_STATUS_SMARTCONFIG;
+            return true;
+        }
+        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
+        {
+            wifi_smartconfig_stop(screen->internal.wifi);
+            screen->internal.wifi->status = WIFI_STATUS_NONE;
+            wifi_start(screen->internal.wifi);
+            return true;
+        }
+        break;
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+        if (screen->internal.tracker->internal.mode == TRACKER_MODE_AUTO) 
+        {
+            screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_MANUAL);
+            // if (screen->internal.main_mode != SCREEN_MODE_MAIN) screen->internal.main_mode = SCREEN_MODE_MAIN;
+        } 
+        else if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL) 
+        { 
+            screen->internal.tracker->internal.mode = TRACKER_MODE_AUTO;
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_TRACKING);
+        }
+        else if (screen->internal.tracker->internal.mode == TRACKER_MODE_DEBUG) 
+        {
+            screen->internal.tracker->internal.mode = TRACKER_MODE_AUTO;
+        }
+
+        if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG)
+        {
+            wifi_smartconfig_stop(screen->internal.wifi);
+            screen->internal.wifi->status = WIFI_STATUS_NONE;
+            wifi_start(screen->internal.wifi);
+        }
         return true;
     }
 
-    if (before_menu)
-    {
-        return false;
-    }
+    return false;
+}
 
-    if (ev->type != BUTTON_EVENT_TYPE_SHORT_PRESS)
+static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
+{
+    switch (ev->type)
     {
-        return false;
+    case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        break;
+    case BUTTON_EVENT_TYPE_LONG_PRESS:
+        break;
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+        break;
     }
+    return false;
+}
 
-#if defined(USE_BUTTON_5WAY)
-    button_id_e bid = button_event_id(ev);
-    int direction = bid == BUTTON_ID_LEFT ? -1 : bid == BUTTON_ID_RIGHT ? 1 : 0;
-    if (direction == 0)
+static bool screen_button_right_press(screen_t *screen, const button_event_t *ev)
+{
+    return false;
+}
+
+static bool screen_button_up_press(screen_t *screen, const button_event_t *ev)
+{
+    return false;
+}
+
+static bool screen_button_down_press(screen_t *screen, const button_event_t *ev)
+{
+    return false;
+}
+
+bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
+{
+
+    switch (ev->button->id)
     {
-        return false;
+        case BUTTON_ID_ENTER:
+            return screen_button_enter_press(screen, ev);
+        case BUTTON_ID_LEFT:
+            return screen_button_left_press(screen, ev);
+        case BUTTON_ID_RIGHT:
+            return screen_button_right_press(screen, ev);
+        case BUTTON_ID_UP:
+            return screen_button_up_press(screen, ev);
+        case BUTTON_ID_DOWN:
+            return screen_button_down_press(screen, ev);
     }
-#else
-    int direction = 1;
-#endif
+//     if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
+//     {
+//         if (ev->type != BUTTON_EVENT_TYPE_LONG_PRESS)
+//             return false;
 
-    return true;
+//         if (ev->button->id == BUTTON_ID_ENTER)
+//         {
+//             screen->internal.wifi->status = WIFI_STATUS_SMARTCONFIG;
+//             return true;
+//         }
+
+//         if (ev->button->id == BUTTON_ID_DOWN)
+//         {
+//             screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
+//             screen->internal.main_mode = SCREEN_MODE_MAIN;
+//             return true;
+//         }
+
+//         return false;
+//     }
+
+//     if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
+//     {
+//         if (ev->type != BUTTON_EVENT_TYPE_LONG_PRESS)
+//             return false;
+
+//         if (ev->button->id == BUTTON_ID_ENTER)
+//         {
+//             wifi_smartconfig_stop(screen->internal.wifi);
+//             screen->internal.wifi->status = WIFI_STATUS_NONE;
+//             wifi_start(screen->internal.wifi);
+//             return true;
+//         }
+
+//         if (ev->button->id == BUTTON_ID_DOWN)
+//         {
+//             screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
+//             screen->internal.main_mode = SCREEN_MODE_MAIN;
+//             return true;
+//         }
+
+//         return false;
+//     }
+
+//     if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
+//     {
+//         screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+//         return true;
+//     }
+
+//     if (before_menu)
+//     {
+//         return false;
+//     }
+
+//     if (ev->type != BUTTON_EVENT_TYPE_SHORT_PRESS)
+//     {
+//         return false;
+//     }
+
+// #if defined(USE_BUTTON_5WAY)
+//     button_id_e bid = button_event_id(ev);
+//     int direction = bid == BUTTON_ID_LEFT ? -1 : bid == BUTTON_ID_RIGHT ? 1 : 0;
+//     if (direction == 0)
+//     {
+//         return false;
+//     }
+// #else
+//     int direction = 1;
+// #endif
+
+     return false;
 }
 
 static void screen_draw_main(screen_t *s)
@@ -288,7 +424,7 @@ static void screen_draw_main(screen_t *s)
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-        servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
@@ -320,6 +456,41 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawBox(&u8g2, bar_start_x, per_h * 5, pan_box_width, frame_height);
 }
 
+static void screen_draw_wifi_config(screen_t *s)
+{
+    const char *sc_marker = "* * * * * * *";
+    bool draw_sc_marker = TIME_CYCLE_EVERY_MS(200, 2) == 0;
+
+    u8g2_SetDrawColor(&u8g2, 1);
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+    char *buf = SCREEN_BUF(s);
+    uint16_t tw = 0;
+
+     u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+    u8g2_SetFontPosCenter(&u8g2);
+
+    if (draw_sc_marker)
+    {
+        tw = u8g2_GetStrWidth(&u8g2, sc_marker);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, (h / 2) - 15, sc_marker);
+    }
+
+    //draw smart config
+    if (TIME_CYCLE_EVERY_MS(800, 2) == 0)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SmartConfig");
+        tw = u8g2_GetStrWidth(&u8g2, buf);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, h / 2, buf);
+    }
+
+    if (draw_sc_marker)
+    {
+        tw = u8g2_GetStrWidth(&u8g2, sc_marker);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, (h / 2) + 20, sc_marker);
+    }
+}
+
 uint8_t wifi_index = 0;
 bool last_flash = true;
 
@@ -343,11 +514,11 @@ static void screen_draw_wait_connect(screen_t *s)
     if (wifi_index > 3)
         wifi_index = 0;
 
-    u8g2_DrawXBM(&u8g2, 0 / 2, 0, WIFI_WIDTH, WIFI_HEIGHT, (uint8_t *)wifi_images[wifi_index]);
+    u8g2_DrawXBM(&u8g2, 0, 0, WIFI_WIDTH, WIFI_HEIGHT, (uint8_t *)wifi_images[wifi_index]);
 
     u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    
+
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SSID:%s", (char *)&s->internal.wifi->config->sta.ssid);
     //const char *ptr_ssid = "SSID:iAts_wifi";
     u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT / 2 + 5, buf);
@@ -356,15 +527,49 @@ static void screen_draw_wait_connect(screen_t *s)
     //const char *ptr_pwd = " PWD:12345678";
     u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT, buf);
 
-    bool wait_connect = TIME_CYCLE_EVERY_MS(800, 2) == 0;
-
-    if (wait_connect)
+    //draw connecting
+    if (TIME_CYCLE_EVERY_MS(600, 2) == 0)
     {
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-        const char *wait_conn = "CONNECTING";
-        uint16_t tw = u8g2_GetStrWidth(&u8g2, wait_conn);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4), wait_conn);
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "== CONNECTING ==");
+        // const char *wait_conn = "== CONNECTING ==";
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) - 3, buf);
+    }
+
+    u8g2_SetFontPosBottom(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "long press to config");
+    uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
+    u8g2_DrawStr(&u8g2, (w - tw) / 2, h, buf);
+}
+
+static void screen_draw_wait_server(screen_t *s)
+{
+    const char *txt = "Connecting to server";
+    const char *conn = "<-->";
+
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+
+    u8g2_DrawXBM(&u8g2, 8, 0, TRACKER_WIDTH, TRACKER_HEIGHT, TRACKER_IMG);
+    u8g2_DrawXBM(&u8g2, w - PHONE_WIDTH - 8, 0, PHONE_WIDTH, PHONE_HEIGHT, PHONE_IMG);
+
+    if (TIME_CYCLE_EVERY_MS(200, 2) == 0)
+    {
+        u8g2_SetFontPosCenter(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, conn);
+        u8g2_DrawStr(&u8g2, (w / 2) - tw / 2, 18, conn);
+    }
+
+    if (TIME_CYCLE_EVERY_MS(800, 2) == 0)
+    {
+        u8g2_SetFontPosCenter(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, txt);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) + 2, txt);
     }
 }
 
@@ -378,8 +583,14 @@ static void screen_draw(screen_t *screen)
         case SCREEN_MODE_MAIN:
             screen_draw_main(screen);
             break;
+        case SCREEN_MODE_WIFI_CONFIG:
+            screen_draw_wifi_config(screen);
+            break;
         case SCREEN_MODE_WAIT_CONNECT:
             screen_draw_wait_connect(screen);
+            break;
+        case SCREEN_MODE_WAIT_SERVER:
+            screen_draw_wait_server(screen);
             break;
         }
         break;
@@ -399,13 +610,28 @@ void screen_update(screen_t *screen)
         return;
     }
 
-    if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED && screen->internal.tracker->internal.status == TRACKER_STATUS_CONNECTING) 
+    if (screen->internal.tracker->internal.mode != TRACKER_MODE_MANUAL)
     {
-        screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTED);
-    } 
-    else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) && screen->internal.tracker->internal.status != TRACKER_STATUS_CONNECTING)
-    {
-        screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_CONNECTING);
+        if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
+            screen->internal.tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
+        {
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTED);
+        }
+        else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) &&
+                 screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+        {
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
+        }
+        else if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG &&
+                 screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
+        {
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
+        }
+        else if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
+                 screen->internal.tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
+        {
+            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_SERVER_CONNECTING);
+        }
     }
 
     char buf[SCREEN_DRAW_BUF_SIZE];

@@ -109,7 +109,7 @@ static void sc_callback(smartconfig_status_t status, void *pdata)
             LOG_I(TAG, "SC_STATUS_LINK_OVER");
             // xEventGroupSetBits(wifi_event_group, SMART_CONFIG_DONE_BIT);
             LOG_I(TAG, "Smartconfig stop");
-            esp_smartconfig_stop();
+            ESP_ERROR_CHECK(esp_smartconfig_stop());
             break;
         default:
             break;
@@ -172,16 +172,24 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &cfg));
         memcpy(wifi->config, &cfg, sizeof(wifi_config_t));
         LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, wifi->ip);
-        // xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         wifi->status = WIFI_STATUS_CONNECTED;
         xTaskCreatePinnedToCore(task_receive, "RECEIVE", 4096, wifi, 1, NULL, xPortGetCoreID());
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         LOG_I(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-        ESP_ERROR_CHECK(esp_wifi_connect());
-        wifi->status = WIFI_STATUS_DISCONNECTED;
-        // xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED_BIT);
-        // xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        if (wifi->status == WIFI_STATUS_SMARTCONFIG)
+        {
+            ESP_ERROR_CHECK(esp_wifi_stop());
+        }
+        else
+        {
+            ESP_ERROR_CHECK(esp_wifi_connect());
+            wifi->status = WIFI_STATUS_DISCONNECTED;    
+        }
+        break;
+    case SYSTEM_EVENT_STA_STOP:
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	    ESP_ERROR_CHECK(esp_wifi_start());
         break;
     default:
         break;
@@ -205,7 +213,6 @@ void wifi_init(wifi_t *wifi)
     wifi->buffer_received = (char *)&buffer_received;
 
     tcpip_adapter_init();
-    // wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, wifi));
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -220,84 +227,9 @@ void wifi_start(wifi_t *wifi)
 	ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-// static void event_bits_handle(EventBits_t uxBits, wifi_t *wifi)
-// {
-//     if(uxBits & SMART_CONFIG_DONE_BIT) {
-//         LOG_I(TAG, "Smartconfig stop");
-//         esp_smartconfig_stop();
-//         wifi->status = WIFI_STATUS_CONNECTING;
-//     }
-//     if(uxBits & WIFI_CONNECTED_BIT) {
-//         wifi->status = WIFI_STATUS_CONNECTED;
-//     } 
-//     if(uxBits & SMART_CONFIG_START_BIT) {
-//         wifi->status = WIFI_STATUS_SMARTCONFIG;
-//     } 
-//     if(uxBits & WIFI_CONNECTED_BIT) {
-//         wifi->status = WIFI_STATUS_CONNECTED;
-//     }
-//     if(uxBits & UDP_CONNCETED_SUCCESS) {
-//         wifi->status = WIFI_STATUS_UDP_CONNECTED;
-//     }
-//     // if(uxBits & WIFI_DISCONNECTED_BIT) {
-//     //     wifi->status = WIFI_STATUS_CONNECTING;
-//     // }
-// }
-
-// void task_wifi(void *arg)
-// {
-//     wifi_t *wifi = arg;
-    
-// 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-// 	ESP_ERROR_CHECK(esp_wifi_start());
-
-//     EventBits_t uxBits;
-
-//     TickType_t wait_delay = 0xff;
-
-//     for (;;)
-//     {
-//         uxBits = 0;
-
-//         switch (wifi->status)
-//         {
-//             case WIFI_STATUS_SMARTCONFIG:
-//                 uxBits = xEventGroupWaitBits(wifi_event_group, 
-//                     SMART_CONFIG_DONE_BIT, 
-//                     true, false, wait_delay);
-//                 break;
-//             case WIFI_STATUS_CONNECTING:
-//                 uxBits = xEventGroupWaitBits(wifi_event_group, 
-//                     SMART_CONFIG_START_BIT | WIFI_CONNECTED_BIT, 
-//                     true, false, wait_delay);
-//                 break;
-//             case WIFI_STATUS_CONNECTED:
-//                 // xTaskCreatePinnedToCore(task_connect, "CONNECT", 4096, wifi, 1, NULL, xPortGetCoreID());
-//                 if (!wifi->reciving)
-//                 {
-//                     xTaskCreatePinnedToCore(task_receive, "RECEIVE", 4096, wifi, 1, NULL, xPortGetCoreID());
-//                 }
-//                 uxBits = xEventGroupWaitBits(wifi_event_group, 
-//                     UDP_CONNCETED_SUCCESS | WIFI_CONNECTED_BIT, 
-//                     true, false, wait_delay); 
-//                 break;
-//             case WIFI_STATUS_DISCONNECTED:
-//                 uxBits = xEventGroupWaitBits(wifi_event_group, 
-//                     SMART_CONFIG_START_BIT | WIFI_CONNECTED_BIT, 
-//                     true, false, wait_delay);
-//                 wifi->status = WIFI_STATUS_CONNECTING;
-//                 break;
-//             case WIFI_STATUS_UDP_CONNECTED:
-//                 break;
-//             default:
-//                 break;    
-//         }
-
-//         // if (wifi->status != WIFI_STATUS_CONNECTED)
-//         // {
-//             event_bits_handle(uxBits, wifi);
-//             vTaskDelay(MILLIS_TO_TICKS(10));
-//         // }
-//     }
-// }
+void wifi_smartconfig_stop(wifi_t *wifi)
+{
+	ESP_ERROR_CHECK(esp_smartconfig_stop());
+    ESP_ERROR_CHECK(esp_wifi_stop());
+}
 #endif
