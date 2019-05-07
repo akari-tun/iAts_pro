@@ -22,6 +22,7 @@ typedef struct servo_pwmc_status_s servo_status_t;
 // void servo_init(servo_t *servo_pwmc, ui_t *ui);
 void servo_init(servo_t *servo_pwmc);
 void servo_update(servo_t *servo_pwmc);
+void servo_reverse_check(servo_t *servo);
 void servo_pulsewidth_out(servo_status_t *status, uint16_t pulsewidth);
 void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config);
 uint16_t servo_pan_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse);

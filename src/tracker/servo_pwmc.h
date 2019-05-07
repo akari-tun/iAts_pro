@@ -19,6 +19,8 @@
 #define MAX_PAN_DEGREE 180
 #define MAX_TILT_DEGREE 90
 
+typedef struct _Notifier notifier_t;
+
 typedef struct servo_pwmc_config_s
 {
     //gpio
@@ -52,6 +54,7 @@ typedef struct servo_pwmc_s
         servo_pwmc_status_t tilt;
 
         ease_config_t ease_config;
+        notifier_t *reverse_notifier
     } internal;
 } servo_pwmc_t;
 

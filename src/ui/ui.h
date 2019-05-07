@@ -50,9 +50,9 @@ typedef struct ui_s
 #if defined(USE_BEEPER)
         beeper_t beeper;
 #endif
-#if defined(LED_1_USE_WS2812)
-        led_gradual_target_t led_gradual_target;
-#endif
+// #if defined(LED_1_USE_WS2812)
+//         led_gradual_target_t led_gradual_target;
+// #endif
         button_t buttons[UI_BUTTON_COUNT];
 #ifdef USE_SCREEN
         time_ticks_t screen_autooff_interval;

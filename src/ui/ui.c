@@ -24,6 +24,7 @@ static battery_t battery;
 
 static Observer ui_status_observer;
 static Observer ui_flag_observer;
+static Observer ui_reverse_observer;
 
 static void ui_status_updated(void *notifier, void *s)
 {
@@ -100,6 +101,16 @@ static void ui_flag_updated(void *notifier, void *f)
     if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
 #endif
+}
+
+static void ui_reverse_updated(void *notifier, void *r)
+{
+    Observer *obs = (Observer *)notifier;
+    // bool *is_reverse = (bool *)r;
+    ui_t *ui = (ui_t *)obs->Obj;
+
+    led_mode_add(LED_MODE_REVERSING);
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_REVERSING);
 }
 
 static void ui_beep(ui_t *ui)
@@ -261,11 +272,16 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
     ui_flag_observer.Update = ui_flag_updated;
     tracker->internal.flag_changed_notifier->mSubject.Attach(tracker->internal.flag_changed_notifier, &ui_flag_observer);
 
-#if defined(LED_1_USE_WS2812)
-    led_init(&ui->internal.led_gradual_target);
-#else
+    ui_reverse_observer.Obj = ui;
+    ui_reverse_observer.Name = "UI reverseing observer";
+    ui_reverse_observer.Update = ui_reverse_updated;
+    tracker->servo->internal.reverse_notifier->mSubject.Attach(tracker->servo->internal.reverse_notifier, &ui_reverse_observer);
+
+// #if defined(LED_1_USE_WS2812)
+//     led_init(&ui->internal.led_gradual_target);
+// #else
     led_init();
-#endif
+// #endif
 
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN

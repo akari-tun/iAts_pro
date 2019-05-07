@@ -1,5 +1,6 @@
 #include <hal/log.h>
 #include "servo.h"
+#include "observer.h"
 
 // #include "ui/led.h"
 // #include "ui/beeper.h"
@@ -21,12 +22,12 @@ void servo_init(servo_t *servo)
 
     servo->internal.pan.pTr_pulsewidth_cal = &servo_pan_per_degree_cal;
     servo->internal.tilt.pTr_pulsewidth_cal = &servo_tilt_per_degree_cal;
+    servo->internal.reverse_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
 }
 
 void servo_update(servo_t *servo)
 {
-    servo->internal.tilt.is_reverse = servo->internal.pan.currtent_degree > 180;
-    servo->internal.pan.is_reverse = servo->internal.pan.currtent_degree > 180;
+    servo_reverse_check(servo);
     // tilt
     servo_pulsewidth_control(&servo->internal.tilt, &servo->internal.ease_config);
     // pan
@@ -45,6 +46,18 @@ void servo_pulsewidth_out(servo_status_t *status, uint16_t pulsewidth)
 // #endif
     }
     status->last_pulsewidth = pulsewidth;
+}
+
+void servo_reverse_check(servo_t *servo)
+{
+    bool reverse = servo->internal.pan.currtent_degree > 180;
+    if (servo->is_reversing != reverse)
+    {
+        servo->internal.tilt.is_reverse = reverse;
+        servo->internal.pan.is_reverse = reverse;
+        servo->is_reversing = reverse;
+        servo->internal.reverse_notifier->mSubject.Notify(servo->internal.reverse_notifier, &reverse);
+    }
 }
 
 void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config)

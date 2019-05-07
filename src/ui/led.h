@@ -67,15 +67,15 @@ typedef struct led_pattern_s
 #endif
 } led_pattern_t;
 
-#if defined(LED_1_USE_WS2812)
-typedef struct led_gradual_target_s
-{
-    uint16_t pan;
-    uint16_t tilt;
-    uint16_t pan_pulsewidth;
-    uint16_t tilt_pulsewidth;
-} led_gradual_target_t;
-#endif
+// #if defined(LED_1_USE_WS2812)
+// typedef struct led_gradual_target_s
+// {
+//     uint16_t pan;
+//     uint16_t tilt;
+//     uint16_t pan_pulsewidth;
+//     uint16_t tilt_pulsewidth;
+// } led_gradual_target_t;
+// #endif
 
 #if defined(LED_USE_WS2812)
 #define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .color = c, .fade_duration = f, .level = l})
@@ -99,22 +99,22 @@ typedef enum
     LED_MODE_TRACKING,
 
     LED_MODE_WAIT_CONNECT,
-    
+
     LED_MODE_SMART_CONFIG,
 
     LED_MODE_BOOT,
 
-    LED_MODE_EASING,
+    LED_MODE_REVERSING,
 
     LED_MODE_COUNT,
 
 } led_mode_e;
 
-#if defined(LED_1_USE_WS2812)
-void led_init(led_gradual_target_t *led_gradual_target);
-#else
+// #if defined(LED_1_USE_WS2812)
+// void led_init(led_gradual_target_t *led_gradual_target);
+// #else
 void led_init(void);
-#endif
+// #endif
 
 void led_update(void);
 

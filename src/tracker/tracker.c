@@ -99,10 +99,7 @@ void task_tracker(void *arg)
                     distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
 
                     servo.internal.pan.currtent_degree = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon) * 10.0f;
-                    servo.internal.pan.is_reverse = servo.internal.pan.currtent_degree > 180;
                     servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-                    // tracker->ui->internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
-                    // tracker->ui->internal.led_gradual_target.pan_pulsewidth = servo.internal.pan.currtent_pulsewidth;
                 }
 
                 //tilt
@@ -112,10 +109,10 @@ void task_tracker(void *arg)
                     int16_t plane_alt = telemetry_get_i16(atp_get_tag_val(TAG_HOME_ALTITUDE));
 
                     servo.internal.tilt.currtent_degree = tilt_to(distance, tracker_alt, plane_alt);
-                    servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-                    // tracker->ui->internal.led_gradual_target.pan = servo.internal.pan.currtent_degree;
-                    // tracker->ui->internal.led_gradual_target.pan_pulsewidth = servo.internal.pan.currtent_pulsewidth;
+                    servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
                 }
+
+                servo_reverse_check(&servo);
             }
         }
         else if (tracker->internal.mode == TRACKER_MODE_MANUAL)

@@ -58,14 +58,14 @@ static const beep_pattern_t patterns[BEEPER_MODE_COUNT - 1] = {
         .repeat = 0,
         .silence_repeat = 0,
     },
-    // BEEPER_MODE_EASING
+    // BEEPER_MODE_REVERSING
     {
         .beep_length = 5,
         .silence_length = 10,
         .repeat = 3,
         .silence_repeat = SILENCE_REPEAT_STOP,
     },
-        // BEEPER_MODE_EASING
+    // BEEPER_MODE_SETED
     {
         .beep_length = 5,
         .silence_length = 10,

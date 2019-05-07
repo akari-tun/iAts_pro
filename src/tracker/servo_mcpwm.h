@@ -25,6 +25,8 @@
 #define SERVO_PAN_MCPWM_OPR MCPWM_OPR_A
 #define SERVO_TILT_MCPWM_OPR MCPWM_OPR_B
 
+typedef struct _Notifier notifier_t;
+
 typedef struct servo_mcpwm_config_s
 {
     //gpio
@@ -60,6 +62,7 @@ typedef struct servo_mcpwm_s
         servo_mcpwm_status_t tilt;
 
         ease_config_t ease_config;
+        notifier_t *reverse_notifier;
     } internal;
 } servo_mcpwm_t;
 

@@ -402,11 +402,11 @@ static void screen_draw_main(screen_t *s)
     int per_voltage = 0;
     if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
     {
-        per_voltage = (((int)(voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
+        per_voltage = (((voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
     }
     else if (voltage >= DEFAULT_BATTERY_MIN_VOLTAGE)
     {
-        per_voltage = ((int)(voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
+        per_voltage = ((voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
     }
     u8g2_DrawBox(&u8g2, w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
