@@ -8,7 +8,8 @@
 
 static const char *TAG = "button";
 
-#define LONG_PRESS_INTERVAL MILLIS_TO_TICKS(300)
+#define DOUBLE_PRESS_INTERVAL MILLIS_TO_TICKS(250)
+#define LONG_PRESS_INTERVAL MILLIS_TO_TICKS(400)
 #define REALLY_LONG_PRESS_INTERVAL MILLIS_TO_TICKS(3000)
 
 static bool button_is_down(button_t *button)
@@ -61,7 +62,8 @@ void button_update(button_t *button)
     {
         if (!button->state.is_down)
         {
-            button->state.down_since = now;
+            if (button->state.click_num == 0) button->state.down_since = now;
+            button->state.click_num++;
             button->state.long_press_sent = false;
             button->state.really_long_press_sent = false;
         }
@@ -71,6 +73,7 @@ void button_update(button_t *button)
             {
                 button_send_event(button, BUTTON_EVENT_TYPE_LONG_PRESS);
                 button->state.long_press_sent = true;
+                button->state.click_num = 0;
             }
             if (button->state.down_since + REALLY_LONG_PRESS_INTERVAL < now)
             {
@@ -78,16 +81,22 @@ void button_update(button_t *button)
                 {
                     button_send_event(button, BUTTON_EVENT_TYPE_REALLY_LONG_PRESS);
                     button->state.really_long_press_sent = true;
+                    button->state.click_num = 0;
                 }
             }
         }
     }
     else
     {
-        if (button->state.is_down && !button->state.long_press_sent && !button->state.really_long_press_sent)
+        if (button->state.click_num > 0 && 
+            !button->state.long_press_sent && 
+            !button->state.really_long_press_sent && 
+            button->state.down_since + DOUBLE_PRESS_INTERVAL < now)
         {
-            button_send_event(button, BUTTON_EVENT_TYPE_SHORT_PRESS);
+            button_send_event(button, button->state.click_num > 1 ? BUTTON_EVENT_TYPE_DOUBLE_PRESS : BUTTON_EVENT_TYPE_SHORT_PRESS);
+            button->state.click_num = 0;
         }
     }
+
     button->state.is_down = is_down;
 }

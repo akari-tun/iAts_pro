@@ -24,6 +24,7 @@ typedef enum
 typedef enum
 {
     BUTTON_EVENT_TYPE_SHORT_PRESS = 1,
+    BUTTON_EVENT_TYPE_DOUBLE_PRESS,
     BUTTON_EVENT_TYPE_LONG_PRESS,
     BUTTON_EVENT_TYPE_REALLY_LONG_PRESS,
 } button_event_type_e;
@@ -46,6 +47,7 @@ typedef struct button_config_s
 typedef struct button_state_s
 {
     bool is_down;
+    uint8_t click_num;
     bool long_press_sent;
     bool really_long_press_sent;
     unsigned long down_since;
