@@ -68,6 +68,8 @@ const char *telemetry_format_horizontal_speed(const telemetry_t *val, char *buf,
 const char *telemetry_format_hdop(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_metre(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, size_t bufsize);
+const char *telemetry_format_ip(const telemetry_t *val, char *buf, size_t bufsize);
+const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, size_t bufsize);
 
 int telemetry_get_id_count(void);
 int telemetry_get_id_at(int idx);

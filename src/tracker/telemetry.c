@@ -148,6 +148,30 @@ const char *telemetry_format_metre(const telemetry_t *val, char *buf, size_t buf
     return buf;
 }
 
+const char *telemetry_format_ip(const telemetry_t *val, char *buf, size_t bufsize)
+{
+    snprintf(buf, bufsize, "%d.%d.%d.%d", 
+        (val->val.u32 >> 8 * 0) & 0xFF,
+        (val->val.u32 >> 8 * 1) & 0xFF,
+        (val->val.u32 >> 8 * 2) & 0xFF,
+        (val->val.u32 >> 8 * 3) & 0xFF);
+    return buf;
+}
+
+const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, size_t bufsize)
+{
+    switch (val->val.u8)
+    {
+    case 1:
+        return "Tracking";
+    case 2:
+        return "Manual";
+    case 3:
+        return "Debug";
+    }
+    return NULL;
+}
+
 bool telemetry_has_value(const telemetry_t *val)
 {
     return data_state_get_last_update(&val->data_state) > 0;
