@@ -9,6 +9,10 @@
 #include "ui/screen.h"
 #include "ui/ui.h"
 #include "tracker/tracker.h"
+#include "protocols/atp.h"
+#if defined(USE_WIFI)
+#include "wifi/wifi.h"
+#endif
 
 #include "util/macros.h"
 
@@ -31,6 +35,7 @@ static void ui_status_updated(void *notifier, void *s)
     Observer *obs = (Observer *)notifier;
     tracker_status_e *status = (tracker_status_e *)s;
     ui_t *ui = (ui_t *)obs->Obj;
+    time_micros_t now = time_micros_now();
 
     switch (*status)
     {
@@ -41,52 +46,90 @@ static void ui_status_updated(void *notifier, void *s)
             led_mode_remove(LED_MODE_WAIT_CONNECT);
         if (!led_mode_is_enable(LED_MODE_SMART_CONFIG))
             led_mode_add(LED_MODE_SMART_CONFIG);
+
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
 #endif
+
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WIFI_CONFIG;
 #endif
+
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_WIFI_CONNECTED ^ (uint8_t)0xff));
         break;
     case TRACKER_STATUS_WIFI_CONNECTING:
+
 #if defined(USE_BEEPER)
         if (ui->internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
             beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
 #endif
+
         if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
             led_mode_remove(LED_MODE_SMART_CONFIG);
         if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_add(LED_MODE_WAIT_CONNECT);
+
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
 #endif
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_WIFI_CONNECTED ^ (uint8_t)0xff));
+
         break;
     case TRACKER_STATUS_WIFI_CONNECTED:
+
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
 #endif
+
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
 #endif
+
         if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
             led_mode_remove(LED_MODE_SMART_CONFIG);
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
+
+        ATP_SET_U32(TAG_TRACKER_T_IP, ui->internal.screen.internal.wifi->ip, now);
+        ATP_SET_U16(TAG_TRACKER_T_PORT, 8898, now);
+
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED);
         break;
     case TRACKER_STATUS_SERVER_CONNECTING:
+
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
 #endif
+        // ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag &= ~TRACKER_FLAG_SERVER_CONNECTED;
         break;
     case TRACKER_STATUS_TRACKING:
-    case TRACKER_STATUS_MANUAL:
+
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
 #endif
+
         if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
             led_mode_remove(LED_MODE_SMART_CONFIG);
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
+
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING);
+        break;
+    case TRACKER_STATUS_MANUAL:
+
+#if defined(USE_SCREEN)
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
+#endif
+
+        if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
+            led_mode_remove(LED_MODE_SMART_CONFIG);
+        if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+            led_mode_remove(LED_MODE_WAIT_CONNECT);
+
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_TRACKING ^ (uint8_t)0xff));
         break;
     }
 }
@@ -97,10 +140,23 @@ static void ui_flag_updated(void *notifier, void *f)
     uint8_t *flag = (uint8_t *)f;
     ui_t *ui = (ui_t *)obs->Obj;
 
-#if defined(USE_BEEPER)
+
     if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
+    {
+#if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
 #endif
+    }
+
+    if (*flag & TRACKER_FLAG_SERVER_CONNECTED) 
+    {
+#if defined(USE_BEEPER)
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
+#endif
+#if defined(USE_WIFI)
+        ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_UDP_CONNECTED);
+#endif
+    }
 }
 
 static void ui_reverse_updated(void *notifier, void *r)
@@ -110,8 +166,89 @@ static void ui_reverse_updated(void *notifier, void *r)
     ui_t *ui = (ui_t *)obs->Obj;
 
     led_mode_add(LED_MODE_REVERSING);
+#if defined(USE_BEEPER)
     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_REVERSING);
+#endif
 }
+
+#if defined(USE_WIFI)
+
+static Observer ui_wifi_status_observer;
+
+static void ui_wifi_status_update(void *notifier, void *s)
+{    
+    Observer *obs = (Observer *)notifier;
+    iats_wifi_status_e *status = (iats_wifi_status_e *)s;
+    ui_t *ui = (ui_t *)obs->Obj;
+    tracker_t *tracker = ui->internal.tracker;
+
+    if (tracker->internal.mode != TRACKER_MODE_MANUAL)
+    {
+        // wifi_t *wifi = ui->internal.screen.internal.wifi;
+
+        switch (*status)
+        {
+        case WIFI_STATUS_NONE:
+            break;
+        case WIFI_STATUS_SMARTCONFIG:
+            if (tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
+            }
+            break;
+        case WIFI_STATUS_DISCONNECTED:
+            if (tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
+            }
+            break;
+        case WIFI_STATUS_CONNECTING:
+            if (tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
+            }
+            break;
+        case WIFI_STATUS_CONNECTED:
+            if (tracker->internal.status <= TRACKER_STATUS_WIFI_CONNECTING)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTED);
+            }
+            if (tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_SERVER_CONNECTING);
+            }
+            break;
+        case WIFI_STATUS_UDP_CONNECTED:
+            if (tracker->internal.status != TRACKER_STATUS_MANUAL && tracker->internal.status != TRACKER_STATUS_TRACKING)
+            {
+                tracker->internal.status_changed(tracker, TRACKER_STATUS_TRACKING);
+            }
+            break;
+        }
+
+        // if (wifi->status == WIFI_STATUS_CONNECTED &&
+        //     tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
+        // {
+        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTED);
+        // }
+        // else if ((wifi->status == WIFI_STATUS_CONNECTING || wifi->status == WIFI_STATUS_DISCONNECTED) &&
+        //          tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+        // {
+        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
+        // }
+        // else if (wifi->status == WIFI_STATUS_SMARTCONFIG &&
+        //          tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
+        // {
+        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
+        // }
+        // else if (wifi->status == WIFI_STATUS_CONNECTED &&
+        //          tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
+        // {
+        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_SERVER_CONNECTING);
+        // }
+    }
+}
+#endif
 
 static void ui_beep(ui_t *ui)
 {
@@ -257,8 +394,12 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
     }
 }
 
+#if defined(USE_WIFI)
 // void ui_init(ui_t *ui, ui_config_t *cfg, servo_t *servo)
-void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
+void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker, wifi_t *wifi)
+#else
+void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
+#endif
 {
     ui->internal.tracker = tracker;
 
@@ -289,6 +430,15 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
     if (screen_init(&ui->internal.screen, &cfg->screen, tracker))
     {
         button_callback = ui_handle_screen_button_event;
+#if defined(USE_WIFI)
+        ui_wifi_status_observer.Obj = ui;
+        ui_wifi_status_observer.Name = "UI wifi status observer";
+        ui_wifi_status_observer.Update = ui_wifi_status_update;
+        wifi->status_change_notifier->mSubject.Attach(wifi->status_change_notifier, &ui_wifi_status_observer);
+        ui->internal.screen.internal.wifi = wifi;
+#endif
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
+	    ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
     }
 #endif
 
