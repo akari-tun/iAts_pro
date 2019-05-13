@@ -44,13 +44,11 @@ typedef enum
 
 static u8g2_t u8g2;
 
-// bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, servo_t *servo)
 bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker)
 {
     memset(screen, 0, sizeof(*screen));
     screen->internal.available = screen_i2c_init(cfg, &u8g2);
     screen->internal.cfg = *cfg;
-    // screen->internal.servo = servo;
     screen->internal.tracker = tracker;
     return screen->internal.available;
 }
@@ -134,10 +132,10 @@ static void screen_splash_task(void *arg)
         }
     }
 
-    time_millis_delay(ANIMATION_FRAME_DURATION_MS);
-
     screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
     wifi_start(screen->internal.wifi);
+
+    time_millis_delay(ANIMATION_FRAME_DURATION_MS);
 
     screen->internal.splashing = false;
 
@@ -209,21 +207,7 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
     {
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
         break;
-    case BUTTON_EVENT_TYPE_LONG_PRESS:
-        if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
-        {
-            screen->internal.wifi->status = WIFI_STATUS_SMARTCONFIG;
-            return true;
-        }
-        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
-        {
-            wifi_smartconfig_stop(screen->internal.wifi);
-            screen->internal.wifi->status = WIFI_STATUS_NONE;
-            wifi_start(screen->internal.wifi);
-            return true;
-        }
-        break;
-    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+    case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
         if (screen->internal.tracker->internal.mode == TRACKER_MODE_AUTO) 
         {
             screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
@@ -239,11 +223,27 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         {
             screen->internal.tracker->internal.mode = TRACKER_MODE_AUTO;
         }
+        break;
+    case BUTTON_EVENT_TYPE_LONG_PRESS:
+        if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
+        {
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_SMARTCONFIG);
+            return true;
+        }
+        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
+        {
+            wifi_smartconfig_stop(screen->internal.wifi);
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+            wifi_start(screen->internal.wifi);
+            return true;
+        }
+        break;
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
 
         if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG)
         {
             wifi_smartconfig_stop(screen->internal.wifi);
-            screen->internal.wifi->status = WIFI_STATUS_NONE;
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
             wifi_start(screen->internal.wifi);
         }
         return true;
@@ -257,6 +257,8 @@ static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
     switch (ev->type)
     {
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        break;
+    case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
         break;
     case BUTTON_EVENT_TYPE_LONG_PRESS:
         break;
@@ -511,6 +513,7 @@ static void screen_draw_wait_connect(screen_t *s)
         wifi_index++;
         last_flash = flash;
     }
+
     if (wifi_index > 3)
         wifi_index = 0;
 
@@ -520,11 +523,9 @@ static void screen_draw_wait_connect(screen_t *s)
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
 
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SSID:%s", (char *)&s->internal.wifi->config->sta.ssid);
-    //const char *ptr_ssid = "SSID:iAts_wifi";
     u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT / 2 + 5, buf);
 
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "PWD:%s", (char *)&s->internal.wifi->config->sta.password);
-    //const char *ptr_pwd = " PWD:12345678";
     u8g2_DrawStr(&u8g2, WIFI_WIDTH + 6, WIFI_HEIGHT, buf);
 
     //draw connecting
@@ -605,34 +606,35 @@ static void screen_draw(screen_t *screen)
 
 void screen_update(screen_t *screen)
 {
+
     if (screen->internal.splashing)
     {
         return;
     }
 
-    if (screen->internal.tracker->internal.mode != TRACKER_MODE_MANUAL)
-    {
-        if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
-            screen->internal.tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
-        {
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTED);
-        }
-        else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) &&
-                 screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
-        {
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
-        }
-        else if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG &&
-                 screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
-        {
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
-        }
-        else if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
-                 screen->internal.tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
-        {
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_SERVER_CONNECTING);
-        }
-    }
+    // if (screen->internal.tracker->internal.mode != TRACKER_MODE_MANUAL)
+    // {
+    //     if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
+    //         screen->internal.tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
+    //     {
+    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTED);
+    //     }
+    //     else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) &&
+    //              screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+    //     {
+    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
+    //     }
+    //     else if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG &&
+    //              screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
+    //     {
+    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
+    //     }
+    //     else if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
+    //              screen->internal.tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
+    //     {
+    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_SERVER_CONNECTING);
+    //     }
+    // }
 
     char buf[SCREEN_DRAW_BUF_SIZE];
 
