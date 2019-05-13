@@ -195,6 +195,9 @@ void task_tracker(void *arg)
                     {
                         pan_tick = now + servo_get_easing_sleep(&servo.internal.pan);
                         servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
+
+                        // LOG_I(TAG, "step_to:%d | step_positon:%d | step_sleep_ms:%d\n", 
+                        //     servo.internal.pan.step_to, servo.internal.pan.step_positon, servo.internal.pan.step_sleep_ms);
                     }
                     else
                     {
@@ -205,10 +208,15 @@ void task_tracker(void *arg)
 
                         distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
 
-                        LOG_D(TAG, "t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d\n", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
+                        // LOG_D(TAG, "t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d\n", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
 
                         uint16_t course_deg = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon);
-
+                        course_deg = course_deg + servo.internal.course;
+                        if (course_deg >= 360u)
+                        {
+                            course_deg = course_deg - 360u;
+                        }
+                            
                         if (course_deg != servo.internal.pan.currtent_degree)
                         {
                             servo.internal.pan.currtent_degree = course_deg;
@@ -226,18 +234,22 @@ void task_tracker(void *arg)
                     {
                         tilt_tick = now + servo_get_easing_sleep(&servo.internal.tilt);
                         servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
+
+                        // LOG_I(TAG, "step_to:%d | step_positon:%d | step_sleep_ms:%d\n", 
+                        //     servo.internal.tilt.step_to, servo.internal.tilt.step_positon, servo.internal.tilt.step_sleep_ms);
                     }
                     else
                     {
                         int32_t tracker_alt = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE));
                         int32_t plane_alt = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE));
 
-                        LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d\n", tracker_alt, plane_alt, distance);
+                        // LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d\n", tracker_alt, plane_alt, distance);
 
                         uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
 
-                        if (tilt_deg != servo.internal.tilt.currtent_degree)
+                        if (tilt_deg != servo.internal.tilt.currtent_degree || servo.internal.tilt.is_reverse != servo.internal.pan.is_reverse)
                         {
+                            servo.internal.tilt.is_reverse = servo.internal.pan.is_reverse;
                             servo.internal.tilt.currtent_degree = tilt_deg;
                             servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
                         }
@@ -251,6 +263,7 @@ void task_tracker(void *arg)
         }
         else if (t->internal.mode == TRACKER_MODE_MANUAL)
         {
+            servo.internal.tilt.is_reverse = servo.internal.pan.is_reverse;
             servo_update(&servo);
         }
 

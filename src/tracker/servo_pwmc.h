@@ -35,8 +35,8 @@ typedef struct servo_pwmc_config_s
 typedef struct servo_pwmc_status_s
 {
     uint16_t currtent_degree;
-    uint32_t currtent_pulsewidth;
-    uint32_t last_pulsewidth;
+    uint16_t currtent_pulsewidth;
+    uint16_t last_pulsewidth;
 
     uint16_t step_positon;
     uint16_t step_to;
@@ -52,6 +52,8 @@ typedef struct servo_pwmc_s
 {
     struct 
     { 
+        uint16_t course;
+        
         servo_pwmc_status_t pan;
         servo_pwmc_status_t tilt;
 

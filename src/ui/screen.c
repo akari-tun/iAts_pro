@@ -249,6 +249,10 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
             uint16_t deg = (float)(servo_pan->currtent_pulsewidth - config->min_pulsewidth) / (float)(config->max_pulsewidth - config->min_pulsewidth) 
                 * config->max_degree;
+            if (servo_pan->is_reverse)
+            {
+                deg = 359 - deg;
+            }
             screen->internal.tracker->servo->internal.course = deg;
             setting_set_u16(setting_course, deg);
 
@@ -438,6 +442,9 @@ static void screen_draw_main(screen_t *s)
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "C->%d", s->internal.tracker->servo->internal.course);
     u8g2_DrawStr(&u8g2, icon_index, 0, buf);
+    icon_index += (u8g2_GetStrWidth(&u8g2, buf) + 1);
+    u8g2_DrawHLine(&u8g2, icon_index, 0, 2);
+    u8g2_DrawHLine(&u8g2, icon_index, 1, 2);
 
 #ifdef USE_BATTERY_MEASUREMENT
     // battery icon
@@ -487,7 +494,7 @@ static void screen_draw_main(screen_t *s)
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_degree(&s->internal.tracker->servo->internal.pan));
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_course_to_degree(s->internal.tracker->servo));
     u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
     u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);

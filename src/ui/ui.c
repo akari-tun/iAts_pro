@@ -375,12 +375,12 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
         case BUTTON_ID_ENTER:
             break;
         case BUTTON_ID_LEFT:
-            if (ui->internal.tracker->servo->internal.pan.currtent_degree >= 359) ui->internal.tracker->servo->internal.pan.currtent_degree = 0;
-            ui->internal.tracker->servo->internal.pan.currtent_degree++;
-            break;
-        case BUTTON_ID_RIGHT:
             if (ui->internal.tracker->servo->internal.pan.currtent_degree == 0) ui->internal.tracker->servo->internal.pan.currtent_degree = 359;
             ui->internal.tracker->servo->internal.pan.currtent_degree--;
+            break;
+        case BUTTON_ID_RIGHT:
+            if (ui->internal.tracker->servo->internal.pan.currtent_degree >= 359) ui->internal.tracker->servo->internal.pan.currtent_degree = 0;
+            ui->internal.tracker->servo->internal.pan.currtent_degree++;
             break;
         case BUTTON_ID_UP:
             ui->internal.tracker->servo->internal.tilt.currtent_degree++;

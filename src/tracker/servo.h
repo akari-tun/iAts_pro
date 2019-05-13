@@ -28,6 +28,7 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
 uint16_t servo_pan_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
 uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
 uint16_t servo_ease_cal(ease_config_t *ease_config, servo_status_t *status);
+uint16_t servo_get_course_to_degree(servo_t *servo);
 uint16_t servo_get_degree(servo_status_t *status);
 uint32_t servo_get_pulsewidth(servo_status_t *status);
 uint32_t servo_get_easing_sleep(servo_status_t *status);
