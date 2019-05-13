@@ -80,11 +80,11 @@ LED_PATTERN(boot_pattern, boot_stages, 1);
 
 static const led_stage_t reversing_stages[] = {
     LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
-    LED_STAGE_OFF(50, 0),
+    LED_STAGE_OFF(100, 0),
     LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
-    LED_STAGE_OFF(50, 0),
+    LED_STAGE_OFF(100, 0),
     LED_STAGE(255, HAL_WS2812_GREEN, 50, 0),
-    LED_STAGE_OFF(50, 0),
+    LED_STAGE_OFF(100, 0),
 };
 LED_PATTERN(reversing_pattern, reversing_stages, 1);
 
