@@ -57,8 +57,8 @@ static const uint8_t *WIFI_IMG = (uint8_t *)Wifi_Icon_bits;
 
 #define BATTERY_WIDTH Battery_width
 #define BATTERY_HEIGHT Battery_height
-#define BATTERY_BOX_WIDTH BATTERY_WIDTH - 3
-#define BATTERY_BOX_HEIGHT BATTERY_HEIGHT - 2
+#define BATTERY_BOX_WIDTH (BATTERY_WIDTH - 3)
+#define BATTERY_BOX_HEIGHT (BATTERY_HEIGHT - 2)
 
 static const uint8_t *BATTERY_IMG = (uint8_t *)Battery_bits;
 
