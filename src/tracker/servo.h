@@ -30,4 +30,5 @@ uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_ro
 uint16_t servo_ease_cal(ease_config_t *ease_config, servo_status_t *status);
 uint16_t servo_get_degree(servo_status_t *status);
 uint32_t servo_get_pulsewidth(servo_status_t *status);
+uint32_t servo_get_easing_sleep(servo_status_t *status);
 uint8_t servo_get_per_pulsewidth(servo_status_t *status);

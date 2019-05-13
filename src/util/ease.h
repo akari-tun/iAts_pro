@@ -10,7 +10,9 @@ typedef enum ease_out {
 
 typedef struct ease_config_s
 {
-    uint16_t steps;
+    uint16_t max_steps;
+	uint16_t max_ms;
+	uint16_t min_ms;
     uint16_t min_pulsewidth;
     ease_out_t ease_out;
 } ease_config_t;

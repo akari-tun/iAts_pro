@@ -39,6 +39,8 @@ typedef struct servo_pwmc_status_s
     uint32_t last_pulsewidth;
 
     uint16_t step_positon;
+    uint16_t step_to;
+    uint32_t step_sleep_ms;
     bool is_easing;
     bool is_reverse;
 

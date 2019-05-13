@@ -35,7 +35,7 @@ void servo_pwm_configuration(servo_pwmc_status_t *status, hal_gpio_t gpio)
     status->currtent_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
     status->last_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
 
-    status->step_positon = DEFAULT_EASE_STEPS;
+    status->step_positon = DEFAULT_EASE_MAX_STEPS;
     status->is_easing = false;
     status->is_reverse = false;
 

@@ -99,12 +99,6 @@ static bool tracker_check_atp_cmd(tracker_t *t)
 
     time_millis_t now = time_millis_now(); 
 
-    // if (t->last_heartbeat + 30000 < now && t->internal.flag & TRACKER_FLAG_SERVER_CONNECTED)
-    // {
-    //     t->internal.status_changed(t, TRACKER_STATUS_SERVER_CONNECTING);
-    //     return false;
-    // }
-
     if (!(t->internal.flag & TRACKER_FLAG_SERVER_CONNECTED))
     {
         
@@ -141,7 +135,9 @@ static bool tracker_check_atp_cmd(tracker_t *t)
 void tracker_init(tracker_t *t)
 {
     ease_config_t e_cfg = {
-        .steps = DEFAULT_EASE_STEPS,
+        .max_steps = DEFAULT_EASE_MAX_STEPS,
+        .max_ms = DEFAULT_EASE_MAX_MS,
+	    .min_ms = DEFAULT_EASE_MIN_MS,
         .min_pulsewidth = DEFAULT_EASE_MIN_PULSEWIDTH,
         .ease_out = DEFAULT_EASE_OUT,
     };
@@ -162,13 +158,6 @@ void tracker_init(tracker_t *t)
     t->atp->tracker = t;
     t->atp->tag_value_changed = t->internal.telemetry_changed;
     
-    // atp.flag_change = tracker_flag_changed;
-    // atp.telemetry_val_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
-    // telemetry_vals_observer.Obj = t;
-    // telemetry_vals_observer.Name = "Telemetry values observer";
-    // telemetry_vals_observer.Update = telemetry_vals_updated;
-    // atp.telemetry_val_notifier->mSubject.Attach(atp.telemetry_val_notifier, &telemetry_vals_observer);
-
     servo_init(&servo);
     atp_init(&atp);
 }
@@ -177,7 +166,10 @@ void task_tracker(void *arg)
 {
     tracker_t *t = arg;
 
-    time_ticks_t sleep;
+    // time_ticks_t sleep;
+    time_millis_t now;
+    time_millis_t pan_tick = 0;
+    time_millis_t tilt_tick = 0;
 
     // servo_pulsewidth_out(&servo.internal.pan, servo.internal.pan.config.max_pulsewidth);
     // servo_pulsewidth_out(&servo.internal.tilt, servo.internal.pan.config.max_pulsewidth);
@@ -190,33 +182,68 @@ void task_tracker(void *arg)
 
     while (1)
     {
+        now = time_millis_now();
+
         if (t->internal.mode == TRACKER_MODE_AUTO)
         {
             if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
             {
                 //pan
-                if (TIME_CYCLE_EVERY_MS(150, 2) == 0)
+                if (now > pan_tick)
                 {
-                    float tracker_lat = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
-                    float tracker_lon = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
-                    float plane_lat = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
-                    float plane_lon = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
+                    if (servo.internal.pan.is_easing)
+                    {
+                        pan_tick = now + servo_get_easing_sleep(&servo.internal.pan);
+                        servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
+                    }
+                    else
+                    {
+                        float tracker_lat = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+                        float tracker_lon = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+                        float plane_lat = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
+                        float plane_lon = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
 
-                    distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
-                    // printf("tracker_lat:%f | tracker_lon:%f | plane_lat:%f | plane_lon:%f | distance:%d\n", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
-                    servo.internal.pan.currtent_degree = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon);
-                    servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
+                        distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
+
+                        LOG_D(TAG, "t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d\n", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
+
+                        uint16_t course_deg = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon);
+
+                        if (course_deg != servo.internal.pan.currtent_degree)
+                        {
+                            servo.internal.pan.currtent_degree = course_deg;
+                            servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
+                        }
+
+                        pan_tick = now + (servo.internal.pan.is_easing ? servo_get_easing_sleep(&servo.internal.pan) : 100);
+                    }
                 }
 
                 //tilt
-                if (TIME_CYCLE_EVERY_MS(200, 2) == 0)
+                if (now > tilt_tick)
                 {
-                    int32_t tracker_alt = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE));
-                    int32_t plane_alt = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE));
+                    if (servo.internal.tilt.is_easing)
+                    {
+                        tilt_tick = now + servo_get_easing_sleep(&servo.internal.tilt);
+                        servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
+                    }
+                    else
+                    {
+                        int32_t tracker_alt = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE));
+                        int32_t plane_alt = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE));
 
-                    // printf("tracker_alt:%d | plane_alt:%d | distance:%d\n", tracker_alt, plane_alt, distance);
-                    servo.internal.tilt.currtent_degree = tilt_to(distance, tracker_alt, plane_alt);
-                    servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
+                        LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d\n", tracker_alt, plane_alt, distance);
+
+                        uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
+
+                        if (tilt_deg != servo.internal.tilt.currtent_degree)
+                        {
+                            servo.internal.tilt.currtent_degree = tilt_deg;
+                            servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
+                        }
+
+                        tilt_tick = now + (servo.internal.tilt.is_easing ? servo_get_easing_sleep(&servo.internal.tilt) : 100);
+                    }
                 }
 
                 servo_reverse_check(&servo);
@@ -227,19 +254,19 @@ void task_tracker(void *arg)
             servo_update(&servo);
         }
 
-        if (servo.internal.tilt.is_easing || servo.internal.pan.is_easing)
-        {
-            sleep = MILLIS_TO_TICKS(10);
-            servo_update(&servo);
-        }
-        else
-        {
-            sleep = MILLIS_TO_TICKS(50);
-        }
+        // if (servo.internal.tilt.is_easing || servo.internal.pan.is_easing)
+        // {
+        //     sleep = MILLIS_TO_TICKS(10);
+        //     servo_update(&servo);
+        // }
+        // else
+        // {
+        //     sleep = MILLIS_TO_TICKS(100);
+        // }
 
         if (!tracker_check_atp_cmd(t))
         {
-            vTaskDelay(sleep);
+            vTaskDelay(MILLIS_TO_TICKS(1));
         }
     }
 }
