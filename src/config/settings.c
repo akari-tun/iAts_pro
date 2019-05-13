@@ -36,7 +36,11 @@ typedef enum
 #define NO_VALUE {0}
 #define BOOL(v) {.u8 = (v ? 1 : 0)}
 #define U8(v) {.u8 = v}
+#define I8(v) {.i8 = v}
 #define U16(v) {.u16 = v}
+#define I16(v) {.i16 = v}
+#define U32(v) {.u32 = v}
+#define I32(v) {.i32 = v}
 // clang-format on
 
 static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
@@ -56,6 +60,16 @@ static const char *off_on_table[] = {"Off", "On"};
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = SETTING_FLAG_READONLY, .folder = p, .data = v }
 #define U8_SETTING(k, n, f, p, mi, ma, def) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f, .folder = p, .min = U8(mi), .max = U8(ma), .def_val = U8(def) }
+#define I8_SETTING(k, n, f, p, mi, ma, def) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I8, .flags = f, .folder = p, .min = I8(mi), .max = I8(ma), .def_val = I8(def) }
+#define U16_SETTING(k, n, f, p, mi, ma, def) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U16, .flags = f, .folder = p, .min = U16(mi), .max = U16(ma), .def_val = U16(def) }
+#define I16_SETTING(k, n, f, p, mi, ma, def) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I16, .flags = f, .folder = p, .min = I16(mi), .max = I16(ma), .def_val = I16(def) }
+#define U32_SETTING(k, n, f, p, mi, ma, def) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U32, .flags = f, .folder = p, .min = U32(mi), .max = U32(ma), .def_val = U32(def) }
+#define I32_SETTING(k, n, f, p, mi, ma, def) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I32, .flags = f, .folder = p, .min = I32(mi), .max = I32(ma), .def_val = I32(def) }
 #define U8_MAP_SETTING_UNIT(k, n, f, p, m, u, def) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f | SETTING_FLAG_NAME_MAP, .val_names = m, .unit = u, .folder = p, .min = U8(0), .max = U8(ARRAY_COUNT(m) - 1), .def_val = U8(def) }
 #define U8_MAP_SETTING(k, n, f, p, m, def) U8_MAP_SETTING_UNIT(k, n, f, p, m, NULL, def)
@@ -86,6 +100,12 @@ static const setting_t settings[] = {
     STRING_SETTING(SETTING_KEY_WIFI_SSID, "SSID", FOLDER_ID_WIFI),
     STRING_SETTING(SETTING_KEY_WIFI_PWD, "PWD", FOLDER_ID_WIFI),
     BOOL_SETTING(SETTING_KEY_WIFI_SMART_CONFIG, "Smart Config", SETTING_FLAG_EPHEMERAL, FOLDER_ID_WIFI, false),
+    FOLDER(SETTING_KEY_SERVO, "SERVO", FOLDER_ID_SERVO, FOLDER_ID_ROOT, NULL),
+    U16_SETTING(SETTING_KEY_SERVO_COURSE, "Course", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 359, 0),
+    U16_SETTING(SETTING_KEY_SERVO_MAX_PLUSEWIDTH, "Max pwm", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 3000, 2500),
+    U16_SETTING(SETTING_KEY_SERVO_MIN_PLUSEWIDTH, "Min pwm", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 3000, 500),
+    U16_SETTING(SETTING_KEY_SERVO_MAX_DEGREE, "Max deg", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 180),
+    U16_SETTING(SETTING_KEY_SERVO_MIN_DEGREE, "Min deg", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 0),
 };
 
 _Static_assert(SETTING_COUNT == ARRAY_COUNT(settings), "SETTING_COUNT != ARRAY_COUNT(settings)");
@@ -142,23 +162,21 @@ static void setting_save(const setting_t *setting)
     case SETTING_TYPE_U8:
         storage_set_u8(&storage, setting->key, setting_get_val_ptr(setting)->u8);
         break;
-        /*
     case SETTING_TYPE_I8:
-        storage_set_i8(&storage, setting->key, setting->val.i8);
+        storage_set_i8(&storage, setting->key, setting_get_val_ptr(setting)->i8);
         break;
     case SETTING_TYPE_U16:
-        storage_set_u16(&storage, setting->key, setting->val.u16);
+        storage_set_u16(&storage, setting->key, setting_get_val_ptr(setting)->u16);
         break;
     case SETTING_TYPE_I16:
-        storage_set_i16(&storage, setting->key, setting->val.i16);
+        storage_set_i16(&storage, setting->key, setting_get_val_ptr(setting)->i16);
         break;
     case SETTING_TYPE_U32:
-        storage_set_u32(&storage, setting->key, setting->val.u32);
+        storage_set_u32(&storage, setting->key, setting_get_val_ptr(setting)->u32);
         break;
     case SETTING_TYPE_I32:
-        storage_set_i32(&storage, setting->key, setting->val.i32);
+        storage_set_i32(&storage, setting->key, setting_get_val_ptr(setting)->i32);
         break;
-        */
     case SETTING_TYPE_STRING:
         storage_set_str(&storage, setting->key, setting_get_str_ptr(setting));
         break;
@@ -254,23 +272,21 @@ void settings_init(void)
         case SETTING_TYPE_U8:
             found = storage_get_u8(&storage, setting->key, &setting_get_val_ptr(setting)->u8);
             break;
-            /*
         case SETTING_TYPE_I8:
-            found = storage_get_i8(&storage, setting->key, &setting->val.i8);
+            found = storage_get_i8(&storage, setting->key, &setting_get_val_ptr(setting)->i8);
             break;
         case SETTING_TYPE_U16:
-            found = storage_get_u16(&storage, setting->key, &setting->val.u16);
+            found = storage_get_u16(&storage, setting->key, &setting_get_val_ptr(setting)->u16);
             break;
         case SETTING_TYPE_I16:
-            found = storage_get_i16(&storage, setting->key, &setting->val.i16);
+            found = storage_get_i16(&storage, setting->key, &setting_get_val_ptr(setting)->i16);
             break;
         case SETTING_TYPE_U32:
-            found = storage_get_u32(&storage, setting->key, &setting->val.u32);
+            found = storage_get_u32(&storage, setting->key, &setting_get_val_ptr(setting)->u32);
             break;
         case SETTING_TYPE_I32:
-            found = storage_get_i32(&storage, setting->key, &setting->val.i32);
+            found = storage_get_i32(&storage, setting->key, &setting_get_val_ptr(setting)->i32);
             break;
-            */
         case SETTING_TYPE_STRING:
             assert(string_storage_index < ARRAY_COUNT(settings_string_storage));
             setting_get_val_ptr(setting)->u8 = string_storage_index++;
@@ -336,6 +352,31 @@ const setting_t *settings_get_key(const char *key)
 uint8_t settings_get_key_u8(const char *key)
 {
     return setting_get_u8(settings_get_key(key));
+}
+
+int8_t settings_get_key_i8(const char *key)
+{
+    return setting_get_i8(settings_get_key(key));
+}
+
+uint16_t settings_get_key_u16(const char *key)
+{
+    return setting_get_u16(settings_get_key(key));
+}
+
+int16_t settings_get_key_i16(const char *key)
+{
+    return setting_get_i16(settings_get_key(key));
+}
+
+uint32_t settings_get_key_u32(const char *key)
+{
+    return setting_get_u32(settings_get_key(key));
+}
+
+int32_t settings_get_key_i32(const char *key)
+{
+    return setting_get_i32(settings_get_key(key));
 }
 
 hal_gpio_t settings_get_key_gpio(const char *key)
@@ -435,6 +476,16 @@ int32_t setting_get_min(const setting_t *setting)
     {
     case SETTING_TYPE_U8:
         return setting->min.u8;
+    case SETTING_TYPE_I8:
+        return setting->min.i8;
+    case SETTING_TYPE_U16:
+        return setting->min.u16;
+    case SETTING_TYPE_I16:
+        return setting->min.i16;
+    case SETTING_TYPE_U32:
+        return setting->min.u32;
+    case SETTING_TYPE_I32:
+        return setting->min.i32;
     case SETTING_TYPE_STRING:
         break;
     case SETTING_TYPE_FOLDER:
@@ -449,6 +500,16 @@ int32_t setting_get_max(const setting_t *setting)
     {
     case SETTING_TYPE_U8:
         return setting->max.u8;
+    case SETTING_TYPE_I8:
+        return setting->max.i8;
+    case SETTING_TYPE_U16:
+        return setting->max.u16;
+    case SETTING_TYPE_I16:
+        return setting->max.i16;
+    case SETTING_TYPE_U32:
+        return setting->max.u32;
+    case SETTING_TYPE_I32:
+        return setting->max.i32;
     case SETTING_TYPE_STRING:
         break;
     case SETTING_TYPE_FOLDER:
@@ -463,6 +524,16 @@ int32_t setting_get_default(const setting_t *setting)
     {
     case SETTING_TYPE_U8:
         return setting->def_val.u8;
+    case SETTING_TYPE_I8:
+        return setting->def_val.i8;
+    case SETTING_TYPE_U16:
+        return setting->def_val.u16;
+    case SETTING_TYPE_I16:
+        return setting->def_val.i16;
+    case SETTING_TYPE_U32:
+        return setting->def_val.u32;
+    case SETTING_TYPE_I32:
+        return setting->def_val.i32;
     case SETTING_TYPE_STRING:
         break;
     case SETTING_TYPE_FOLDER:
@@ -535,6 +606,101 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
     if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->u8 != v)
     {
         setting_get_val_ptr(setting)->u8 = v;
+        setting_changed(setting);
+    }
+}
+
+int8_t setting_get_i8(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_I8);
+    return setting_get_val_ptr(setting)->i8;
+}
+
+void setting_set_i8(const setting_t *setting, int8_t v)
+{
+    assert(setting->type == SETTING_TYPE_I8);
+
+    v = MIN(v, setting->max.i8);
+    v = MAX(v, setting->min.i8);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->i8 != v)
+    {
+        setting_get_val_ptr(setting)->i8 = v;
+        setting_changed(setting);
+    }
+}
+
+uint16_t setting_get_u16(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_U16);
+    return setting_get_val_ptr(setting)->u16;
+}
+
+void setting_set_u16(const setting_t *setting, uint16_t v)
+{
+    assert(setting->type == SETTING_TYPE_U16);
+
+    v = MIN(v, setting->max.u16);
+    v = MAX(v, setting->min.u16);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->u16 != v)
+    {
+        setting_get_val_ptr(setting)->u16 = v;
+        setting_changed(setting);
+    }
+}
+
+int16_t setting_get_i16(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_I16);
+    return setting_get_val_ptr(setting)->i16;
+}
+
+void setting_set_i16(const setting_t *setting, int16_t v)
+{
+    assert(setting->type == SETTING_TYPE_I16);
+
+    v = MIN(v, setting->max.i16);
+    v = MAX(v, setting->min.i16);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->i16 != v)
+    {
+        setting_get_val_ptr(setting)->i16 = v;
+        setting_changed(setting);
+    }
+}
+
+uint32_t setting_get_u32(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_U32);
+    return setting_get_val_ptr(setting)->u32;
+}
+
+void setting_set_u32(const setting_t *setting, uint32_t v)
+{
+    assert(setting->type == SETTING_TYPE_I32);
+
+    v = MIN(v, setting->max.u32);
+    v = MAX(v, setting->min.u32);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->u32 != v)
+    {
+        setting_get_val_ptr(setting)->u32 = v;
+        setting_changed(setting);
+    }
+}
+
+int32_t setting_get_i32(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_I32);
+    return setting_get_val_ptr(setting)->i32;
+}
+
+void setting_set_i32(const setting_t *setting, int32_t v)
+{
+    assert(setting->type == SETTING_TYPE_I32);
+
+    v = MIN(v, setting->max.i32);
+    v = MAX(v, setting->min.i32);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_val_ptr(setting)->i32 != v)
+    {
+        setting_get_val_ptr(setting)->i32 = v;
         setting_changed(setting);
     }
 }
@@ -652,23 +818,21 @@ void setting_format_value(char *buf, size_t size, const setting_t *setting)
         case SETTING_TYPE_U8:
             snprintf(buf, size, "%u", setting_get_u8(setting));
             break;
-            /*
         case SETTING_TYPE_I8:
-            snprintf(buf, size, "%d", setting->val.i8);
+            snprintf(buf, size, "%d", setting_get_i8(setting));
             break;
         case SETTING_TYPE_U16:
-            snprintf(buf, size, "%u", setting->val.u16);
+            snprintf(buf, size, "%u", setting_get_u16(setting));
             break;
         case SETTING_TYPE_I16:
-            snprintf(buf, size, "%d", setting->val.i16);
+            snprintf(buf, size, "%d", setting_get_i16(setting));
             break;
         case SETTING_TYPE_U32:
-            snprintf(buf, size, "%u", setting->val.u32);
+            snprintf(buf, size, "%u", setting_get_u32(setting));
             break;
         case SETTING_TYPE_I32:
-            snprintf(buf, size, "%d", setting->val.i32);
+            snprintf(buf, size, "%d", setting_get_i32(setting));
             break;
-            */
         case SETTING_TYPE_STRING:
         {
             const char *value = setting_get_str_ptr(setting);

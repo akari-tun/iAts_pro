@@ -9,14 +9,22 @@
 #define SETTING_STATIC_COUNT 1
 
 #define SETTING_WIFI_FOLDER_COUNT 4
+#define SETTING_SERVO_FOLDER_COUNT 6
 
-#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_WIFI_FOLDER_COUNT)
+#define SETTING_COUNT (SETTING_STATIC_COUNT + SETTING_WIFI_FOLDER_COUNT + SETTING_SERVO_FOLDER_COUNT)
 
 #define SETTING_KEY_WIFI "wifi"
 #define SETTING_KEY_WIFI_PREFIX SETTING_KEY_WIFI "."
 #define SETTING_KEY_WIFI_SSID SETTING_KEY_WIFI_PREFIX "ssid"
 #define SETTING_KEY_WIFI_PWD SETTING_KEY_WIFI_PREFIX "pwd"
 #define SETTING_KEY_WIFI_SMART_CONFIG SETTING_KEY_WIFI_PREFIX "sc"
+#define SETTING_KEY_SERVO "servo"
+#define SETTING_KEY_SERVO_PREFIX SETTING_KEY_SERVO "."
+#define SETTING_KEY_SERVO_COURSE SETTING_KEY_SERVO_PREFIX "course"
+#define SETTING_KEY_SERVO_MAX_PLUSEWIDTH SETTING_KEY_SERVO_PREFIX "max pwm"
+#define SETTING_KEY_SERVO_MIN_PLUSEWIDTH SETTING_KEY_SERVO_PREFIX "min pwm"
+#define SETTING_KEY_SERVO_MAX_DEGREE SETTING_KEY_SERVO_PREFIX "max deg"
+#define SETTING_KEY_SERVO_MIN_DEGREE SETTING_KEY_SERVO_PREFIX "min deg"
 
 #define SETTING_IS(setting, k) STR_EQUAL(setting->key, k)
 
@@ -24,8 +32,8 @@ typedef enum
 {
     FOLDER_ID_ROOT = 1,
     FOLDER_ID_WIFI,
+    FOLDER_ID_SERVO,
 } folder_id_e;
-
 
 typedef enum
 {
@@ -47,14 +55,11 @@ typedef enum
 typedef enum
 {
     SETTING_TYPE_U8 = 0,
-
-    /* Unused, reserved
     SETTING_TYPE_I8,
     SETTING_TYPE_U16,
     SETTING_TYPE_I16,
     SETTING_TYPE_U32,
     SETTING_TYPE_I32,
-    */
     SETTING_TYPE_STRING = 6,
     SETTING_TYPE_FOLDER = 7,
 } setting_type_e;
@@ -66,10 +71,16 @@ typedef enum
     SETTING_FLAG_READONLY = 1 << 2,
     SETTING_FLAG_CMD = 1 << 3,
     SETTING_FLAG_DYNAMIC = 1 << 4,
+    SETTING_FLAG_VALUE = 1 << 5,
 } setting_flag_e;
 
 typedef union {
     uint8_t u8;
+    int8_t i8;
+    uint16_t u16;
+    int16_t i16;
+    uint32_t u32;
+    int32_t i32;
 } setting_value_t;
 
 typedef struct setting_s
@@ -112,6 +123,11 @@ int settings_get_count(void);
 const setting_t *settings_get_setting_at(int idx);
 const setting_t *settings_get_key(const char *key);
 uint8_t settings_get_key_u8(const char *key);
+int8_t settings_get_key_i8(const char *key);
+uint16_t settings_get_key_u16(const char *key);
+int16_t settings_get_key_i16(const char *key);
+uint32_t settings_get_key_u32(const char *key);
+int32_t settings_get_key_i32(const char *key);
 hal_gpio_t settings_get_key_gpio(const char *key);
 bool settings_get_key_bool(const char *key);
 const char *settings_get_key_string(const char *key);
@@ -126,7 +142,17 @@ int32_t setting_get_min(const setting_t *setting);
 int32_t setting_get_max(const setting_t *setting);
 int32_t setting_get_default(const setting_t *setting);
 uint8_t setting_get_u8(const setting_t *setting);
+int8_t setting_get_i8(const setting_t *setting);
+uint16_t setting_get_u16(const setting_t *setting);
+int16_t setting_get_i16(const setting_t *setting);
+uint32_t setting_get_u32(const setting_t *setting);
+int32_t setting_get_i32(const setting_t *setting);
 void setting_set_u8(const setting_t *setting, uint8_t v);
+void setting_set_i8(const setting_t *setting, int8_t v);
+void setting_set_u16(const setting_t *setting, uint16_t v);
+void setting_set_i16(const setting_t *setting, int16_t v);
+void setting_set_u32(const setting_t *setting, uint32_t v);
+void setting_set_i32(const setting_t *setting, int32_t v);
 hal_gpio_t setting_get_gpio(const setting_t *setting);
 bool setting_get_bool(const setting_t *setting);
 void setting_set_bool(const setting_t *setting, bool v);
