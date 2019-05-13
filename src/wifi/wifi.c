@@ -18,41 +18,18 @@
 #include "wifi.h"
 #include "udp.h"
 #include "config/settings.h"
+#include "tracker/observer.h"
+
 
 static const char *TAG = "Wifi";
 
-/* FreeRTOS event group to signal when we are connected & ready to make a request */
-// static EventGroupHandle_t wifi_event_group;
 //Allocate 512 bytes buffer for received
 static volatile char buffer_received[BUFFER_LENGHT];
-static volatile char buffer_send[BUFFER_LENGHT];
+//static volatile char buffer_send[BUFFER_LENGHT];
 
-
-static void task_connect(void *arg)
+static void wifi_send(void *buffer, int len)
 {
-    wifi_t *wifi = arg;
-    ESP_ERROR_CHECK(wifi_create_udp_client());
-
-    char *index = strrchr(wifi->ip, CHAR_DOT);
-    char *broadcast_addr;
-    broadcast_addr = (char*)malloc(index - wifi->ip + 3);
-    strncpy(broadcast_addr, wifi->ip, index - wifi->ip + 1);
-    strcat(broadcast_addr, "255");
-
-    LOG_I(TAG, "Broadcast Address: %s", broadcast_addr);
-    wifi_udp_set_server_ip(broadcast_addr);
-
-    free(broadcast_addr);
-    int len = 0;
-    char sendBuff[128] = "I want connect to you.";
-
-    while (wifi->status == WIFI_STATUS_CONNECTED && wifi->status != WIFI_STATUS_UDP_CONNECTED)
-    {    
-        len = wifi_udp_send(sendBuff, strlen(sendBuff));
-        vTaskDelay(MILLIS_TO_TICKS(5000));
-    }
-    
-    vTaskDelete(NULL);
+    wifi_udp_send(buffer, len);
 }
 
 static void task_receive(void *arg)
@@ -61,7 +38,16 @@ static void task_receive(void *arg)
 
     wifi_t *wifi = arg;
     ESP_ERROR_CHECK(wifi_create_udp_server());
-    char *buffer;
+    ESP_ERROR_CHECK(wifi_create_udp_client());
+
+    ip4_addr_t broadcast_addr = {
+        .addr = (u32_t)(wifi->ip | 0xff000000)
+    };
+
+    LOG_I(TAG, "Broadcast Address: %s", ip4addr_ntoa(&broadcast_addr));
+    wifi_udp_set_server_ip(&broadcast_addr.addr);
+
+    char *buffer = (char *)&buffer_received;
     buffer = (char*)malloc(BUFFER_LENGHT);
     int len = 0;
     wifi->reciving = true;
@@ -69,7 +55,14 @@ static void task_receive(void *arg)
     while (wifi->status == WIFI_STATUS_CONNECTED || wifi->status == WIFI_STATUS_UDP_CONNECTED)
     {    
         len = wifi_udp_receive(buffer, BUFFER_LENGHT);
-        vTaskDelay(MILLIS_TO_TICKS(10));
+        if (len > 0)
+        {
+            wifi->callback(buffer, 0, len);
+        }
+        else
+        {
+            vTaskDelay(MILLIS_TO_TICKS(10));
+        }
     }
 
     wifi->reciving = false;
@@ -107,7 +100,6 @@ static void sc_callback(smartconfig_status_t status, void *pdata)
             break;
         case SC_STATUS_LINK_OVER:
             LOG_I(TAG, "SC_STATUS_LINK_OVER");
-            // xEventGroupSetBits(wifi_event_group, SMART_CONFIG_DONE_BIT);
             LOG_I(TAG, "Smartconfig stop");
             ESP_ERROR_CHECK(esp_smartconfig_stop());
             break;
@@ -132,7 +124,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         //If wifi never configuration, use smartconfig to configuration wifi.
         if (strlen(ssid) == 0 || strlen(password) == 0) 
         {
-            wifi->status = WIFI_STATUS_SMARTCONFIG;
+            wifi->status_change(wifi, WIFI_STATUS_SMARTCONFIG);
         }
 
         if (wifi->status == WIFI_STATUS_NONE)
@@ -157,7 +149,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
             ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
             ESP_ERROR_CHECK(esp_wifi_connect());
-            wifi->status = WIFI_STATUS_CONNECTING;
+            wifi->status_change(wifi, WIFI_STATUS_CONNECTING);
         }
         else if (wifi->status == WIFI_STATUS_SMARTCONFIG)
         {
@@ -167,12 +159,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         }
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
-        wifi->ip = ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip);
+        wifi->ip = event->event_info.got_ip.ip_info.ip.addr;
         wifi_config_t cfg;
         ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &cfg));
         memcpy(wifi->config, &cfg, sizeof(wifi_config_t));
-        LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, wifi->ip);
-        wifi->status = WIFI_STATUS_CONNECTED;
+        LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+        wifi->status_change(wifi, WIFI_STATUS_CONNECTED);
         xTaskCreatePinnedToCore(task_receive, "RECEIVE", 4096, wifi, 1, NULL, xPortGetCoreID());
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -184,7 +176,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         else
         {
             ESP_ERROR_CHECK(esp_wifi_connect());
-            wifi->status = WIFI_STATUS_DISCONNECTED;    
+            wifi->status_change(wifi, WIFI_STATUS_DISCONNECTED);
         }
         break;
     case SYSTEM_EVENT_STA_STOP:
@@ -197,6 +189,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
+static void wifi_status_change(void *w, uint8_t status)
+{
+    wifi_t *wifi = (wifi_t*)w;
+    
+    LOG_I(TAG, "WIFI_STATUS_CHANGE -> %d", status);
+    wifi->status = status;
+    wifi->status_change_notifier->mSubject.Notify(wifi->status_change_notifier, &wifi->status);
+}
+
 void wifi_init(wifi_t *wifi)
 {
     // Initialize NVS
@@ -207,10 +208,13 @@ void wifi_init(wifi_t *wifi)
     }
     ESP_ERROR_CHECK(ret);
 
-    wifi->status = WIFI_STATUS_NONE;
+    wifi->status_change = wifi_status_change;
     wifi->config = (wifi_config_t*)malloc(sizeof(wifi_config_t));
-    wifi->buffer_send = (char *)&buffer_send;
     wifi->buffer_received = (char *)&buffer_received;
+    wifi->send = wifi_send;
+    wifi->status_change_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
+
+    wifi->status_change(wifi, WIFI_STATUS_NONE);
 
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, wifi));
