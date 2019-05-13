@@ -11,14 +11,14 @@
 #define TP_PACKET_LEAD							0x24      //引导码 $
 #define TP_PACKET_START							0x54      //协议头 T
 
-#define TAG_COUNT								37        //TAG数量，定义了新的TAG需要增加这个值
+#define TAG_COUNT TAG_BASE_COUNT + TAG_PLANE_COUNT + TAG_TRACKER_COUNT + TAG_PARAM_COUNT   //TAG数量，定义了新的TAG需要增加这个值
 #define TAG_BASE_COUNT                          3         //基础Tag数量
 #define TAG_PLANE_COUNT                         10        //Plane tags count
-#define TAG_HOME_COUNT                          8         //Home tags count
+#define TAG_TRACKER_COUNT                       13        //Tarcker tags count
 #define TAG_PARAM_COUNT                         11        //Parameter tags count
 
 #define TAG_PLANE_MASK                          0x10      //Plane tags mask
-#define TAG_HOME_MASK                           0x40      //Home tags mask
+#define TAG_TRACKER_MASK                        0x40      //Tarcker tags mask
 #define TAG_PARAM_MASK                          0x70      //Parameter tags mask
 
 //-----------------基础协议---------------------------------------------------
@@ -37,14 +37,19 @@
 #define TAG_PLANE_ROLL							0x18      //横滚角度 L:2
 #define TAG_PLANE_HEADING						0x19      //飞机方向 L:2
 //-----------------家的数据---------------------------------------------------
-#define TAG_HOME_LONGITUDE						0x40      //家的经度 L:4
-#define TAG_HOME_LATITUDE						0x41      //家的纬度 L:4
-#define TAG_HOME_ALTITUDE						0x42      //家的高度 L:4
-#define TAG_HOME_HEADING						0x43      //家的朝向 L:2
-#define TAG_HOME_PITCH  						0x44      //家的俯仰 L:1
-#define TAG_HOME_VOLTAGE						0x45      //家的电压 L:2
-#define TAG_HOME_MODE							0x46      //家的模式 L:1
-#define TAG_HOME_DECLINATION					0x47      //磁偏角 L:1
+#define TAG_TRACKER_LONGITUDE					0x40      //家的经度 L:4
+#define TAG_TRACKER_LATITUDE					0x41      //家的纬度 L:4
+#define TAG_TRACKER_ALTITUDE					0x42      //家的高度 L:4
+#define TAG_TRACKER_HEADING						0x43      //家的朝向 L:2
+#define TAG_TRACKER_PITCH  						0x44      //家的俯仰 L:1
+#define TAG_TRACKER_VOLTAGE						0x45      //家的电压 L:2
+#define TAG_TRACKER_MODE						0x46      //家的模式 L:1
+#define TAG_TRACKER_DECLINATION					0x47      //磁偏角 L:1
+#define TAG_TRACKER_T_IP                        0x48      //Tarcker IP L:4
+#define TAG_TRACKER_T_PORT                      0x49      //Tarcker Port L:2
+#define TAG_TRACKER_S_IP                        0x4A      //SERVER IP L:4
+#define TAG_TRACKER_S_PORT                      0x4B      //SERVER PORT :2
+#define TAG_TRACKER_FLAG                        0x4C      //标志位 L:1
 //-----------------配置参数---------------------------------------------------
 #define TAG_PARAM_PID_P							0x70      //PID_P L:2
 #define TAG_PARAM_PID_I							0x71      //PID_I L:2
@@ -80,7 +85,8 @@
 #define TAG_STRING_MAX_SIZE 20
 #define ATP_ASSERT_TYPE(id, typ) assert(telemetry_get_type(id) == typ)
 
-typedef struct tracker_s tracker_t;
+// typedef struct tracker_s tracker_t;
+typedef struct _Notifier notifier_t;
 
 typedef enum
 {
@@ -114,13 +120,34 @@ typedef struct atp_frame_s
     uint8_t atp_cmd;
     uint8_t atp_index;
     uint8_t atp_tag_len;
-    uint8_t atp_tag_index;
-    uint8_t *atp_tags;
     uint8_t atp_crc;
+    uint8_t buffer_index;
+    uint8_t *buffer;
 } atp_frame_t;
 
-void atp_init(tracker_t *t);
+typedef void (*pTr_atp_decode)(void *buffer, int offset, int len);
+typedef void (*pTr_atp_send)(void *buffer, int len);
+typedef void (*pTr_tag_value_changed)(void *t, uint8_t tag);
+
+typedef struct atp_s
+{
+    pTr_atp_decode atp_decode;
+    pTr_atp_send atp_send;
+    pTr_tag_value_changed tag_value_changed;
+    void *tracker;
+
+    atp_frame_t *dec_frame;
+    atp_frame_t *enc_frame;
+    telemetry_t *plane_vals;
+    telemetry_t *tracker_vals;
+    telemetry_t *param_vals;
+
+    notifier_t *telemetry_val_notifier;
+} atp_t;
+
+void atp_init(atp_t *t);
 uint8_t atp_get_tag_index(uint8_t tag);
+uint8_t *atp_frame_encode(void *data);
 telemetry_t *atp_get_tag_val(uint8_t tag);
 
 #define ATP_SET_U8(tag, v, now) telemetry_set_u8(atp_get_tag_val(tag), v, now);
