@@ -19,10 +19,13 @@
 #include "screen.h"
 #include "tracker/tracker.h"
 #include "wifi/wifi.h"
+#include "config/settings.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
 #define ANIMATION_FRAME_DURATION_MS 500
 #define ANIMATION_TOTAL_DURATION_MS (ANIMATION_REPEAT * ANIMATION_COUNT * ANIMATION_FRAME_DURATION_MS)
+
+static const char *TAG = "Servo";
 
 typedef enum
 {
@@ -239,14 +242,29 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         }
         break;
     case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+        if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
+        {
+            const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
+            servo_config_t *config = &screen->internal.tracker->servo->internal.pan.config;
+            servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
+            uint16_t deg = (float)(servo_pan->currtent_pulsewidth - config->min_pulsewidth) / (float)(config->max_pulsewidth - config->min_pulsewidth) 
+                * config->max_degree;
+            screen->internal.tracker->servo->internal.course = deg;
+            setting_set_u16(setting_course, deg);
+
+            LOG_I(TAG, "Course degree set to %d", deg);
+
+            return true;
+        }
 
         if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG)
         {
             wifi_smartconfig_stop(screen->internal.wifi);
             screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
             wifi_start(screen->internal.wifi);
+            return true;
         }
-        return true;
+        break;
     }
 
     return false;
@@ -386,16 +404,40 @@ static void screen_draw_main(screen_t *s)
 
     char *buf = SCREEN_BUF(s);
 
-#ifdef USE_WIFI
-    // wifi icon
-    u8g2_DrawXBM(&u8g2, 0, 0, WIFI_ICON_WIDTH, WIFI_ICON_HEIGHT, WIFI_IMG);
-    u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-    // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
-    u8g2_DrawStr(&u8g2, WIFI_ICON_WIDTH + 2, 2, (char *)&s->internal.wifi->config->sta.ssid);
-    // u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-    // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
-    // u8g2_DrawStr(&u8g2, 0, per_h * 7, (char *)&s->internal.wifi->config->sta.password);
-#endif
+// #ifdef USE_WIFI
+//     // wifi icon
+//     u8g2_DrawXBM(&u8g2, 0, 0, WIFI_ICON_WIDTH, WIFI_ICON_HEIGHT, WIFI_IMG);
+//     u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+//     // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
+//     u8g2_DrawStr(&u8g2, WIFI_ICON_WIDTH + 2, 2, (char *)&s->internal.wifi->config->sta.ssid);
+//     // u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+//     // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
+//     // u8g2_DrawStr(&u8g2, 0, per_h * 7, (char *)&s->internal.wifi->config->sta.password);
+// #endif
+
+    uint8_t icon_index = 0;
+
+    if (s->internal.tracker->internal.flag & TRACKER_FLAG_WIFI_CONNECTED)
+    {
+        u8g2_DrawXBM(&u8g2, icon_index, 0, SMALL_WIFI_WIDTH, SMALL_WIFI_HEIGHT, SMALL_WIFI_ICON);
+        icon_index += SMALL_WIFI_WIDTH + 4;
+    }
+
+    if (s->internal.tracker->internal.flag & TRACKER_FLAG_HOMESETED)
+    {
+        u8g2_DrawXBM(&u8g2, icon_index, 0, HOME_WIDTH, HOME_HEIGHT, HOME_ICON);
+        icon_index += HOME_WIDTH + 4;
+    }
+
+    if (s->internal.tracker->internal.flag & TRACKER_FLAG_PLANESETED)
+    {
+        u8g2_DrawXBM(&u8g2, icon_index, 0, AIRPLANE_WIDTH, AIRPLANE_HEIGHT, AIRPLANE_ICON);
+        icon_index += AIRPLANE_WIDTH + 4;
+    }
+
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "C->%d", s->internal.tracker->servo->internal.course);
+    u8g2_DrawStr(&u8g2, icon_index, 0, buf);
 
 #ifdef USE_BATTERY_MEASUREMENT
     // battery icon
