@@ -22,6 +22,10 @@
 #include "Phone.xbm"
 #include "Tracker.xbm"
 
+#include "Home.xbm"
+#include "Airplane.xbm"
+#include "Small_Wifi.xbm"
+
 #define AF_LOGO_WIDTH 39
 #define AF_LOGO_HEIGHT 31
 #define AF_LOGO_ANIMATION_COUNT 9
@@ -72,3 +76,15 @@ static const uint8_t *PHONE_IMG = (uint8_t *)Phone_bits;
 #define TRACKER_WIDTH Tracker_width
 #define TRACKER_HEIGHT Tracker_height
 static const uint8_t *TRACKER_IMG = (uint8_t *)Tracker_bits;
+
+#define HOME_WIDTH Home_width
+#define HOME_HEIGHT Home_height
+static const uint8_t *HOME_ICON = (uint8_t *)Home_bits;
+
+#define SMALL_WIFI_WIDTH Small_Wifi_width
+#define SMALL_WIFI_HEIGHT Small_Wifi_height
+static const uint8_t *SMALL_WIFI_ICON = (uint8_t *)Small_Wifi_bits;
+
+#define AIRPLANE_WIDTH Airplane_width
+#define AIRPLANE_HEIGHT Airplane_height
+static const uint8_t *AIRPLANE_ICON = (uint8_t *)Airplane_bits;
