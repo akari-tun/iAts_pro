@@ -80,6 +80,12 @@ static const char *off_on_table[] = {"Off", "On"};
 
 #define SETTINGS_STORAGE_KEY "settings"
 
+static const char *servo_zero_degree_pwm_table[] = {
+    "Min Pwm",
+    "Max Pwm",
+};
+_Static_assert(ARRAY_COUNT(servo_zero_degree_pwm_table) == SERVO_ZERO_DEGREE_PWM_COUNT, "SERVO_ZERO_DEGREE_PWM_COUNT is invalid");
+
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
@@ -106,6 +112,8 @@ static const setting_t settings[] = {
     U16_SETTING(SETTING_KEY_SERVO_MIN_PLUSEWIDTH, "Min pwm", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 3000, 500),
     U16_SETTING(SETTING_KEY_SERVO_MAX_DEGREE, "Max deg", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 180),
     U16_SETTING(SETTING_KEY_SERVO_MIN_DEGREE, "Min deg", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 0),
+    U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH, "Pan zero", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
+    U8_MAP_SETTING(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH, "Tilt zerp", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
 };
 
 _Static_assert(SETTING_COUNT == ARRAY_COUNT(settings), "SETTING_COUNT != ARRAY_COUNT(settings)");

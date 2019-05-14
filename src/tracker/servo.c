@@ -14,7 +14,11 @@ void servo_init(servo_t *servo)
     servo->internal.reverse_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
 
     uint16_t course = settings_get_key_u16(SETTING_KEY_SERVO_COURSE);
+    uint8_t pan_zero = settings_get_key_u8(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH);
+    uint8_t tilt_zero = settings_get_key_u8(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH);
     servo->internal.course = course;
+    servo->internal.pan.config.zero_degree_pwm = pan_zero;
+    servo->internal.tilt.config.zero_degree_pwm = tilt_zero;
 }
 
 void servo_update(servo_t *servo)
@@ -74,17 +78,30 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
 uint16_t servo_pan_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse)
 {
     degree_of_rotation = degree_of_rotation % MAX_PAN_DEGREE;
+
+    uint16_t pwm_of_degree = ((config->max_pulsewidth - config->min_pulsewidth) * degree_of_rotation) / config->max_degree;
     // return (config->min_pulsewidth + (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
-    return (config->max_pulsewidth - (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
+    // return (config->max_pulsewidth - (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
+    return config->zero_degree_pwm > 0 ? (config->max_pulsewidth - pwm_of_degree) : (config->min_pulsewidth + pwm_of_degree);
 }
 
 uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_rotation, bool is_reverse)
 {
     uint16_t cal_pulsewidth;
     degree_of_rotation = degree_of_rotation == MAX_TILT_DEGREE ? MAX_TILT_DEGREE : degree_of_rotation % MAX_TILT_DEGREE;
-    cal_pulsewidth = (config->min_pulsewidth + (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
-    if (!is_reverse) {
-        cal_pulsewidth = config->max_pulsewidth - (cal_pulsewidth - config->min_pulsewidth);
+    // cal_pulsewidth = (config->min_pulsewidth + (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
+    // if (!is_reverse) {
+    //     cal_pulsewidth = config->max_pulsewidth - (cal_pulsewidth - config->min_pulsewidth);
+    // }
+    uint16_t pwm_of_degree = ((config->max_pulsewidth - config->min_pulsewidth) * degree_of_rotation) / config->max_degree;
+
+    if (config->zero_degree_pwm > 0)
+    {
+        cal_pulsewidth = is_reverse ? config->min_pulsewidth + pwm_of_degree : config->max_pulsewidth - pwm_of_degree;
+    }
+    else
+    {
+        cal_pulsewidth = is_reverse ? config->max_pulsewidth - pwm_of_degree : config->min_pulsewidth + pwm_of_degree;
     }
 
     return cal_pulsewidth;

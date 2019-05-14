@@ -44,6 +44,8 @@ typedef struct servo_pwmc_status_s
     bool is_easing;
     bool is_reverse;
 
+    uint8_t zero_degree_pwm;
+
     servo_pwmc_config_t config;
     uint16_t (*pTr_pulsewidth_cal)(servo_pwmc_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
 } servo_pwmc_status_t;

@@ -36,6 +36,8 @@ typedef struct servo_mcpwm_config_s
     uint16_t max_pulsewidth;
     uint16_t max_degree;
     uint16_t min_degree;
+
+    uint8_t zero_degree_pwm;
 } servo_mcpwm_config_t;
 
 typedef struct servo_mcpwm_status_s
@@ -51,6 +53,7 @@ typedef struct servo_mcpwm_status_s
     bool is_reverse;
 
     servo_mcpwm_config_t config;
+
     uint16_t (*pTr_pulsewidth_cal)(servo_mcpwm_config_t *config, uint16_t degree_of_rotation, bool is_reverse);
 } servo_mcpwm_status_t;
 
