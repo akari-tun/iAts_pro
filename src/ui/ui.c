@@ -85,7 +85,7 @@ static void ui_status_updated(void *notifier, void *s)
 #endif
 
 #if defined(USE_SCREEN)
-        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
+        ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
 #endif
 
         if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
@@ -97,14 +97,6 @@ static void ui_status_updated(void *notifier, void *s)
         ATP_SET_U16(TAG_TRACKER_T_PORT, 8898, now);
 
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED);
-        break;
-    case TRACKER_STATUS_SERVER_CONNECTING:
-
-#if defined(USE_SCREEN)
-        ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_SERVER;
-#endif
-        // ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
-        ui->internal.tracker->internal.flag &= ~TRACKER_FLAG_SERVER_CONNECTED;
         break;
     case TRACKER_STATUS_TRACKING:
 
@@ -181,9 +173,9 @@ static void ui_wifi_status_update(void *notifier, void *s)
     Observer *obs = (Observer *)notifier;
     iats_wifi_status_e *status = (iats_wifi_status_e *)s;
     ui_t *ui = (ui_t *)obs->Obj;
-    tracker_t *tracker = ui->internal.tracker;
+    tracker_t *t = ui->internal.tracker;
 
-    if (tracker->internal.mode != TRACKER_MODE_MANUAL)
+    if (t->internal.status != TRACKER_STATUS_MANUAL)
     {
         // wifi_t *wifi = ui->internal.screen.internal.wifi;
 
@@ -192,61 +184,36 @@ static void ui_wifi_status_update(void *notifier, void *s)
         case WIFI_STATUS_NONE:
             break;
         case WIFI_STATUS_SMARTCONFIG:
-            if (tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
+            if (t->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
             {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
+                t->internal.status_changed(t, TRACKER_STATUS_WIFI_SMART_CONFIG);
             }
             break;
         case WIFI_STATUS_DISCONNECTED:
-            if (tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+            if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
             {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
+                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
             }
             break;
         case WIFI_STATUS_CONNECTING:
-            if (tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
+            if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
             {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
+                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
             }
             break;
         case WIFI_STATUS_CONNECTED:
-            if (tracker->internal.status <= TRACKER_STATUS_WIFI_CONNECTING)
+            if (t->internal.status <= TRACKER_STATUS_WIFI_CONNECTING)
             {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTED);
-            }
-            if (tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
-            {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_SERVER_CONNECTING);
+                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTED);
             }
             break;
         case WIFI_STATUS_UDP_CONNECTED:
-            if (tracker->internal.status != TRACKER_STATUS_MANUAL && tracker->internal.status != TRACKER_STATUS_TRACKING)
+            if (t->internal.status != TRACKER_STATUS_MANUAL && t->internal.status != TRACKER_STATUS_TRACKING)
             {
-                tracker->internal.status_changed(tracker, TRACKER_STATUS_TRACKING);
+                t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
             }
             break;
         }
-
-        // if (wifi->status == WIFI_STATUS_CONNECTED &&
-        //     tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
-        // {
-        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTED);
-        // }
-        // else if ((wifi->status == WIFI_STATUS_CONNECTING || wifi->status == WIFI_STATUS_DISCONNECTED) &&
-        //          tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
-        // {
-        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_CONNECTING);
-        // }
-        // else if (wifi->status == WIFI_STATUS_SMARTCONFIG &&
-        //          tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
-        // {
-        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
-        // }
-        // else if (wifi->status == WIFI_STATUS_CONNECTED &&
-        //          tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
-        // {
-        //     tracker->internal.status_changed(tracker, TRACKER_STATUS_SERVER_CONNECTING);
-        // }
     }
 }
 #endif
@@ -372,7 +339,9 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
     if (btn->id == BUTTON_ID_ENTER) return;
     if (!btn->state.is_down) return;
 
-    if (ui->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
+    tracker_t *t = ui->internal.tracker;
+
+    if (t->internal.status == TRACKER_STATUS_MANUAL && ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
     {
         menu_t *menu = menu_get_active();
 
@@ -383,20 +352,20 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
         case BUTTON_ID_ENTER:
             break;
         case BUTTON_ID_LEFT:
-            if (ui->internal.tracker->servo->internal.pan.currtent_degree == 0) ui->internal.tracker->servo->internal.pan.currtent_degree = 359;
-            ui->internal.tracker->servo->internal.pan.currtent_degree--;
+            if (t->servo->internal.pan.currtent_degree == 0) t->servo->internal.pan.currtent_degree = 359;
+            t->servo->internal.pan.currtent_degree--;
             break;
         case BUTTON_ID_RIGHT:
-            if (ui->internal.tracker->servo->internal.pan.currtent_degree >= 359) ui->internal.tracker->servo->internal.pan.currtent_degree = 0;
-            ui->internal.tracker->servo->internal.pan.currtent_degree++;
+            if (t->servo->internal.pan.currtent_degree >= 359) t->servo->internal.pan.currtent_degree = 0;
+            t->servo->internal.pan.currtent_degree++;
             break;
         case BUTTON_ID_UP:
-            ui->internal.tracker->servo->internal.tilt.currtent_degree++;
-            if (ui->internal.tracker->servo->internal.tilt.currtent_degree > 90) ui->internal.tracker->servo->internal.tilt.currtent_degree = 90;
+            t->servo->internal.tilt.currtent_degree++;
+            if (t->servo->internal.tilt.currtent_degree > 90) t->servo->internal.tilt.currtent_degree = 90;
             break;
         case BUTTON_ID_DOWN:
-            if (ui->internal.tracker->servo->internal.tilt.currtent_degree <= 1) ui->internal.tracker->servo->internal.tilt.currtent_degree = 1;
-            ui->internal.tracker->servo->internal.tilt.currtent_degree--;
+            if (t->servo->internal.tilt.currtent_degree <= 1) t->servo->internal.tilt.currtent_degree = 1;
+            t->servo->internal.tilt.currtent_degree--;
             break;
         }
     }

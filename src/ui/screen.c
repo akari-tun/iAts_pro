@@ -207,25 +207,20 @@ bool screen_is_animating(const screen_t *screen)
 
 static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev)
 {
+    tracker_t *t = screen->internal.tracker;
+
     switch (ev->type)
     {
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
         break;
     case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
-        if (screen->internal.tracker->internal.mode == TRACKER_MODE_AUTO) 
+        if (t->internal.status == TRACKER_STATUS_TRACKING) 
         {
-            screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_MANUAL);
-            // if (screen->internal.main_mode != SCREEN_MODE_MAIN) screen->internal.main_mode = SCREEN_MODE_MAIN;
+            t->internal.status_changed(t, TRACKER_STATUS_MANUAL);
         } 
-        else if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL) 
+        else if (t->internal.status == TRACKER_STATUS_MANUAL) 
         { 
-            screen->internal.tracker->internal.mode = TRACKER_MODE_AUTO;
-            screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_TRACKING);
-        }
-        else if (screen->internal.tracker->internal.mode == TRACKER_MODE_DEBUG) 
-        {
-            screen->internal.tracker->internal.mode = TRACKER_MODE_AUTO;
+            t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
         }
         break;
     case BUTTON_EVENT_TYPE_LONG_PRESS:
@@ -243,7 +238,8 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         }
         break;
     case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
-        if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
+        // if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
+        if (t->internal.status == TRACKER_STATUS_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
         {
             const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
             servo_config_t *config = &screen->internal.tracker->servo->internal.pan.config;
@@ -483,7 +479,6 @@ static int screen_autosplit_lines(char *buf, uint16_t max_width)
     return lines;
 }
 
-
 static int screen_draw_multiline(char *buf, uint16_t y, screen_multiline_opt_e opt)
 {
     const uint16_t display_width = u8g2_GetDisplayWidth(&u8g2);
@@ -561,11 +556,12 @@ static void screen_draw_label_value(screen_t *screen, const char *label, const c
     }
 }
 
-static void screen_draw_main(screen_t *s)
+
+static void screen_draw_servo(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
 
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    // uint16_t w = u8g2_GetDisplayWidth(&u8g2);
     uint16_t h = u8g2_GetDisplayHeight(&u8g2);
     const uint16_t per_h = h / 8;
     const uint8_t frame_height = 7;
@@ -574,16 +570,89 @@ static void screen_draw_main(screen_t *s)
 
     char *buf = SCREEN_BUF(s);
 
-// #ifdef USE_WIFI
-//     // wifi icon
-//     u8g2_DrawXBM(&u8g2, 0, 0, WIFI_ICON_WIDTH, WIFI_ICON_HEIGHT, WIFI_IMG);
-//     u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-//     // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
-//     u8g2_DrawStr(&u8g2, WIFI_ICON_WIDTH + 2, 2, (char *)&s->internal.wifi->config->sta.ssid);
-//     // u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-//     // uint16_t tw = u8g2_GetStrWidth(&u8g2, (char *)&s->internal.wifi->config->sta.ssid);
-//     // u8g2_DrawStr(&u8g2, 0, per_h * 7, (char *)&s->internal.wifi->config->sta.password);
-// #endif
+    const uint16_t bar_width = 85;
+    const uint8_t bar_start_x = 18;
+    const uint8_t per_start_x = 105;
+    uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.tilt);
+    uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
+    // icon
+    u8g2_DrawXBM(&u8g2, 0, per_h * 2, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, TILT_ICON);
+    // pluse width and degree
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
+    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
+    // percent pulse width
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);
+    u8g2_DrawStr(&u8g2, per_start_x, per_h * 3, buf);
+    // frame
+    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 3, bar_width, frame_height);
+    // box
+    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 3, tilt_box_width, frame_height);
+
+    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.pan);
+    uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
+    // label
+    u8g2_DrawXBM(&u8g2, 0, per_h * 4, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
+    // pluse width and degree
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_course_to_degree(s->internal.tracker->servo));
+    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);
+    // percent pulse width
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
+    u8g2_DrawStr(&u8g2, per_start_x, per_h * 5, buf);
+    // frame
+    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 5, bar_width, frame_height);
+    // box
+    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 5, pan_box_width, frame_height);
+}
+
+
+static void screen_draw_wait_server(screen_t *s)
+{
+    const char *txt = "Connecting to server";
+    const char *conn = "<-->";
+
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+
+    u8g2_DrawXBM(&u8g2, 24, 24, TRACKER_WIDTH, TRACKER_HEIGHT, TRACKER_IMG);
+    u8g2_DrawXBM(&u8g2, w - PHONE_WIDTH - 24, 24, PHONE_WIDTH, PHONE_HEIGHT, PHONE_IMG);
+
+    if (TIME_CYCLE_EVERY_MS(200, 2) == 0)
+    {
+        u8g2_SetFontPosCenter(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, conn);
+        u8g2_DrawStr(&u8g2, (w / 2) - tw / 2, 38, conn);
+    }
+
+    if (TIME_CYCLE_EVERY_MS(800, 2) == 0)
+    {
+        u8g2_SetFontPosCenter(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, txt);
+        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) + 10, txt);
+    }
+}
+
+static void screen_draw_main(screen_t *s)
+{
+    u8g2_SetDrawColor(&u8g2, 1);
+
+    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
+    // uint16_t h = u8g2_GetDisplayHeight(&u8g2);
+    // const uint16_t per_h = h / 8;
+    // const uint8_t frame_height = 7;
+
+    u8g2_SetFontPosTop(&u8g2);
+
+    char *buf = SCREEN_BUF(s);
 
     uint8_t icon_index = 0;
 
@@ -631,46 +700,14 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawStr(&u8g2, 80, 0, buf);
 #endif
 
-    const uint16_t bar_width = 85;
-    const uint8_t bar_start_x = 18;
-    const uint8_t per_start_x = 105;
-    uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.tilt);
-    uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
-    // icon
-    u8g2_DrawXBM(&u8g2, 0, per_h * 2, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, TILT_ICON);
-    // pluse width and degree
-    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
-    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
-    // percent pulse width
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);
-    u8g2_DrawStr(&u8g2, per_start_x, per_h * 3, buf);
-    // frame
-    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 3, bar_width, frame_height);
-    // box
-    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 3, tilt_box_width, frame_height);
-
-    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.pan);
-    uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
-    // label
-    u8g2_DrawXBM(&u8g2, 0, per_h * 4, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
-    // pluse width and degree
-    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_course_to_degree(s->internal.tracker->servo));
-    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);
-    // percent pulse width
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
-    u8g2_DrawStr(&u8g2, per_start_x, per_h * 5, buf);
-    // frame
-    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 5, bar_width, frame_height);
-    // box
-    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 5, pan_box_width, frame_height);
+    if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL)
+    {
+         screen_draw_servo(s);
+    }
+    else
+    {
+        screen_draw_wait_server(s);
+    }
 }
 
 static void screen_draw_wifi_config(screen_t *s)
@@ -761,34 +798,6 @@ static void screen_draw_wait_connect(screen_t *s)
     u8g2_DrawStr(&u8g2, (w - tw) / 2, h, buf);
 }
 
-static void screen_draw_wait_server(screen_t *s)
-{
-    const char *txt = "Connecting to server";
-    const char *conn = "<-->";
-
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
-
-    u8g2_DrawXBM(&u8g2, 8, 0, TRACKER_WIDTH, TRACKER_HEIGHT, TRACKER_IMG);
-    u8g2_DrawXBM(&u8g2, w - PHONE_WIDTH - 8, 0, PHONE_WIDTH, PHONE_HEIGHT, PHONE_IMG);
-
-    if (TIME_CYCLE_EVERY_MS(200, 2) == 0)
-    {
-        u8g2_SetFontPosCenter(&u8g2);
-        u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
-        uint16_t tw = u8g2_GetStrWidth(&u8g2, conn);
-        u8g2_DrawStr(&u8g2, (w / 2) - tw / 2, 18, conn);
-    }
-
-    if (TIME_CYCLE_EVERY_MS(800, 2) == 0)
-    {
-        u8g2_SetFontPosCenter(&u8g2);
-        u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
-        uint16_t tw = u8g2_GetStrWidth(&u8g2, txt);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) + 2, txt);
-    }
-}
-
 static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
 {
 #define MENU_LINE_HEIGHT 12
@@ -874,9 +883,6 @@ static void screen_draw(screen_t *screen)
                 break;
             case SCREEN_MODE_WAIT_CONNECT:
                 screen_draw_wait_connect(screen);
-                break;
-            case SCREEN_MODE_WAIT_SERVER:
-                screen_draw_wait_server(screen);
                 break;
             }
             break;

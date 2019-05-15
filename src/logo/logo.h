@@ -55,9 +55,9 @@ static const char *wifi_images[] = {
     Wifi_3_bits,
 };
 
-#define WIFI_ICON_WIDTH Wifi_Icon_width
-#define WIFI_ICON_HEIGHT Wifi_Icon_height
-static const uint8_t *WIFI_IMG = (uint8_t *)Wifi_Icon_bits;
+// #define WIFI_ICON_WIDTH Wifi_Icon_width
+// #define WIFI_ICON_HEIGHT Wifi_Icon_height
+// static const uint8_t *WIFI_IMG = (uint8_t *)Wifi_Icon_bits;
 
 #define BATTERY_WIDTH Battery_width
 #define BATTERY_HEIGHT Battery_height

@@ -19,7 +19,6 @@ typedef enum
     TRACKER_STATUS_WIFI_SMART_CONFIG,
     TRACKER_STATUS_WIFI_CONNECTING,
     TRACKER_STATUS_WIFI_CONNECTED,
-    TRACKER_STATUS_SERVER_CONNECTING,
     TRACKER_STATUS_TRACKING,
     TRACKER_STATUS_MANUAL,
 } tracker_status_e;
@@ -53,7 +52,7 @@ typedef struct tracker_s
     {
         uint8_t flag;
         tracker_status_e status;
-        tracker_mode_e mode;
+        // tracker_mode_e mode;
         pTr_status_changed status_changed;
         pTr_flag_changed flag_changed;
         pTr_telemetry_changed telemetry_changed;

@@ -26,8 +26,7 @@ static void tracker_status_changed(void *t, tracker_status_e s)
         break;
     case TRACKER_STATUS_WIFI_CONNECTED:
         // tracker->ui->internal.screen.internal.main_mode = SCREEN_MODE_MAIN;
-        break;
-    case TRACKER_STATUS_SERVER_CONNECTING:
+        tracker->internal.status_changed(tracker, TRACKER_STATUS_TRACKING);
         break;
     case TRACKER_STATUS_TRACKING:
         break;
@@ -144,7 +143,7 @@ void tracker_init(tracker_t *t)
 
     servo.internal.ease_config = e_cfg;
 
-    t->internal.mode = TRACKER_MODE_AUTO;
+    // t->internal.mode = TRACKER_MODE_AUTO;
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -184,7 +183,7 @@ void task_tracker(void *arg)
     {
         now = time_millis_now();
 
-        if (t->internal.mode == TRACKER_MODE_AUTO)
+        if (t->internal.status == TRACKER_STATUS_TRACKING)
         {
             if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
             {
@@ -261,7 +260,7 @@ void task_tracker(void *arg)
                 servo_reverse_check(&servo);
             }
         }
-        else if (t->internal.mode == TRACKER_MODE_MANUAL)
+        else if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
             servo.internal.tilt.is_reverse = servo.internal.pan.is_reverse;
             servo_update(&servo);
