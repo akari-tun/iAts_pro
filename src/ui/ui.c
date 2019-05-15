@@ -10,6 +10,7 @@
 #include "ui/ui.h"
 #include "tracker/tracker.h"
 #include "protocols/atp.h"
+#include "menu.h"
 #if defined(USE_WIFI)
 #include "wifi/wifi.h"
 #endif
@@ -286,15 +287,18 @@ static void ui_handle_screen_button_event(const button_event_t *ev, void *user_d
 {
     ui_t *ui = user_data;
     ui_reset_screen_autooff(ui);
+
     if (ui_handle_screen_wake(ui))
     {
         return;
     }
+    
     bool handled = screen_handle_button_event(&ui->internal.screen, true, ev);
-    // if (!handled)
-    // {
-    //     handled |= menu_handle_button_event(ev);
-    // }
+    
+    if (!handled)
+    {
+        handled |= menu_handle_button_event(ev);
+    }
     // if (!handled)
     // {
     //     handled |= screen_handle_button_event(&ui->internal.screen, false, ev);
@@ -370,6 +374,10 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
 
     if (ui->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
     {
+        menu_t *menu = menu_get_active();
+
+        if (menu != NULL) return;
+
         switch (btn->id)
         {
         case BUTTON_ID_ENTER:
@@ -538,7 +546,7 @@ void ui_update(ui_t *ui)
             ui->internal.screen_is_off = true;
             screen_shutdown(&ui->internal.screen);
         }
-        // menu_update();
+        menu_update();
         if (!ui->internal.screen_is_off)
         {
             screen_update(&ui->internal.screen);

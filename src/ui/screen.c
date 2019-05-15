@@ -16,6 +16,7 @@
 #include "util/time.h"
 #include "util/version.h"
 
+#include "menu.h"
 #include "screen.h"
 #include "tracker/tracker.h"
 #include "wifi/wifi.h"
@@ -307,6 +308,8 @@ static bool screen_button_down_press(screen_t *screen, const button_event_t *ev)
 
 bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
 {
+    menu_t *menu = menu_get_active();
+    if (menu) return false;
 
     switch (ev->button->id)
     {
@@ -393,6 +396,169 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
 // #endif
 
      return false;
+}
+
+
+static uint16_t screen_animation_offset(uint16_t width, uint16_t max_width, uint16_t *actual_width)
+{
+    if (width > max_width)
+    {
+        // Value is too wide, gotta animate
+        uint16_t extra = width - max_width;
+        // Move 1 pixel every 200ms, stopping for 3 cycles at each end
+        time_ticks_t step_duration = MILLIS_TO_TICKS(200);
+        uint16_t stop = 3;
+        uint16_t offset = (time_ticks_now() / step_duration) % (extra + stop * 2);
+        if (offset < stop * 2)
+        {
+            offset = 0;
+        }
+        else
+        {
+            offset -= stop;
+            if (offset > extra - 1)
+            {
+                offset = extra - 1;
+            }
+        }
+        if (actual_width)
+        {
+            *actual_width = max_width;
+        }
+        return offset;
+    }
+    if (actual_width)
+    {
+        *actual_width = width;
+    }
+    return 0;
+}
+
+static int screen_autosplit_lines(char *buf, uint16_t max_width)
+{
+    uint16_t line_width;
+    size_t len = strlen(buf);
+    const char *p = buf;
+    int lines = 1;
+    int sep = -1;
+    for (int ii = 0; ii <= len; ii++)
+    {
+        if (buf[ii] == ' ' || buf[ii] == '\0')
+        {
+            buf[ii] = '\0';
+            line_width = u8g2_GetStrWidth(&u8g2, p);
+            if (line_width <= max_width)
+            {
+                // Still fits in the line. Store the separator and continue.
+                sep = ii;
+                buf[ii] = ' ';
+            }
+            else
+            {
+                // We need a new line. Check if we had a previous separator,
+                // otherwise break here
+                if (sep >= 0)
+                {
+                    buf[ii] = ' ';
+                    buf[sep] = '\n';
+                    p = &buf[sep + 1];
+                    sep = ii;
+                }
+                else
+                {
+                    if (ii == len)
+                    {
+                        // String ends exactly here, the last line scrolls
+                        break;
+                    }
+                    buf[ii] = '\n';
+                    p = &buf[ii + 1];
+                    sep = -1;
+                }
+                lines++;
+            }
+        }
+    }
+    buf[len] = '\0';
+    return lines;
+}
+
+
+static int screen_draw_multiline(char *buf, uint16_t y, screen_multiline_opt_e opt)
+{
+    const uint16_t display_width = u8g2_GetDisplayWidth(&u8g2);
+    uint16_t max_width = display_width;
+    int border = 0;
+    int x = 0;
+    if (opt == SCREEN_MULTILINEOPT_BORDER)
+    {
+        max_width -= 2;
+        border = 2;
+    }
+    int lines = screen_autosplit_lines(buf, max_width);
+    int line_height = u8g2_GetAscent(&u8g2) - u8g2_GetDescent(&u8g2) + 1;
+    int text_height = lines * line_height;
+    int yy = y;
+
+    u8g2_SetFontPosTop(&u8g2);
+
+    switch (opt)
+    {
+    case SCREEN_MULTILINEOPT_NONE:
+        u8g2_SetDrawColor(&u8g2, 1);
+        break;
+    case SCREEN_MULTILINEOPT_BORDER:
+        u8g2_SetDrawColor(&u8g2, 1);
+        // Draw the frame later in case the text needs animation
+        yy += 1;
+        x += 1;
+        break;
+    case SCREEN_MULTILINEOPT_BOX:
+        u8g2_SetDrawColor(&u8g2, 1);
+        u8g2_DrawBox(&u8g2, 0, y, display_width, text_height);
+        u8g2_SetDrawColor(&u8g2, 0);
+        break;
+    }
+    for (int ii = 0; ii < lines; ii++)
+    {
+        const char *s = u8x8_GetStringLineStart(ii, buf);
+        uint16_t width = u8g2_GetStrWidth(&u8g2, s);
+        if (width <= max_width)
+        {
+            u8g2_DrawStr(&u8g2, x + (max_width - width) / 2, yy, s);
+        }
+        else
+        {
+            // Animate
+            int offset = screen_animation_offset(width, max_width - 2, NULL);
+            u8g2_DrawStr(&u8g2, x - offset, yy, s);
+        }
+        yy += line_height;
+    }
+
+    if (opt == SCREEN_MULTILINEOPT_BORDER)
+    {
+        u8g2_DrawFrame(&u8g2, 0, y, display_width, text_height);
+    }
+
+    return text_height + border;
+}
+
+static void screen_draw_label_value(screen_t *screen, const char *label, const char *val, uint16_t w, uint16_t y, uint16_t sep)
+{
+    uint16_t label_width = (label ? u8g2_GetStrWidth(&u8g2, label) : 0) + sep;
+    uint16_t max_value_width = w - label_width - 1;
+    uint16_t val_width = u8g2_GetStrWidth(&u8g2, val);
+    uint16_t val_offset = screen_animation_offset(val_width, max_value_width, &val_width);
+    u8g2_DrawStr(&u8g2, label_width - val_offset, y, val);
+    u8g2_SetDrawColor(&u8g2, 0);
+    uint16_t line_height = u8g2_GetAscent(&u8g2) - u8g2_GetDescent(&u8g2);
+    u8g2_DrawBox(&u8g2, 0, y - line_height, label_width, line_height);
+    u8g2_SetDrawColor(&u8g2, 1);
+    if (label)
+    {
+        u8g2_DrawStr(&u8g2, 0, y, label);
+    }
 }
 
 static void screen_draw_main(screen_t *s)
@@ -623,33 +789,104 @@ static void screen_draw_wait_server(screen_t *s)
     }
 }
 
+static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
+{
+#define MENU_LINE_HEIGHT 12
+    int entries = menu_get_num_entries(menu);
+    u8g2_SetFontPosTop(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+    const char *prompt = menu_get_prompt(menu);
+    if (prompt)
+    {
+        uint16_t pw = u8g2_GetStrWidth(&u8g2, prompt);
+        uint16_t mpw = SCREEN_W(s) - 4;
+        uint16_t px;
+        if (pw <= mpw)
+        {
+            px = (SCREEN_W(s) - pw) / 2;
+        }
+        else
+        {
+            uint16_t po = screen_animation_offset(pw, mpw, &pw);
+            px = 2 - po;
+        }
+        u8g2_SetDrawColor(&u8g2, 1);
+        u8g2_DrawStr(&u8g2, px, y + 2, prompt);
+        u8g2_DrawFrame(&u8g2, 0, y, SCREEN_W(s), MENU_LINE_HEIGHT + 1);
+        y += MENU_LINE_HEIGHT + 2;
+    }
+    // Check if we need to skip some entries to allow the selected entry
+    // to be displayed.
+    int start = 0;
+    int selected = menu_get_entry_selected(menu);
+    while (y + ((selected - start + 1) * MENU_LINE_HEIGHT) > SCREEN_H(s))
+    {
+        start++;
+    }
+    for (int ii = start; ii < entries; ii++)
+    {
+        const char *title = menu_entry_get_title(menu, ii, SCREEN_BUF(s), SCREEN_DRAW_BUF_SIZE);
+        u8g2_SetDrawColor(&u8g2, 1);
+        if (menu_is_entry_selected(menu, ii))
+        {
+            u8g2_DrawBox(&u8g2, 0, y, SCREEN_W(s), 12);
+            u8g2_SetDrawColor(&u8g2, 0);
+        }
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, title);
+        uint16_t offset = screen_animation_offset(tw, SCREEN_W(s) - 2, &tw);
+        u8g2_DrawStr(&u8g2, 0 - offset, y, title);
+        y += MENU_LINE_HEIGHT;
+    }
+}
+
 static void screen_draw(screen_t *screen)
 {
-    switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
+    menu_t *menu = menu_get_active();
+
+    // if (menu == &menu_empty)
+    // {
+    //     menu_pop_active();
+    //     menu = menu_get_active();
+    // }
+
+    // There's nothing overriding the screen, draw the normal interface
+    while (menu == &menu_empty)
     {
-    case SCREEN_SECONDARY_MODE_NONE:
-        switch ((screen_main_mode_e)screen->internal.main_mode)
+        menu_pop_active();
+        menu = menu_get_active();
+    }
+    if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
+    {
+        screen_draw_menu(screen, menu, 0);
+    }
+    else
+    {
+        switch ((screen_secondary_mode_e)screen->internal.secondary_mode)
         {
-        case SCREEN_MODE_MAIN:
-            screen_draw_main(screen);
+        case SCREEN_SECONDARY_MODE_NONE:
+            switch ((screen_main_mode_e)screen->internal.main_mode)
+            {
+            case SCREEN_MODE_MAIN:
+                screen_draw_main(screen);
+                break;
+            case SCREEN_MODE_WIFI_CONFIG:
+                screen_draw_wifi_config(screen);
+                break;
+            case SCREEN_MODE_WAIT_CONNECT:
+                screen_draw_wait_connect(screen);
+                break;
+            case SCREEN_MODE_WAIT_SERVER:
+                screen_draw_wait_server(screen);
+                break;
+            }
             break;
-        case SCREEN_MODE_WIFI_CONFIG:
-            screen_draw_wifi_config(screen);
+        case SCREEN_SECONDARY_MODE_FREQUENCIES:
+            //screen_draw_frequencies(screen);
             break;
-        case SCREEN_MODE_WAIT_CONNECT:
-            screen_draw_wait_connect(screen);
-            break;
-        case SCREEN_MODE_WAIT_SERVER:
-            screen_draw_wait_server(screen);
+        case SCREEN_SECONDARY_MODE_DEBUG_INFO:
+            //screen_draw_debug_info(screen);
             break;
         }
-        break;
-    case SCREEN_SECONDARY_MODE_FREQUENCIES:
-        //screen_draw_frequencies(screen);
-        break;
-    case SCREEN_SECONDARY_MODE_DEBUG_INFO:
-        //screen_draw_debug_info(screen);
-        break;
     }
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <string.h>
 
 #define ARRAY_COUNT(arr) (sizeof(arr) / sizeof(arr[0]))
 #define ARRAY_ASSERT_COUNT(arr, count, msg) _Static_assert(ARRAY_COUNT(arr) == count, msg)

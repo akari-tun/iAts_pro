@@ -8,6 +8,8 @@
 #include "freertos/task.h"
 #include "esp_attr.h"
 
+#include "platform/system.h"
+
 #include "driver/mcpwm.h"
 #include "soc/mcpwm_reg.h"
 #include "soc/mcpwm_struct.h"
@@ -32,6 +34,16 @@ static ui_t ui;
 static wifi_t wifi;
 #endif
 static tracker_t tracker;
+
+static void setting_changed(const setting_t *setting, void *user_data)
+{
+    UNUSED(user_data);
+
+    if (SETTING_IS(setting, SETTING_KEY_DEVELOPER_REBOOT))
+    {
+        system_reboot();
+    }
+}
 
 void iats_tracker_init(void)
 {
@@ -98,6 +110,8 @@ void task_ui(void *arg)
 void app_main()
 {
 	settings_init();
+	settings_add_listener(setting_changed, NULL);
+
 	iats_tracker_init();
 #if defined(USE_WIFI)
 	iats_wifi_init();
