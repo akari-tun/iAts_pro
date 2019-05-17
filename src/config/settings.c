@@ -86,6 +86,11 @@ static const char *servo_zero_degree_pwm_table[] = {
 };
 _Static_assert(ARRAY_COUNT(servo_zero_degree_pwm_table) == SERVO_ZERO_DEGREE_PWM_COUNT, "SERVO_ZERO_DEGREE_PWM_COUNT is invalid");
 
+#if defined(USE_SCREEN)
+static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
+static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
+#endif
+
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
@@ -114,6 +119,11 @@ static const setting_t settings[] = {
     U16_SETTING(SETTING_KEY_SERVO_MIN_DEGREE, "Min Degree", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 0),
     U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH, "Pan Zero", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
     U8_MAP_SETTING(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH, "Tilt Zero", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
+#if defined(USE_SCREEN)
+    FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
+    U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
+    U8_MAP_SETTING(SETTING_KEY_SCREEN_AUTO_OFF, "Auto Off", 0, FOLDER_ID_SCREEN, screen_autopoweroff_table, UI_SCREEN_AUTOOFF_DEFAULT),
+#endif
     FOLDER(SETTING_KEY_DIAGNOSTICS, "Diagnostics", FOLDER_ID_DIAGNOSTICS, FOLDER_ID_ROOT, NULL),
     CMD_SETTING(SETTING_KEY_DIAGNOSTICS_DEBUG_INFO, "Debug Info", FOLDER_ID_DIAGNOSTICS, 0, 0),
     FOLDER(SETTING_KEY_DEVELOPER, "Developer Options", FOLDER_ID_DEVELOPER, FOLDER_ID_DIAGNOSTICS, NULL),
