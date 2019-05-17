@@ -72,6 +72,13 @@ static const beep_pattern_t patterns[BEEPER_MODE_COUNT - 1] = {
         .repeat = 2,
         .silence_repeat = SILENCE_REPEAT_STOP,
     },
+    // BEEPER_MODE_LOST
+    {
+        .beep_length = 50,
+        .silence_length = 0,
+        .repeat = 0,
+        .silence_repeat = SILENCE_REPEAT_STOP,
+    },
 };
 
 static void beeper_gpio_init(beeper_t *beeper)

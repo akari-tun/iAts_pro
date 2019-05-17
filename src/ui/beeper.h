@@ -22,6 +22,7 @@ typedef enum
     BEEPER_MODE_WAIT_CONNECT,
     BEEPER_MODE_REVERSING,
     BEEPER_MODE_SETED,
+    BEEPER_MODE_LOST,
 
     BEEPER_MODE_COUNT,
 } beeper_mode_e;
