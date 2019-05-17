@@ -47,6 +47,7 @@ typedef void (*pTr_telemetry_changed)(void *t, uint8_t tag);
 typedef struct tracker_s
 {
     time_millis_t last_heartbeat;
+    time_millis_t last_ack;
 
     struct
     {
@@ -70,3 +71,5 @@ const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, siz
 tracker_status_e get_tracker_status(const tracker_t *t);
 uint8_t get_tracker_flag(const tracker_t *t);
 bool get_tracker_reversing(const tracker_t *t);
+float get_plane_lat();
+float get_plane_lon();

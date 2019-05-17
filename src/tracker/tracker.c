@@ -44,10 +44,6 @@ static void tracker_flag_changed(void *t, uint8_t f)
 
     tracker->internal.flag |= f;
     time_micros_t now = time_micros_now();
-
-    // #if defined(USE_BEEPER)
-    //     if (f & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED)) beeper_set_mode(&t->ui.internal.beeper, BEEPER_MODE_SETED);
-    // #endif
     
     ATP_SET_U8(TAG_TRACKER_FLAG, tracker->internal.flag, now);
     tracker->internal.flag_changed_notifier->mSubject.Notify(tracker->internal.flag_changed_notifier, &f);
@@ -61,10 +57,10 @@ static void tracker_telemetry_changed(void *t, uint8_t tag)
     {
     case TAG_BASE_ACK:
         if (!(telemetry_get_u8(atp_get_tag_val(TAG_TRACKER_FLAG)) & TRACKER_FLAG_SERVER_CONNECTED))
-        {   
+        {
             tracker->internal.flag_changed(tracker, TRACKER_FLAG_SERVER_CONNECTED);
         }
-        tracker->last_heartbeat = time_millis_now();
+        tracker->last_ack = time_millis_now();
         break;
     case TAG_PLANE_LONGITUDE:
         if (!(tracker->internal.flag & TRACKER_FLAG_PLANESETED))
@@ -101,7 +97,7 @@ static bool tracker_check_atp_cmd(tracker_t *t)
     if (!(t->internal.flag & TRACKER_FLAG_SERVER_CONNECTED))
     {
         
-        if (now > t->last_heartbeat + 2000)
+        if (now > t->last_heartbeat + 1000)
         {
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
@@ -115,7 +111,7 @@ static bool tracker_check_atp_cmd(tracker_t *t)
     }
     else
     {
-        if (now > t->last_heartbeat + 10000)
+        if (now > t->last_heartbeat + 5000)
         {
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
@@ -151,6 +147,7 @@ void tracker_init(tracker_t *t)
     t->internal.telemetry_changed = tracker_telemetry_changed;
     t->internal.status_changed(t, TRACKER_STATUS_BOOTING);
     t->last_heartbeat = time_millis_now();
+    t->last_ack = time_millis_now();
 
     t->servo = &servo;
     t->atp = &atp;
@@ -296,4 +293,14 @@ uint8_t get_tracker_flag(const tracker_t *t)
 bool get_tracker_reversing(const tracker_t *t)
 {
     return t->servo->is_reversing;
+}
+
+float get_plane_lat()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
+}
+
+float get_plane_lon()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
 }
