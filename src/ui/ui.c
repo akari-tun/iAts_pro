@@ -5,6 +5,7 @@
 
 #include "platform/system.h"
 
+#include "config/settings.h"
 #include "ui/led.h"
 #include "ui/screen.h"
 #include "ui/ui.h"
@@ -122,7 +123,7 @@ static void ui_status_updated(void *notifier, void *s)
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
 
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_TRACKING ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & ~TRACKER_FLAG_TRACKING);
         break;
     }
 }
@@ -133,9 +134,9 @@ static void ui_flag_updated(void *notifier, void *f)
     uint8_t *flag = (uint8_t *)f;
     ui_t *ui = (ui_t *)obs->Obj;
 
-
     if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
     {
+        led_mode_add(LED_MODE_SETED);
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
 #endif
@@ -154,14 +155,15 @@ static void ui_flag_updated(void *notifier, void *f)
 
 static void ui_reverse_updated(void *notifier, void *r)
 {
-    Observer *obs = (Observer *)notifier;
-    // bool *is_reverse = (bool *)r;
-    ui_t *ui = (ui_t *)obs->Obj;
+    UNUSED(r);
 
     led_mode_add(LED_MODE_REVERSING);
 #if defined(USE_BEEPER)
+    Observer *obs = (Observer *)notifier;
+    ui_t *ui = (ui_t *)obs->Obj;
     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_REVERSING);
 #endif
+    LOG_I(TAG, "Reversing...");
 }
 
 #if defined(USE_WIFI)
@@ -177,8 +179,6 @@ static void ui_wifi_status_update(void *notifier, void *s)
 
     if (t->internal.status != TRACKER_STATUS_MANUAL)
     {
-        // wifi_t *wifi = ui->internal.screen.internal.wifi;
-
         switch (*status)
         {
         case WIFI_STATUS_NONE:
@@ -235,7 +235,7 @@ static bool ui_handle_screen_wake(ui_t *ui)
     if (ui_screen_is_available(ui) && ui->internal.screen_is_off)
     {
         screen_power_on(&ui->internal.screen);
-        // screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
+        screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
         ui->internal.screen_is_off = false;
         return true;
     }
@@ -313,22 +313,38 @@ static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user
     // }
 }
 
+static void ui_settings_handler(const setting_t *setting, void *user_data)
+{
+
+#ifdef USE_SCREEN
+#define UPDATE_SCREEN_SETTING(k, f)                                              \
+    do                                                                           \
+    {                                                                            \
+        if (SETTING_IS(setting, k) && screen_is_available(&ui->internal.screen)) \
+        {                                                                        \
+            f(&ui->internal.screen, setting_get_u8(setting));                    \
+        }                                                                        \
+    } while (0)
+
+    ui_t *ui = user_data;
+
+    UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, screen_set_brightness);
+
+    if (SETTING_IS(setting, SETTING_KEY_SCREEN_AUTO_OFF) && screen_is_available(&ui->internal.screen))
+    {
+        ui_set_screen_set_autooff(ui, setting_get_u8(setting));
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_DIAGNOSTICS_DEBUG_INFO))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_DEBUG_INFO);
+    }
+#endif
+}
+
 #if defined(USE_BEEPER)
 static void ui_update_beeper(ui_t *ui)
 {
-    // if (rc_is_failsafe_active(ui->internal.rc, NULL))
-    // {
-    //     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_FAILSAFE);
-    // }
-    // else if (rc_is_binding(ui->internal.rc))
-    // {
-    //     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_BIND);
-    // }
-    // else
-    // if (ui->internal.beeper.mode != BEEPER_MODE_STARTUP)
-    // {
-    //     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
-    // }
     beeper_update(&ui->internal.beeper);
 }
 #endif
@@ -367,6 +383,24 @@ static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
             if (t->servo->internal.tilt.currtent_degree <= 1) t->servo->internal.tilt.currtent_degree = 1;
             t->servo->internal.tilt.currtent_degree--;
             break;
+        }
+    }
+}
+
+static void ui_status_check(ui_t *ui)
+{
+    if (ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED)
+    {
+        time_millis_t now = time_millis_now();
+
+        if (ui->internal.tracker->last_ack + 6000 < now)
+        {
+#if defined(USE_WIFI)
+            ui->internal.tracker->internal.flag &= ~TRACKER_FLAG_SERVER_CONNECTED;
+            ATP_SET_U8(TAG_TRACKER_FLAG, ui->internal.tracker->internal.flag, now);
+            ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_CONNECTED);
+#endif
+            LOG_I(TAG, "Server was losted...");
         }
     }
 }
@@ -418,14 +452,6 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
 	    ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
     }
 #endif
-
-    // for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
-    // {
-    //     ui->internal.buttons[ii].user_data = ui;
-    //     ui->internal.buttons[ii].callback = button_callback;
-    // }
-
-    // ui->internal.rc = rc;
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
         ui->internal.buttons[ii].callback = button_callback;
@@ -446,22 +472,16 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
     {
         LOG_I(TAG, "Screen detected");
         system_add_flag(SYSTEM_FLAG_SCREEN);
-        // #if defined(SCREEN_FIXED_ORIENTATION)
-        //         screen_orientation_e screen_orientation = SCREEN_ORIENTATION_DEFAULT;
-        // #else
-        //         screen_orientation_e screen_orientation = settings_get_key_u8(SETTING_KEY_SCREEN_ORIENTATION);
-        // #endif
-        //         screen_set_orientation(&ui->internal.screen, screen_orientation);
-        //         screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
-        //         ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
+        screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
+        ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
     }
     else
     {
         LOG_I(TAG, "No screen detected");
     }
-    // menu_init(rc);
+    menu_init(tracker);
 #endif
-    // settings_add_listener(ui_settings_handler, ui);
+    settings_add_listener(ui_settings_handler, ui);
 
 #ifdef USE_BATTERY_MEASUREMENT
     battery_init(&battery);
@@ -515,13 +535,17 @@ void ui_update(ui_t *ui)
             ui->internal.screen_is_off = true;
             screen_shutdown(&ui->internal.screen);
         }
+
         menu_update();
+
         if (!ui->internal.screen_is_off)
         {
             screen_update(&ui->internal.screen);
         }
     }
 #endif
+
+    ui_status_check(ui);
 }
 
 void ui_yield(ui_t *ui)

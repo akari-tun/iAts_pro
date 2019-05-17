@@ -236,9 +236,6 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             wifi_start(screen->internal.wifi);
             return true;
         }
-        break;
-    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
-        // if (screen->internal.tracker->internal.mode == TRACKER_MODE_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
         if (t->internal.status == TRACKER_STATUS_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
         {
             const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
@@ -246,10 +243,8 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
             uint16_t deg = (float)(servo_pan->currtent_pulsewidth - config->min_pulsewidth) / (float)(config->max_pulsewidth - config->min_pulsewidth) 
                 * config->max_degree;
-            if (servo_pan->is_reverse)
-            {
-                deg = 359 - deg;
-            }
+            if (servo_pan->is_reverse) deg = 359 - deg;
+            deg += 1;
             screen->internal.tracker->servo->internal.course = deg;
             setting_set_u16(setting_course, deg);
 
@@ -257,12 +252,17 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
 
             return true;
         }
-
-        if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG)
+        break;
+    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
+        if (t->internal.status == TRACKER_STATUS_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
         {
-            wifi_smartconfig_stop(screen->internal.wifi);
-            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
-            wifi_start(screen->internal.wifi);
+            const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
+            uint16_t deg = 0;
+            screen->internal.tracker->servo->internal.course = deg;
+            setting_set_u16(setting_course, deg);
+
+            LOG_I(TAG, "Course degree set to %d", deg);
+
             return true;
         }
         break;
@@ -304,6 +304,12 @@ static bool screen_button_down_press(screen_t *screen, const button_event_t *ev)
 
 bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
 {
+    if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
+    {
+        screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+        return true;
+    }
+
     menu_t *menu = menu_get_active();
     if (menu) return false;
 
@@ -320,76 +326,6 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
         case BUTTON_ID_DOWN:
             return screen_button_down_press(screen, ev);
     }
-//     if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
-//     {
-//         if (ev->type != BUTTON_EVENT_TYPE_LONG_PRESS)
-//             return false;
-
-//         if (ev->button->id == BUTTON_ID_ENTER)
-//         {
-//             screen->internal.wifi->status = WIFI_STATUS_SMARTCONFIG;
-//             return true;
-//         }
-
-//         if (ev->button->id == BUTTON_ID_DOWN)
-//         {
-//             screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
-//             screen->internal.main_mode = SCREEN_MODE_MAIN;
-//             return true;
-//         }
-
-//         return false;
-//     }
-
-//     if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
-//     {
-//         if (ev->type != BUTTON_EVENT_TYPE_LONG_PRESS)
-//             return false;
-
-//         if (ev->button->id == BUTTON_ID_ENTER)
-//         {
-//             wifi_smartconfig_stop(screen->internal.wifi);
-//             screen->internal.wifi->status = WIFI_STATUS_NONE;
-//             wifi_start(screen->internal.wifi);
-//             return true;
-//         }
-
-//         if (ev->button->id == BUTTON_ID_DOWN)
-//         {
-//             screen->internal.tracker->internal.mode = TRACKER_MODE_MANUAL;
-//             screen->internal.main_mode = SCREEN_MODE_MAIN;
-//             return true;
-//         }
-
-//         return false;
-//     }
-
-//     if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
-//     {
-//         screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
-//         return true;
-//     }
-
-//     if (before_menu)
-//     {
-//         return false;
-//     }
-
-//     if (ev->type != BUTTON_EVENT_TYPE_SHORT_PRESS)
-//     {
-//         return false;
-//     }
-
-// #if defined(USE_BUTTON_5WAY)
-//     button_id_e bid = button_event_id(ev);
-//     int direction = bid == BUTTON_ID_LEFT ? -1 : bid == BUTTON_ID_RIGHT ? 1 : 0;
-//     if (direction == 0)
-//     {
-//         return false;
-//     }
-// #else
-//     int direction = 1;
-// #endif
 
      return false;
 }
@@ -556,60 +492,72 @@ static void screen_draw_label_value(screen_t *screen, const char *label, const c
     }
 }
 
-
 static void screen_draw_servo(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
 
-    // uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
-    const uint16_t per_h = h / 8;
+    const uint16_t per_h = s->internal.h / 16;
     const uint8_t frame_height = 7;
 
     u8g2_SetFontPosTop(&u8g2);
 
     char *buf = SCREEN_BUF(s);
 
-    const uint16_t bar_width = 85;
+    const uint16_t bar_width = 88;
     const uint8_t bar_start_x = 18;
-    const uint8_t per_start_x = 105;
+    const uint8_t per_start_x = 108;
     uint8_t tilt_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.tilt);
     uint16_t tilt_box_width = (bar_width * tilt_percentage) / 100;
     // icon
-    u8g2_DrawXBM(&u8g2, 0, per_h * 2, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, TILT_ICON);
+    u8g2_DrawXBM(&u8g2, 0, per_h * 3, TILT_ICON_WIDTH, TILT_ICON_HEIGHT, s->internal.tracker->servo->is_reversing ? TILT_ICON : TILT_R_ICON);
     // pluse width and degree
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
              servo_get_pulsewidth(&s->internal.tracker->servo->internal.tilt), servo_get_degree(&s->internal.tracker->servo->internal.tilt));
-    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 2, buf);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2, 2);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 2 + 1, 2);
+    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 3, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 3, per_h * 3, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 3, per_h * 3 + 1, 2);
     // percent pulse width
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", tilt_percentage);
-    u8g2_DrawStr(&u8g2, per_start_x, per_h * 3, buf);
-    // frame
-    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 3, bar_width, frame_height);
-    // box
-    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 3, tilt_box_width, frame_height);
-
-    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.pan);
-    uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
-    // label
-    u8g2_DrawXBM(&u8g2, 0, per_h * 4, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
-    // pluse width and degree
-    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
-             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_course_to_degree(s->internal.tracker->servo));
-    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 4, buf);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4, 2);
-    u8g2_DrawHLine(&u8g2, per_start_x - 1, per_h * 4 + 1, 2);
-    // percent pulse width
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
     u8g2_DrawStr(&u8g2, per_start_x, per_h * 5, buf);
     // frame
     u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 5, bar_width, frame_height);
     // box
-    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 5, pan_box_width, frame_height);
+    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 5, tilt_box_width, frame_height);
+
+    uint8_t pan_percentage = servo_get_per_pulsewidth(&s->internal.tracker->servo->internal.pan);
+    uint16_t pan_box_width = (bar_width * pan_percentage) / 100;
+    // label
+    u8g2_DrawXBM(&u8g2, 0, per_h * 7, PAN_ICON_WIDTH, PAN_ICON_HEIGHT, PAN_ICON);
+    // pluse width and degree
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P:%4dus    D:%3d",
+             servo_get_pulsewidth(&s->internal.tracker->servo->internal.pan), servo_get_course_to_degree(s->internal.tracker->servo));
+    u8g2_DrawStr(&u8g2, bar_start_x, per_h * 7, buf);
+    u8g2_DrawHLine(&u8g2, per_start_x - 3, per_h * 7, 2);
+    u8g2_DrawHLine(&u8g2, per_start_x - 3, per_h * 7 + 1, 2);
+    // percent pulse width
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%3d%%", pan_percentage);
+    u8g2_DrawStr(&u8g2, per_start_x, per_h * 9, buf);
+    // frame
+    u8g2_DrawFrame(&u8g2, bar_start_x, per_h * 9, bar_width, frame_height);
+    // box
+    u8g2_DrawBox(&u8g2, bar_start_x, per_h * 9, pan_box_width, frame_height);
+
+    const char *manual = "MANUAL";
+    const char *tracking = "TRACKING";
+    
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
+    uint16_t tw = u8g2_GetStrWidth(&u8g2, s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL ? manual : tracking);
+    u8g2_DrawStr(&u8g2, s->internal.w - tw, per_h * 14, s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL ? manual : tracking);
+
+    u8g2_SetFontPosTop(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lat:%-3.7f", get_plane_lat());
+    u8g2_DrawStr(&u8g2, 0, per_h * 12, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lon:%-3.7f", get_plane_lon());
+    u8g2_DrawStr(&u8g2, 0, (per_h * 14), buf);
 }
 
 
@@ -618,18 +566,15 @@ static void screen_draw_wait_server(screen_t *s)
     const char *txt = "Connecting to server";
     const char *conn = "<-->";
 
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
-
     u8g2_DrawXBM(&u8g2, 24, 24, TRACKER_WIDTH, TRACKER_HEIGHT, TRACKER_IMG);
-    u8g2_DrawXBM(&u8g2, w - PHONE_WIDTH - 24, 24, PHONE_WIDTH, PHONE_HEIGHT, PHONE_IMG);
+    u8g2_DrawXBM(&u8g2, s->internal.w - PHONE_WIDTH - 24, 24, PHONE_WIDTH, PHONE_HEIGHT, PHONE_IMG);
 
     if (TIME_CYCLE_EVERY_MS(200, 2) == 0)
     {
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
         uint16_t tw = u8g2_GetStrWidth(&u8g2, conn);
-        u8g2_DrawStr(&u8g2, (w / 2) - tw / 2, 38, conn);
+        u8g2_DrawStr(&u8g2, (s->internal.w / 2) - tw / 2, 38, conn);
     }
 
     if (TIME_CYCLE_EVERY_MS(800, 2) == 0)
@@ -637,19 +582,13 @@ static void screen_draw_wait_server(screen_t *s)
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont12_tf);
         uint16_t tw = u8g2_GetStrWidth(&u8g2, txt);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) + 10, txt);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) + 10, txt);
     }
 }
 
 static void screen_draw_main(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
-
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    // uint16_t h = u8g2_GetDisplayHeight(&u8g2);
-    // const uint16_t per_h = h / 8;
-    // const uint8_t frame_height = 7;
-
     u8g2_SetFontPosTop(&u8g2);
 
     char *buf = SCREEN_BUF(s);
@@ -683,7 +622,7 @@ static void screen_draw_main(screen_t *s)
 
 #ifdef USE_BATTERY_MEASUREMENT
     // battery icon
-    u8g2_DrawXBM(&u8g2, w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
+    u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
     float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
     if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
@@ -694,7 +633,7 @@ static void screen_draw_main(screen_t *s)
     {
         per_voltage = ((voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
     }
-    u8g2_DrawBox(&u8g2, w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
+    u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
     u8g2_DrawStr(&u8g2, 80, 0, buf);
@@ -716,8 +655,6 @@ static void screen_draw_wifi_config(screen_t *s)
     bool draw_sc_marker = TIME_CYCLE_EVERY_MS(200, 2) == 0;
 
     u8g2_SetDrawColor(&u8g2, 1);
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
     char *buf = SCREEN_BUF(s);
     uint16_t tw = 0;
 
@@ -727,7 +664,7 @@ static void screen_draw_wifi_config(screen_t *s)
     if (draw_sc_marker)
     {
         tw = u8g2_GetStrWidth(&u8g2, sc_marker);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, (h / 2) - 15, sc_marker);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, (s->internal.h / 2) - 15, sc_marker);
     }
 
     //draw smart config
@@ -735,13 +672,13 @@ static void screen_draw_wifi_config(screen_t *s)
     {
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SmartConfig");
         tw = u8g2_GetStrWidth(&u8g2, buf);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, h / 2, buf);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h / 2, buf);
     }
 
     if (draw_sc_marker)
     {
         tw = u8g2_GetStrWidth(&u8g2, sc_marker);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, (h / 2) + 20, sc_marker);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, (s->internal.h / 2) + 20, sc_marker);
     }
 }
 
@@ -754,8 +691,6 @@ static void screen_draw_wait_connect(screen_t *s)
     u8g2_SetFont(&u8g2, u8g2_font_micro_tr);
     u8g2_SetFontPosTop(&u8g2);
 
-    uint16_t w = u8g2_GetDisplayWidth(&u8g2);
-    uint16_t h = u8g2_GetDisplayHeight(&u8g2);
     char *buf = SCREEN_BUF(s);
 
     bool flash = TIME_CYCLE_EVERY_MS(400, 2) == 0;
@@ -786,16 +721,15 @@ static void screen_draw_wait_connect(screen_t *s)
         u8g2_SetFontPosCenter(&u8g2);
         u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "== CONNECTING ==");
-        // const char *wait_conn = "== CONNECTING ==";
         uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
-        u8g2_DrawStr(&u8g2, (w - tw) / 2, h - (h / 4) - 3, buf);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
     }
 
     u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "long press to config");
     uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
-    u8g2_DrawStr(&u8g2, (w - tw) / 2, h, buf);
+    u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h, buf);
 }
 
 static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
@@ -848,15 +782,23 @@ static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
     }
 }
 
+
+static void screen_draw_debug_info(screen_t *s)
+{
+    char *buf = SCREEN_BUF(s);
+    u8g2_SetDrawColor(&u8g2, 1);
+    u8g2_SetFontPosTop(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+
+    uint16_t y = 0;
+
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%.02f C", system_temperature());
+    screen_draw_label_value(s, "Core Temp:", buf, SCREEN_W(s), y, 3);
+}
+
 static void screen_draw(screen_t *screen)
 {
     menu_t *menu = menu_get_active();
-
-    // if (menu == &menu_empty)
-    // {
-    //     menu_pop_active();
-    //     menu = menu_get_active();
-    // }
 
     // There's nothing overriding the screen, draw the normal interface
     while (menu == &menu_empty)
@@ -890,7 +832,7 @@ static void screen_draw(screen_t *screen)
             //screen_draw_frequencies(screen);
             break;
         case SCREEN_SECONDARY_MODE_DEBUG_INFO:
-            //screen_draw_debug_info(screen);
+            screen_draw_debug_info(screen);
             break;
         }
     }
@@ -903,30 +845,6 @@ void screen_update(screen_t *screen)
     {
         return;
     }
-
-    // if (screen->internal.tracker->internal.mode != TRACKER_MODE_MANUAL)
-    // {
-    //     if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
-    //         screen->internal.tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
-    //     {
-    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTED);
-    //     }
-    //     else if ((screen->internal.wifi->status == WIFI_STATUS_CONNECTING || screen->internal.wifi->status == WIFI_STATUS_DISCONNECTED) &&
-    //              screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
-    //     {
-    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
-    //     }
-    //     else if (screen->internal.wifi->status == WIFI_STATUS_SMARTCONFIG &&
-    //              screen->internal.tracker->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
-    //     {
-    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_SMART_CONFIG);
-    //     }
-    //     else if (screen->internal.wifi->status == WIFI_STATUS_CONNECTED &&
-    //              screen->internal.tracker->internal.status != TRACKER_STATUS_SERVER_CONNECTING)
-    //     {
-    //         screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_SERVER_CONNECTING);
-    //     }
-    // }
 
     char buf[SCREEN_DRAW_BUF_SIZE];
 
