@@ -59,9 +59,9 @@ static const led_stage_t none_stages[] = {
 LED_PATTERN(none_pattern, none_stages, LED_REPEAT_NONE);
 
 static const led_stage_t wait_connect_stages[] = {
-    LED_STAGE(255, HAL_WS2812_BLUE, 100, 500),
+    LED_STAGE(255, HAL_WS2812_RED, 100, 200),
     LED_STAGE_OFF(50, 500),
-    LED_STAGE(255, HAL_WS2812_RED, 100, 500),
+    LED_STAGE(255, HAL_WS2812_RED, 100, 200),
     LED_STAGE_OFF(50, 500),
 };
 LED_PATTERN(wait_connect_pattern, wait_connect_stages, LED_REPEAT_FOREVER);
@@ -100,6 +100,11 @@ static const led_stage_t config_stages[] = {
 };
 LED_PATTERN(config_pattern, config_stages, LED_REPEAT_FOREVER);
 
+static const led_stage_t seted_stages[] = {
+    LED_STAGE(255, HAL_WS2812_PURPLE, 50, 0),
+};
+LED_PATTERN(seted_pattern, seted_stages, 1);
+
 static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
     [LED_MODE_TRACKING] = &tracking_pattern,
@@ -107,6 +112,7 @@ static const led_pattern_t *patterns[] = {
     [LED_MODE_SMART_CONFIG] = &config_pattern,
     [LED_MODE_BOOT] = &boot_pattern,
     [LED_MODE_REVERSING] = &reversing_pattern,
+    [LED_MODE_SETED] = &seted_pattern,
 };
 
 _Static_assert(LED_MODE_COUNT == ARRAY_COUNT(patterns), "invalid number of LED patterns");

@@ -67,16 +67,6 @@ typedef struct led_pattern_s
 #endif
 } led_pattern_t;
 
-// #if defined(LED_1_USE_WS2812)
-// typedef struct led_gradual_target_s
-// {
-//     uint16_t pan;
-//     uint16_t tilt;
-//     uint16_t pan_pulsewidth;
-//     uint16_t tilt_pulsewidth;
-// } led_gradual_target_t;
-// #endif
-
 #if defined(LED_USE_WS2812)
 #define LED_STAGE(l, c, d, f) ((const led_stage_t){.duration = d, .color = c, .fade_duration = f, .level = l})
 #elif defined(LED_USE_FADING)
@@ -105,6 +95,8 @@ typedef enum
     LED_MODE_BOOT,
 
     LED_MODE_REVERSING,
+
+    LED_MODE_SETED,
 
     LED_MODE_COUNT,
 
