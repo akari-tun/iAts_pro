@@ -68,6 +68,7 @@ static const uint8_t *BATTERY_IMG = (uint8_t *)Battery_bits;
 
 static const uint8_t *PAN_ICON = (uint8_t *)Pan_Icon_bits;
 static const uint8_t *TILT_ICON = (uint8_t *)Tilt_Icon_bits;
+static const uint8_t *TILT_R_ICON = (uint8_t *)Tilt_R_Icon_bits;
 
 #define PHONE_WIDTH Phone_width
 #define PHONE_HEIGHT Phone_height
