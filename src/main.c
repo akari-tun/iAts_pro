@@ -1,6 +1,3 @@
-/* 
-	A lot of the code for this project is copy from the raven(https://github.com/RavenLRS/raven)
-*/
 #include <stdio.h>
 
 #include <hal/log.h>

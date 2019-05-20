@@ -142,7 +142,7 @@ static void ui_flag_updated(void *notifier, void *f)
 #endif
     }
 
-    if (*flag & TRACKER_FLAG_SERVER_CONNECTED) 
+    if (*flag & TRACKER_FLAG_SERVER_CONNECTED)
     {
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
@@ -171,7 +171,7 @@ static void ui_reverse_updated(void *notifier, void *r)
 static Observer ui_wifi_status_observer;
 
 static void ui_wifi_status_update(void *notifier, void *s)
-{    
+{
     Observer *obs = (Observer *)notifier;
     iats_wifi_status_e *status = (iats_wifi_status_e *)s;
     ui_t *ui = (ui_t *)obs->Obj;
@@ -259,17 +259,14 @@ static void ui_handle_screen_button_event(const button_event_t *ev, void *user_d
     {
         return;
     }
-    
+
     bool handled = screen_handle_button_event(&ui->internal.screen, true, ev);
-    
+
     if (!handled)
     {
         handled |= menu_handle_button_event(ev);
     }
-    // if (!handled)
-    // {
-    //     handled |= screen_handle_button_event(&ui->internal.screen, false, ev);
-    // }
+
     if (handled)
     {
         ui_beep(ui);
@@ -281,36 +278,6 @@ static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user
 {
     // No screen configurations only support BUTTON_NAME_ENTER
     ASSERT(button_event_id(ev) == BUTTON_ID_ENTER);
-
-    // ui_t *ui = user_data;
-    // switch (ev->type)
-    // {
-    //     case BUTTON_EVENT_TYPE_SHORT_PRESS:
-    //         if (rc_has_pending_bind_request(ui->internal.rc, NULL))
-    //         {
-    //             rc_accept_bind(ui->internal.rc);
-    //             ui_beep(ui);
-    //         }
-    //         break;
-    //     case BUTTON_EVENT_TYPE_LONG_PRESS:
-    //         break;
-    //     case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
-    //     {
-    //         const setting_t *bind_setting = settings_get_key(SETTING_KEY_BIND);
-    //         bool is_binding = setting_get_bool(bind_setting);
-    //         if (time_micros_now() < SECS_TO_MICROS(15) && !is_binding)
-    //         {
-    //             setting_set_bool(bind_setting, true);
-    //             ui_beep(ui);
-    //         }
-    //         else if (is_binding)
-    //         {
-    //             setting_set_bool(bind_setting, false);
-    //             ui_beep(ui);
-    //         }
-    //         break;
-    //     }
-    // }
 }
 
 static void ui_settings_handler(const setting_t *setting, void *user_data)
@@ -349,40 +316,48 @@ static void ui_update_beeper(ui_t *ui)
 }
 #endif
 
-//manual mode handl
-static void ui_handle_manual_mode(ui_t *ui, button_t *btn)
+static void ui_manual_button_still_down_handle(tracker_t *t, button_t *btn)
 {
-    if (btn->id == BUTTON_ID_ENTER) return;
-    if (!btn->state.is_down) return;
-
-    tracker_t *t = ui->internal.tracker;
-
-    if (t->internal.status == TRACKER_STATUS_MANUAL && ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
+    switch (btn->id)
     {
-        menu_t *menu = menu_get_active();
+    case BUTTON_ID_ENTER:
+        break;
+    case BUTTON_ID_LEFT:
+        tracker_pan_move(t, -1);
+        break;
+    case BUTTON_ID_RIGHT:
+        tracker_pan_move(t, 1);
+        break;
+    case BUTTON_ID_UP:
+        tracker_tilt_move(t, 1);
+        break;
+    case BUTTON_ID_DOWN:
+        tracker_tilt_move(t, -1);
+        break;
+    }
+}
 
-        if (menu != NULL) return;
+//button still handle
+static void ui_handle_button_still_down(ui_t *ui, button_t *btn)
+{
+    if (btn->id == BUTTON_ID_ENTER)
+        return;
+    if (!btn->state.is_down)
+        return;
 
-        switch (btn->id)
+    menu_t *menu = menu_get_active();
+
+    if (menu != NULL)
+    {
+        if (btn->state.long_press_sent)
+            menu_handle_button_still_down(menu, btn);
+    }
+    else if (ui->internal.screen.internal.main_mode == SCREEN_MODE_MAIN)
+    {
+        tracker_t *t = ui->internal.tracker;
+        if (t->internal.status == TRACKER_STATUS_MANUAL && btn->state.long_press_sent)
         {
-        case BUTTON_ID_ENTER:
-            break;
-        case BUTTON_ID_LEFT:
-            if (t->servo->internal.pan.currtent_degree == 0) t->servo->internal.pan.currtent_degree = 359;
-            t->servo->internal.pan.currtent_degree--;
-            break;
-        case BUTTON_ID_RIGHT:
-            if (t->servo->internal.pan.currtent_degree >= 359) t->servo->internal.pan.currtent_degree = 0;
-            t->servo->internal.pan.currtent_degree++;
-            break;
-        case BUTTON_ID_UP:
-            t->servo->internal.tilt.currtent_degree++;
-            if (t->servo->internal.tilt.currtent_degree > 90) t->servo->internal.tilt.currtent_degree = 90;
-            break;
-        case BUTTON_ID_DOWN:
-            if (t->servo->internal.tilt.currtent_degree <= 1) t->servo->internal.tilt.currtent_degree = 1;
-            t->servo->internal.tilt.currtent_degree--;
-            break;
+            ui_manual_button_still_down_handle(t, btn);
         }
     }
 }
@@ -429,11 +404,11 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
     ui_reverse_observer.Update = ui_reverse_updated;
     tracker->servo->internal.reverse_notifier->mSubject.Attach(tracker->servo->internal.reverse_notifier, &ui_reverse_observer);
 
-// #if defined(LED_1_USE_WS2812)
-//     led_init(&ui->internal.led_gradual_target);
-// #else
+    // #if defined(LED_1_USE_WS2812)
+    //     led_init(&ui->internal.led_gradual_target);
+    // #else
     led_init();
-// #endif
+    // #endif
 
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
@@ -449,7 +424,7 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
         ui->internal.screen.internal.wifi = wifi;
 #endif
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
-	    ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+        ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
     }
 #endif
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
@@ -522,7 +497,7 @@ void ui_update(ui_t *ui)
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
         button_update(&ui->internal.buttons[ii]);
-        ui_handle_manual_mode(ui, &ui->internal.buttons[ii]);
+        ui_handle_button_still_down(ui, &ui->internal.buttons[ii]);
     }
     // led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
     led_update();

@@ -1,4 +1,6 @@
 #include <hal/log.h>
+
+#include "config/settings.h"
 #include "tracker.h"
 #include "protocols/atp.h"
 #include "util/calc.h"
@@ -87,6 +89,54 @@ static void tracker_telemetry_changed(void *t, uint8_t tag)
     }
 }
 
+static void tracker_settings_handler(const setting_t *setting, void *user_data)
+{
+    tracker_t *t = (tracker_t*)user_data;
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_COURSE))
+    {
+        t->servo->internal.course = setting_get_u16(setting);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH))
+    {
+        t->servo->internal.pan.config.zero_degree_pwm = setting_get_u8(setting);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH))
+    {
+        t->servo->internal.tilt.config.zero_degree_pwm = setting_get_u8(setting);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH))
+    {
+        t->servo->internal.pan.config.max_pulsewidth = setting_get_u16(setting);
+        if (t->servo->internal.pan.currtent_pulsewidth > t->servo->internal.pan.config.max_pulsewidth)
+            t->servo->internal.pan.currtent_pulsewidth = t->servo->internal.pan.config.max_pulsewidth;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH))
+    {
+        t->servo->internal.pan.config.min_pulsewidth = setting_get_u16(setting);
+        if (t->servo->internal.pan.currtent_pulsewidth < t->servo->internal.pan.config.min_pulsewidth)
+            t->servo->internal.pan.currtent_pulsewidth = t->servo->internal.pan.config.min_pulsewidth;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH))
+    {
+        t->servo->internal.tilt.config.max_pulsewidth = setting_get_u16(setting);
+        if (t->servo->internal.tilt.currtent_pulsewidth > t->servo->internal.tilt.config.max_pulsewidth)
+            t->servo->internal.tilt.currtent_pulsewidth = t->servo->internal.tilt.config.max_pulsewidth;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH))
+    {
+        t->servo->internal.tilt.config.min_pulsewidth = setting_get_u16(setting);
+        if (t->servo->internal.tilt.currtent_pulsewidth < t->servo->internal.tilt.config.min_pulsewidth)
+            t->servo->internal.tilt.currtent_pulsewidth = t->servo->internal.tilt.config.min_pulsewidth;
+    }
+}
+
 static bool tracker_check_atp_cmd(tracker_t *t)
 {
     if (!(t->internal.flag & TRACKER_FLAG_WIFI_CONNECTED))
@@ -154,6 +204,8 @@ void tracker_init(tracker_t *t)
     t->atp->tracker = t;
     t->atp->tag_value_changed = t->internal.telemetry_changed;
     
+    settings_add_listener(tracker_settings_handler, t);
+
     servo_init(&servo);
     atp_init(&atp);
 }
@@ -303,4 +355,36 @@ float get_plane_lat()
 float get_plane_lon()
 {
     return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
+}
+
+void tracker_pan_move(tracker_t *t, int v)
+{
+    if (t->servo->internal.pan.currtent_degree == 0 && v < 0)
+    {
+        t->servo->internal.pan.currtent_degree = 359;
+    }
+    else if (t->servo->internal.pan.currtent_degree >= 359 && v > 0)
+    {
+        t->servo->internal.pan.currtent_degree = 0;
+    }
+    else
+    {
+        t->servo->internal.pan.currtent_degree += v;
+    }
+}
+
+void tracker_tilt_move(tracker_t *t, int v)
+{
+    if (t->servo->internal.tilt.currtent_degree == 0 && v < 0)
+    {
+        t->servo->internal.tilt.currtent_degree = 0;
+    }
+    else if (t->servo->internal.tilt.currtent_degree >= 90 && v > 0)
+    {
+        t->servo->internal.tilt.currtent_degree = 90;
+    }
+    else
+    {
+        t->servo->internal.tilt.currtent_degree += v;
+    }
 }

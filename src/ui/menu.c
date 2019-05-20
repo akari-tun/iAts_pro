@@ -237,7 +237,6 @@ menu_t menu_empty = {
     .entries = menu_empty_entries,
 };
 
-
 // static void menu_device_enter_folder(int device_index, folder_id_e folder)
 // {
 //     menu_t *menu = &dyn_menus[dyn_menu_depth++];
@@ -477,6 +476,7 @@ static bool menu_handle_short_press(menu_t *active, const button_event_t *ev)
             return false;
         }
     }
+    
 #if defined(USE_BUTTON_5WAY)
     button_id_e bid = button_event_id(ev);
     int direction = bid == BUTTON_ID_DOWN ? 1 : bid == BUTTON_ID_UP ? -1 : 0;
@@ -503,10 +503,33 @@ static bool menu_handle_short_press(menu_t *active, const button_event_t *ev)
     return true;
 }
 
-
 static bool menu_handle_double_press(menu_t *active, const button_event_t *ev)
 {
-    return true;
+    if (active == NULL)
+        return false;
+
+    const setting_t *setting = (const setting_t *)active->entries[active->index].data;
+
+    if (setting == NULL)
+        return false;
+
+    switch (button_event_id(ev))
+    {
+    case BUTTON_ID_ENTER:
+        if ((SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+            SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH)) 
+            && setting_get_value_is_tmp(setting))
+        {
+            setting_set_value_is_tmp(setting, false);
+            LOG_D(TAG, "[%s] cancel edit.", setting->name);
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 static bool menu_handle_long_press(menu_t *active, const button_event_t *ev)
@@ -518,6 +541,31 @@ static bool menu_handle_long_press(menu_t *active, const button_event_t *ev)
     //     return true;
     // }
 #if defined(USE_BUTTON_5WAY)
+    if (active == NULL)
+        return false;
+
+    const setting_t *setting = (const setting_t *)active->entries[active->index].data;
+
+    if (setting == NULL)
+        return false;
+
+    switch (button_event_id(ev))
+    {
+    case BUTTON_ID_ENTER:
+        if ((SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+            SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH)) 
+            && setting_get_value_is_tmp(setting))
+        {
+            setting_set_u16(setting, setting_get_tmp_u16(setting));
+            setting_set_value_is_tmp(setting, false);
+            LOG_D(TAG, "[%s] set to -> %d", setting->name, setting_get_tmp_u16(setting));
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+
     return false;
 #else
     return menu_run_action(menu, ev);
@@ -527,24 +575,9 @@ static bool menu_handle_long_press(menu_t *active, const button_event_t *ev)
 static bool menu_handle_really_long_press(menu_t *active, const button_event_t *ev)
 {
 #if defined(USE_BUTTON_5WAY)
-    if (button_event_id(ev) == BUTTON_ID_LEFT)
+    if (button_event_id(ev) == BUTTON_ID_ENTER)
     {
         return menu_back_action(NULL, ev);
-    }
-#endif
-#if 0
-    if (setting_is_visible(SETTINGS_VIEW_MENU, SETTING_KEY_POWER_OFF))
-    {
-        menu_t *menu = menu_get_active();
-        if (!(menu && (menu->data1 == FOLDER_ID_POWER_OFF)))
-        {
-            // Pop the menu entered by the long press
-            if (menu_stack_depth > 0)
-            {
-                menu_stack_depth--;
-            }
-            menu_settings_enter_folder(FOLDER_ID_POWER_OFF);
-        }
     }
 #endif
     return false;
@@ -567,6 +600,30 @@ bool menu_handle_button_event(const button_event_t *ev)
     }
 
     return false;
+}
+
+void menu_handle_button_still_down(menu_t *active, button_t *btn)
+{
+    const setting_t *setting = (const setting_t *)active->entries[active->index].data;
+
+    if (setting == NULL)
+        return;
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+            SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH))
+    {
+        if (btn->id == BUTTON_ID_LEFT || btn->id == BUTTON_ID_RIGHT)
+        {
+            if (!setting_get_value_is_tmp(setting))
+            {
+                setting_set_tmp_u16(setting, setting_get_u16(setting));
+                setting_set_value_is_tmp(setting, true);
+            }
+
+            uint16_t v = setting_get_tmp_u16(setting);
+            setting_set_tmp_u16(setting, btn->id == BUTTON_ID_LEFT ? --v : ++v);
+        }
+    }
 }
 
 void menu_push_active(menu_t *menu)

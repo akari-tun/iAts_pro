@@ -205,6 +205,30 @@ bool screen_is_animating(const screen_t *screen)
     return false;
 }
 
+
+static bool screen_manual_button_handle(tracker_t *t, const button_t *btn)
+{
+    switch (btn->id)
+    {
+    case BUTTON_ID_ENTER:
+        return false;
+    case BUTTON_ID_LEFT:
+        tracker_pan_move(t, -1);
+        break;
+    case BUTTON_ID_RIGHT:
+        tracker_pan_move(t, 1);
+        break;
+    case BUTTON_ID_UP:
+        tracker_tilt_move(t, 1);
+        break;
+    case BUTTON_ID_DOWN:
+        tracker_tilt_move(t, -1);
+        break;
+    }
+
+    return true;
+}
+
 static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev)
 {
     tracker_t *t = screen->internal.tracker;
@@ -273,63 +297,63 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
 
 static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
 {
-    switch (ev->type)
+    tracker_t *t = screen->internal.tracker;
+
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
     {
-    case BUTTON_EVENT_TYPE_SHORT_PRESS:
-        break;
-    case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
-        break;
-    case BUTTON_EVENT_TYPE_LONG_PRESS:
-        break;
-    case BUTTON_EVENT_TYPE_REALLY_LONG_PRESS:
-        break;
+        if (t->internal.status == TRACKER_STATUS_MANUAL)
+        {
+            return screen_manual_button_handle(t, ev->button);
+        }
     }
+
     return false;
 }
 
 static bool screen_button_right_press(screen_t *screen, const button_event_t *ev)
 {
+    tracker_t *t = screen->internal.tracker;
+
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    {
+        if (t->internal.status == TRACKER_STATUS_MANUAL)
+        {
+            return screen_manual_button_handle(t, ev->button);
+        }
+    }
+
     return false;
 }
 
 static bool screen_button_up_press(screen_t *screen, const button_event_t *ev)
 {
+    tracker_t *t = screen->internal.tracker;
+
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    {
+        if (t->internal.status == TRACKER_STATUS_MANUAL)
+        {
+            return screen_manual_button_handle(t, ev->button);
+        }
+    }
+
     return false;
 }
 
 static bool screen_button_down_press(screen_t *screen, const button_event_t *ev)
 {
+    tracker_t *t = screen->internal.tracker;
+
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    {
+        if (t->internal.status == TRACKER_STATUS_MANUAL)
+        {
+            return screen_manual_button_handle(t, ev->button);
+        }
+    }
+
     return false;
 }
-
-bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
-{
-    if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
-    {
-        screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
-        return true;
-    }
-
-    menu_t *menu = menu_get_active();
-    if (menu) return false;
-
-    switch (ev->button->id)
-    {
-        case BUTTON_ID_ENTER:
-            return screen_button_enter_press(screen, ev);
-        case BUTTON_ID_LEFT:
-            return screen_button_left_press(screen, ev);
-        case BUTTON_ID_RIGHT:
-            return screen_button_right_press(screen, ev);
-        case BUTTON_ID_UP:
-            return screen_button_up_press(screen, ev);
-        case BUTTON_ID_DOWN:
-            return screen_button_down_press(screen, ev);
-    }
-
-     return false;
-}
-
 
 static uint16_t screen_animation_offset(uint16_t width, uint16_t max_width, uint16_t *actual_width)
 {
@@ -836,6 +860,34 @@ static void screen_draw(screen_t *screen)
             break;
         }
     }
+}
+
+bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev)
+{
+    if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
+    {
+        screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+        return true;
+    }
+
+    menu_t *menu = menu_get_active();
+    if (menu) return false;
+
+    switch (ev->button->id)
+    {
+        case BUTTON_ID_ENTER:
+            return screen_button_enter_press(screen, ev);
+        case BUTTON_ID_LEFT:
+            return screen_button_left_press(screen, ev);
+        case BUTTON_ID_RIGHT:
+            return screen_button_right_press(screen, ev);
+        case BUTTON_ID_UP:
+            return screen_button_up_press(screen, ev);
+        case BUTTON_ID_DOWN:
+            return screen_button_down_press(screen, ev);
+    }
+
+     return false;
 }
 
 void screen_update(screen_t *screen)

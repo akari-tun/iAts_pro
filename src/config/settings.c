@@ -43,7 +43,7 @@ typedef enum
 #define I32(v) {.i32 = v}
 // clang-format on
 
-static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
+static char settings_string_storage[3][SETTING_STRING_BUFFER_SIZE];
 
 #define SETTING_SHOW_IF(c) ((c) ? SETTING_VISIBILITY_SHOW : SETTING_VISIBILITY_HIDE)
 #define SETTING_SHOW_IF_SCREEN(view_id) SETTING_SHOW_IF(view_id == SETTINGS_VIEW_MENU && system_has_flag(SYSTEM_FLAG_SCREEN))
@@ -51,27 +51,29 @@ static char settings_string_storage[2][SETTING_STRING_BUFFER_SIZE];
 static const char *off_on_table[] = {"Off", "On"};
 
 #define FOLDER(k, n, id, p, fn) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .data = fn }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .data = fn, .tmp_index = 0 }
 #define STRING_SETTING(k, n, p) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .folder = p }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .folder = p, .tmp_index = 0 }
 #define FLAGS_STRING_SETTING(k, n, f, p, d) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = f, .folder = p, .data = d }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = f, .folder = p, .data = d, .tmp_index = 0 }
 #define RO_STRING_SETTING(k, n, p, v) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = SETTING_FLAG_READONLY, .folder = p, .data = v }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_STRING, .flags = SETTING_FLAG_READONLY, .folder = p, .data = v, .tmp_index = 0 }
 #define U8_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f, .folder = p, .min = U8(mi), .max = U8(ma), .def_val = U8(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f, .folder = p, .min = U8(mi), .max = U8(ma), .def_val = U8(def), .tmp_index = 0 }
 #define I8_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I8, .flags = f, .folder = p, .min = I8(mi), .max = I8(ma), .def_val = I8(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I8, .flags = f, .folder = p, .min = I8(mi), .max = I8(ma), .def_val = I8(def), .tmp_index = 0 }
 #define U16_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U16, .flags = f, .folder = p, .min = U16(mi), .max = U16(ma), .def_val = U16(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U16, .flags = f, .folder = p, .min = U16(mi), .max = U16(ma), .def_val = U16(def), .tmp_index = 0 }
+#define U16_HAS_TMP_SETTING(k, n, f, p, mi, ma, def, i) \
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U16, .flags = f, .folder = p, .min = U16(mi), .max = U16(ma), .def_val = U16(def), .tmp_index = i }
 #define I16_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I16, .flags = f, .folder = p, .min = I16(mi), .max = I16(ma), .def_val = I16(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I16, .flags = f, .folder = p, .min = I16(mi), .max = I16(ma), .def_val = I16(def), .tmp_index = 0 }
 #define U32_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U32, .flags = f, .folder = p, .min = U32(mi), .max = U32(ma), .def_val = U32(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U32, .flags = f, .folder = p, .min = U32(mi), .max = U32(ma), .def_val = U32(def), .tmp_index = 0 }
 #define I32_SETTING(k, n, f, p, mi, ma, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I32, .flags = f, .folder = p, .min = I32(mi), .max = I32(ma), .def_val = I32(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_I32, .flags = f, .folder = p, .min = I32(mi), .max = I32(ma), .def_val = I32(def), .tmp_index = 0 }
 #define U8_MAP_SETTING_UNIT(k, n, f, p, m, u, def) \
-    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f | SETTING_FLAG_NAME_MAP, .val_names = m, .unit = u, .folder = p, .min = U8(0), .max = U8(ARRAY_COUNT(m) - 1), .def_val = U8(def) }
+    (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_U8, .flags = f | SETTING_FLAG_NAME_MAP, .val_names = m, .unit = u, .folder = p, .min = U8(0), .max = U8(ARRAY_COUNT(m) - 1), .def_val = U8(def), .tmp_index = 0 }
 #define U8_MAP_SETTING(k, n, f, p, m, def) U8_MAP_SETTING_UNIT(k, n, f, p, m, NULL, def)
 #define BOOL_SETTING(k, n, f, p, def) U8_MAP_SETTING(k, n, f, p, off_on_table, def ? 1 : 0)
 #define BOOL_YN_SETTING(k, n, f, p, def) U8_MAP_SETTING(k, n, f, p, no_yes_table, def ? 1 : 0)
@@ -104,6 +106,8 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
 }
 
 static setting_value_t setting_values[SETTING_COUNT];
+static bool setting_values_is_temp[SETTING_TEMP_COUNT];
+static setting_value_t setting_temp_values[SETTING_TEMP_COUNT];
 
 static const setting_t settings[] = {
     FOLDER("", "Settings", FOLDER_ID_ROOT, 0, setting_visibility_root),
@@ -111,14 +115,21 @@ static const setting_t settings[] = {
     STRING_SETTING(SETTING_KEY_WIFI_SSID, "SSID", FOLDER_ID_WIFI),
     STRING_SETTING(SETTING_KEY_WIFI_PWD, "PWD", FOLDER_ID_WIFI),
     BOOL_SETTING(SETTING_KEY_WIFI_SMART_CONFIG, "Smart Config", SETTING_FLAG_EPHEMERAL, FOLDER_ID_WIFI, false),
+    STRING_SETTING(SETTING_KEY_WIFI_IP, "IP", FOLDER_ID_WIFI),
     FOLDER(SETTING_KEY_SERVO, "Servo", FOLDER_ID_SERVO, FOLDER_ID_ROOT, NULL),
     U16_SETTING(SETTING_KEY_SERVO_COURSE, "Course", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 359, 0),
-    U16_SETTING(SETTING_KEY_SERVO_MAX_PLUSEWIDTH, "Max PWM", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 3000, 2500),
-    U16_SETTING(SETTING_KEY_SERVO_MIN_PLUSEWIDTH, "Min PWM", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 3000, 500),
-    U16_SETTING(SETTING_KEY_SERVO_MAX_DEGREE, "Max Degree", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 180),
-    U16_SETTING(SETTING_KEY_SERVO_MIN_DEGREE, "Min Degree", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 360, 0),
-    U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH, "Pan Zero", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
-    U8_MAP_SETTING(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH, "Tilt Zero", 0, FOLDER_ID_SERVO, servo_zero_degree_pwm_table, MIX_PLUSEWIDTH),
+        FOLDER(SETTING_KEY_SERVO_TILT, "Tilt", FOLDER_ID_TILT, FOLDER_ID_SERVO, NULL),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH, "Max PWM", SETTING_FLAG_VALUE, FOLDER_ID_TILT, 0, 3000, DEFAULT_SERVO_MAX_PLUSEWIDTH, 1),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH, "Min PWM", SETTING_FLAG_VALUE, FOLDER_ID_TILT, 0, 3000, DEFAULT_SERVO_MIN_PLUSEWIDTH, 2),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_TILT_MAX_DEGREE, "Max Degree", SETTING_FLAG_VALUE, FOLDER_ID_TILT, 0, 360, DEFAULT_SERVO_MAX_DEGREE, 3),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_TILT_MIN_DEGREE, "Min Degree", SETTING_FLAG_VALUE, FOLDER_ID_TILT, 0, 360, DEFAULT_SERVO_MIN_DEGREE, 4),
+    U8_MAP_SETTING(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH, "Zero PWM", 0, FOLDER_ID_TILT, servo_zero_degree_pwm_table, MIN_PLUSEWIDTH),
+    FOLDER(SETTING_KEY_SERVO_PAN, "Pan", FOLDER_ID_PAN, FOLDER_ID_SERVO, NULL),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH, "Max PWM", SETTING_FLAG_VALUE, FOLDER_ID_PAN, 0, 3000, DEFAULT_SERVO_MAX_PLUSEWIDTH, 5),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH, "Min PWM", SETTING_FLAG_VALUE, FOLDER_ID_PAN, 0, 3000, DEFAULT_SERVO_MIN_PLUSEWIDTH, 6),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_PAN_MAX_DEGREE, "Max Degree", SETTING_FLAG_VALUE, FOLDER_ID_PAN, 0, 360, DEFAULT_SERVO_MAX_DEGREE, 7),
+    U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_PAN_MIN_DEGREE, "Min Degree", SETTING_FLAG_VALUE, FOLDER_ID_PAN, 0, 360, DEFAULT_SERVO_MIN_DEGREE, 8),
+    U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH, "Zero PWM", 0, FOLDER_ID_PAN, servo_zero_degree_pwm_table, MIN_PLUSEWIDTH),
 #if defined(USE_SCREEN)
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
@@ -156,6 +167,11 @@ static setting_value_t *setting_get_val_ptr(const setting_t *setting)
 {
     int index = setting - settings;
     return &setting_values[index];
+}
+
+static setting_value_t *setting_get_tmp_val_ptr(const setting_t *setting)
+{
+    return &setting_temp_values[setting->tmp_index - 1];
 }
 
 static char *setting_get_str_ptr(const setting_t *setting)
@@ -227,6 +243,19 @@ static void setting_move(const setting_t *setting, int delta)
     {
         return;
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_DEGREE) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_DEGREE) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_DEGREE) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_DEGREE))
+    {
+        if (!setting_get_value_is_tmp(setting))
+        {
+            setting_set_tmp_u16(setting, setting_get_u16(setting));
+            setting_set_value_is_tmp(setting, true);
+        }
+        
+        setting_set_tmp_u16(setting, setting_get_tmp_u16(setting) + delta);
+        return;
+    }
+
     switch (setting->type)
     {
     case SETTING_TYPE_U8:
@@ -248,6 +277,29 @@ static void setting_move(const setting_t *setting, int delta)
         if (v != ov)
         {
             setting_get_val_ptr(setting)->u8 = v;
+            setting_changed(setting);
+        }
+        break;
+    }
+    case SETTING_TYPE_U16:
+    {
+        uint16_t v;
+        uint16_t ov = setting_get_val_ptr(setting)->u16;
+        if (delta < 0 && ov == 0)
+        {
+            v = setting->max.u16;
+        }
+        else if (delta > 0 && ov == setting->max.u16)
+        {
+            v = 0;
+        }
+        else
+        {
+            v = ov + delta;
+        }
+        if (v != ov)
+        {
+            setting_get_val_ptr(setting)->u16 = v;
             setting_changed(setting);
         }
         break;
@@ -274,6 +326,8 @@ void settings_init(void)
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
         const setting_t *setting = &settings[ii];
+        if (setting->tmp_index > 0)
+            setting_values_is_temp[setting->tmp_index - 1] = false;
         // Checking this at compile time is tricky, since most strings are
         // assembled via macros. Do it a runtime instead, impact should be
         // pretty minimal.
@@ -823,10 +877,74 @@ void setting_format(char *buf, size_t size, const setting_t *setting)
     }
     char value[64];
     setting_format_value(value, sizeof(value), setting);
-    snprintf(buf, size, "%s: %s", name, value);
+    if (setting_get_value_is_tmp(setting))
+    {
+        snprintf(buf, size, "%s: %s->%d", name, value, setting_get_tmp_u16(setting));
+    }
+    else
+    {
+        snprintf(buf, size, "%s: %s", name, value);
+    }
 }
 
 void setting_format_value(char *buf, size_t size, const setting_t *setting)
+{
+    if (setting->flags & SETTING_FLAG_NAME_MAP)
+    {
+        const char *name = setting_map_name(setting, setting_get_u8(setting));
+        snprintf(buf, size, "%s", name);
+    }
+    else
+    {
+        switch (setting->type)
+        {
+        case SETTING_TYPE_U8:
+            snprintf(buf, size, "%u", setting_get_u8(setting));
+            break;
+        case SETTING_TYPE_I8:
+            snprintf(buf, size, "%d", setting_get_i8(setting));
+            break;
+        case SETTING_TYPE_U16:
+            snprintf(buf, size, "%u", setting_get_u16(setting));
+            break;
+        case SETTING_TYPE_I16:
+            snprintf(buf, size, "%d", setting_get_i16(setting));
+            break;
+        case SETTING_TYPE_U32:
+            snprintf(buf, size, "%u", setting_get_u32(setting));
+            break;
+        case SETTING_TYPE_I32:
+            snprintf(buf, size, "%d", setting_get_i32(setting));
+            break;
+        case SETTING_TYPE_STRING:
+        {
+            const char *value = setting_get_str_ptr(setting);
+            char value_buf[SETTING_STRING_BUFFER_SIZE];
+            if (setting->flags & SETTING_FLAG_DYNAMIC)
+            {
+                if (setting->data)
+                {
+                    setting_dynamic_format_f format_f = setting->data;
+                    if (format_f(value_buf, sizeof(value_buf), setting, SETTING_DYNAMIC_FORMAT_VALUE) > 0)
+                    {
+                        value = value_buf;
+                    }
+                }
+            }
+            snprintf(buf, size, "%s", value ?: "<null>");
+            break;
+        }
+        case SETTING_TYPE_FOLDER:
+            break;
+        }
+    }
+    if (setting->unit)
+    {
+        strlcat(buf, setting->unit, size);
+    }
+}
+
+void setting_format_temp_value(char *buf, size_t size, const setting_t *setting)
 {
     if (setting->flags & SETTING_FLAG_NAME_MAP)
     {
@@ -992,4 +1110,38 @@ int settings_view_get_parent_index(settings_view_t *view, const setting_t *setti
         }
     }
     return -1;
+}
+
+bool setting_get_value_is_tmp(const setting_t *setting)
+{
+    if (setting->tmp_index == 0)
+        return false;
+    assert(setting->tmp_index <= SETTING_TEMP_COUNT);
+    return setting_values_is_temp[setting->tmp_index - 1];
+}
+
+void setting_set_value_is_tmp(const setting_t *setting, bool is_tmp)
+{
+    assert(setting->tmp_index > 0 && setting->tmp_index <= SETTING_TEMP_COUNT);
+    setting_values_is_temp[setting->tmp_index - 1] = is_tmp;
+}
+
+uint16_t setting_get_tmp_u16(const setting_t *setting)
+{
+    assert(setting->type == SETTING_TYPE_U16);
+    assert(setting->tmp_index > 0 && setting->tmp_index <= SETTING_TEMP_COUNT);
+    return setting_get_tmp_val_ptr(setting)->u16;
+}
+
+void setting_set_tmp_u16(const setting_t *setting, uint16_t v)
+{
+    assert(setting->type == SETTING_TYPE_U16);
+    assert(setting->tmp_index > 0 && setting->tmp_index <= SETTING_TEMP_COUNT);
+
+    v = MIN(v, setting->max.u16);
+    v = MAX(v, setting->min.u16);
+    if ((setting->flags & SETTING_FLAG_READONLY) == 0 && setting_get_tmp_val_ptr(setting)->u16 != v)
+    {
+        setting_get_tmp_val_ptr(setting)->u16 = v;
+    }
 }

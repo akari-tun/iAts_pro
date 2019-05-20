@@ -9,9 +9,6 @@
 
 #include "util/ease.h"
 
-#define MAX_PAN_DEGREE 180
-#define MAX_TILT_DEGREE 90
-
 #define SERVO_MCPWM_FREQUENCY 50
 
 #define SERVO_MCPWM_UNIT MCPWM_UNIT_0

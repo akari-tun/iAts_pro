@@ -38,4 +38,5 @@ float battery_get_voltage(battery_t *battery)
 
     //Calculate the correct voltage according to the partial voltage resistance ratio
     return kalman1_filter(&kalman_state, (avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE)); 
+    // return avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE; 
 }

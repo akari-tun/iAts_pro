@@ -27,6 +27,8 @@ static const char *TAG = "Wifi";
 static volatile char buffer_received[BUFFER_LENGHT];
 //static volatile char buffer_send[BUFFER_LENGHT];
 
+static const char *ip;
+
 static void wifi_send(void *buffer, int len)
 {
     wifi_udp_send(buffer, len);
@@ -163,7 +165,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         wifi_config_t cfg;
         ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &cfg));
         memcpy(wifi->config, &cfg, sizeof(wifi_config_t));
-        LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+
+        const char *ip_str = ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip);
+        // strcpy(ip, ip_str);
+        setting_set_string(settings_get_key(SETTING_KEY_WIFI_IP), ip_str);
+
+        LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, ip_str);
         wifi->status_change(wifi, WIFI_STATUS_CONNECTED);
         xTaskCreatePinnedToCore(task_receive, "RECEIVE", 4096, wifi, 1, NULL, xPortGetCoreID());
         break;
@@ -207,6 +214,8 @@ void wifi_init(wifi_t *wifi)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    ip = (char *)malloc(15);
 
     wifi->status_change = wifi_status_change;
     wifi->config = (wifi_config_t*)malloc(sizeof(wifi_config_t));

@@ -16,6 +16,7 @@ extern menu_t menu_empty;
 void menu_init(tracker_t *tracker);
 void menu_update(void);
 bool menu_handle_button_event(const button_event_t *ev);
+void menu_handle_button_still_down(menu_t *active, button_t *btn);
 void menu_push_active(menu_t *menu);
 void menu_set_active(menu_t *menu);
 void menu_pop_active(void);
