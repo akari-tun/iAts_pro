@@ -6,6 +6,7 @@
 #include <hal/pwm.h>
 #endif
 
+#include "config/settings.h"
 #include "beeper.h"
 
 #define BEEP_LENGTH_TO_TICKS(t) MILLIS_TO_TICKS(t * 10)
@@ -148,6 +149,7 @@ void beeper_init(beeper_t *beeper, hal_gpio_t gpio)
     beeper->mode = BEEPER_MODE_NONE;
     beeper_gpio_init(beeper);
     beeper_off(beeper);
+    beeper->enable = settings_get_key_bool(SETTING_KEY_BEEPER_ENABLE);
 }
 
 void beeper_update(beeper_t *beeper)
@@ -205,10 +207,11 @@ void beeper_update(beeper_t *beeper)
 
 void beeper_beep(beeper_t *beeper)
 {
-    if (beeper->mode != BEEPER_MODE_NONE)
+    if (beeper->mode != BEEPER_MODE_NONE || !beeper->enable)
     {
         return;
     }
+
     beeper->internal.single_beep = true;
     beeper->internal.next_update = time_ticks_now() + MILLIS_TO_TICKS(30);
     beeper_on(beeper);
@@ -216,7 +219,10 @@ void beeper_beep(beeper_t *beeper)
 
 void beeper_set_mode(beeper_t *beeper, beeper_mode_e mode)
 {
-    beeper_set_mode_force(beeper, mode, false);
+    if (beeper->enable)
+    {
+        beeper_set_mode_force(beeper, mode, false);
+    }
 }
 
 #endif

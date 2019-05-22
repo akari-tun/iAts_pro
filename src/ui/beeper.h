@@ -31,6 +31,8 @@ typedef struct beeper_s
 {
     hal_gpio_t gpio;
     beeper_mode_e mode;
+    bool enable;
+
     struct
     {
         bool single_beep;
