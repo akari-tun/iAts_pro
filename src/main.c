@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include <hal/log.h>
+// #include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_attr.h"
@@ -114,7 +115,7 @@ void app_main()
 	iats_wifi_init();
 #endif
 	iats_ui_init();
-	
-	xTaskCreatePinnedToCore(task_tracker, "TRACKER", 4096, &tracker, 1, NULL, 0);
-	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 1);
+
+	xTaskCreatePinnedToCore(task_tracker, "TRACKER", 4096, &tracker, 1, NULL, 1);
+	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 }

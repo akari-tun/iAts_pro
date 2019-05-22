@@ -1,5 +1,6 @@
 #include <hal/log.h>
 
+// #include "esp_task_wdt.h"
 #include "config/settings.h"
 #include "tracker.h"
 #include "protocols/atp.h"
@@ -214,18 +215,15 @@ void task_tracker(void *arg)
 {
     tracker_t *t = arg;
 
-    // time_ticks_t sleep;
     time_millis_t now;
-    time_millis_t pan_tick = 0;
-    time_millis_t tilt_tick = 0;
-
-    // servo_pulsewidth_out(&servo.internal.pan, servo.internal.pan.config.max_pulsewidth);
-    // servo_pulsewidth_out(&servo.internal.tilt, servo.internal.pan.config.max_pulsewidth);
+    // time_millis_t pan_tick = 0;
+    // time_millis_t tilt_tick = 0;
+    
     servo_pulsewidth_out(&servo.internal.pan, servo.internal.pan.config.min_pulsewidth);
     servo_pulsewidth_out(&servo.internal.tilt, servo.internal.pan.config.min_pulsewidth);
 
     vTaskDelay(MILLIS_TO_TICKS(3000));
-
+    
     uint16_t distance = 0;
 
     while (1)
@@ -237,15 +235,12 @@ void task_tracker(void *arg)
             if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
             {
                 //pan
-                if (now > pan_tick)
+                if (now > servo.internal.pan.next_tick)
                 {
                     if (servo.internal.pan.is_easing)
                     {
-                        pan_tick = now + servo_get_easing_sleep(&servo.internal.pan);
+                        servo.internal.pan.next_tick = now + servo_get_easing_sleep(&servo.internal.pan);
                         servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-
-                        // LOG_I(TAG, "step_to:%d | step_positon:%d | step_sleep_ms:%d\n", 
-                        //     servo.internal.pan.step_to, servo.internal.pan.step_positon, servo.internal.pan.step_sleep_ms);
                     }
                     else
                     {
@@ -271,20 +266,17 @@ void task_tracker(void *arg)
                             servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
                         }
 
-                        pan_tick = now + (servo.internal.pan.is_easing ? servo_get_easing_sleep(&servo.internal.pan) : 100);
+                        servo.internal.pan.next_tick = now + (servo.internal.pan.is_easing ? servo_get_easing_sleep(&servo.internal.pan) : 100);
                     }
                 }
 
                 //tilt
-                if (now > tilt_tick)
+                if (now > servo.internal.tilt.next_tick)
                 {
                     if (servo.internal.tilt.is_easing)
                     {
-                        tilt_tick = now + servo_get_easing_sleep(&servo.internal.tilt);
+                        servo.internal.tilt.next_tick = now + servo_get_easing_sleep(&servo.internal.tilt);
                         servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
-
-                        // LOG_I(TAG, "step_to:%d | step_positon:%d | step_sleep_ms:%d\n", 
-                        //     servo.internal.tilt.step_to, servo.internal.tilt.step_positon, servo.internal.tilt.step_sleep_ms);
                     }
                     else
                     {
@@ -302,7 +294,7 @@ void task_tracker(void *arg)
                             servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
                         }
 
-                        tilt_tick = now + (servo.internal.tilt.is_easing ? servo_get_easing_sleep(&servo.internal.tilt) : 100);
+                        servo.internal.tilt.next_tick = now + (servo.internal.tilt.is_easing ? servo_get_easing_sleep(&servo.internal.tilt) : 100);
                     }
                 }
 
@@ -311,20 +303,9 @@ void task_tracker(void *arg)
         }
         else if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
-            servo.internal.tilt.is_reverse = servo.internal.pan.is_reverse;
             servo_update(&servo);
         }
-
-        // if (servo.internal.tilt.is_easing || servo.internal.pan.is_easing)
-        // {
-        //     sleep = MILLIS_TO_TICKS(10);
-        //     servo_update(&servo);
-        // }
-        // else
-        // {
-        //     sleep = MILLIS_TO_TICKS(100);
-        // }
-
+        
         if (!tracker_check_atp_cmd(t))
         {
             vTaskDelay(MILLIS_TO_TICKS(1));

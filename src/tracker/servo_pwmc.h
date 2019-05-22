@@ -2,6 +2,7 @@
 
 #if defined(USE_PWMC)
 #include "util/ease.h"
+#include "util/time.h"
 
 #define SERVO_PWM_FREQUENCY_HZ 50
 
@@ -37,6 +38,7 @@ typedef struct servo_pwmc_status_s
     uint16_t currtent_degree;
     uint16_t currtent_pulsewidth;
     uint16_t last_pulsewidth;
+    time_millis_t next_tick;
 
     uint16_t step_positon;
     uint16_t step_to;

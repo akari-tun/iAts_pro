@@ -32,11 +32,13 @@ void servo_init(servo_t *servo)
 
 void servo_update(servo_t *servo)
 {
-    servo_reverse_check(servo);
-    // tilt
-    servo_pulsewidth_control(&servo->internal.tilt, &servo->internal.ease_config);
     // pan
     servo_pulsewidth_control(&servo->internal.pan, &servo->internal.ease_config);
+    // tilt
+    servo->internal.tilt.is_reverse = servo->internal.pan.is_reverse;
+    servo_pulsewidth_control(&servo->internal.tilt, &servo->internal.ease_config);
+
+    servo_reverse_check(servo);
 }
 
 void servo_pulsewidth_out(servo_status_t *status, uint16_t pulsewidth)

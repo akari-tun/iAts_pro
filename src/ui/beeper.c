@@ -137,7 +137,7 @@ static void beeper_set_mode_force(beeper_t *beeper, beeper_mode_e mode, bool for
         beeper->internal.next_update = 0;
         beeper_off(beeper);
     }
-    else
+    else if (!beeper->internal.single_beep)
     {
         beeper_begin_mode(beeper, mode);
     }

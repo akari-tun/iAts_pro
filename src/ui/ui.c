@@ -112,6 +112,9 @@ static void ui_status_updated(void *notifier, void *s)
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
 
+        if (!(ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) && !led_mode_is_enable(LED_MODE_WAIT_SERVER))
+            led_mode_add(LED_MODE_WAIT_SERVER);
+
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING);
         break;
     case TRACKER_STATUS_MANUAL:
@@ -124,6 +127,8 @@ static void ui_status_updated(void *notifier, void *s)
             led_mode_remove(LED_MODE_SMART_CONFIG);
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
+        if (led_mode_is_enable(LED_MODE_WAIT_SERVER))
+            led_mode_remove(LED_MODE_WAIT_SERVER);
 
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & ~TRACKER_FLAG_TRACKING);
         break;
@@ -146,12 +151,17 @@ static void ui_flag_updated(void *notifier, void *f)
 
     if (*flag & TRACKER_FLAG_SERVER_CONNECTED)
     {
+        led_mode_set(LED_MODE_WAIT_SERVER, false);
 #if defined(USE_BEEPER)
         beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
 #endif
 #if defined(USE_WIFI)
         ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_UDP_CONNECTED);
 #endif
+    }
+    else if (ui->internal.tracker->internal.status < TRACKER_STATUS_MANUAL)
+    {
+        led_mode_set(LED_MODE_WAIT_SERVER, true);
     }
 }
 
@@ -561,8 +571,9 @@ void ui_update(ui_t *ui)
         button_update(&ui->internal.buttons[ii]);
         ui_handle_button_still_down(ui, &ui->internal.buttons[ii]);
     }
-    // led_mode_set(LED_MODE_FAILSAFE, rc_is_failsafe_active(ui->internal.rc, NULL));
+
     led_update();
+
 #ifdef USE_SCREEN
     if (ui_screen_is_available(ui))
     {

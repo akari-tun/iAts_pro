@@ -12,6 +12,7 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 #include "esp_smartconfig.h"
+// #include "esp_task_wdt.h"
 
 #include <hal/log.h>
 #include "util/time.h"
@@ -36,7 +37,7 @@ static void wifi_send(void *buffer, int len)
 
 static void task_receive(void *arg)
 {
-    LOG_I(TAG, "Start receive task.");
+    LOG_I(TAG, "Start receive task at cpu core -> %d", xPortGetCoreID());
 
     wifi_t *wifi = arg;
     ESP_ERROR_CHECK(wifi_create_udp_server());
@@ -59,6 +60,7 @@ static void task_receive(void *arg)
         len = wifi_udp_receive(buffer, BUFFER_LENGHT);
         if (len > 0)
         {
+            // LOG_I(TAG, "Recving data length -> %d", len);
             wifi->callback(buffer, 0, len);
         }
         else

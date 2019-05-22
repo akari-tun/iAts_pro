@@ -7,7 +7,8 @@ typedef struct udp_s
 {
     int server_port;
     uint32_t server_ip;
-    int socket_obj;
+    int socket_obj_client;
+    int socket_obj_server;
     uint32_t remote_ip;
 } udp_t;
 

@@ -266,10 +266,8 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
             servo_config_t *config = &screen->internal.tracker->servo->internal.pan.config;
             servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
-            uint16_t deg = (float)(servo_pan->currtent_pulsewidth - config->min_pulsewidth) / (float)(config->max_pulsewidth - config->min_pulsewidth) 
-                * config->max_degree;
+            uint16_t deg = (servo_pan->currtent_pulsewidth - config->min_pulsewidth) / ((config->max_pulsewidth - config->min_pulsewidth) / config->max_degree);
             if (servo_pan->is_reverse) deg = 359 - deg;
-            deg += 1;
             screen->internal.tracker->servo->internal.course = deg;
             setting_set_u16(setting_course, deg);
 
@@ -300,7 +298,7 @@ static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
 {
     tracker_t *t = screen->internal.tracker;
 
-    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS || ev->type == BUTTON_EVENT_TYPE_DOUBLE_PRESS)
     {
         if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
@@ -315,7 +313,7 @@ static bool screen_button_right_press(screen_t *screen, const button_event_t *ev
 {
     tracker_t *t = screen->internal.tracker;
 
-    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS || ev->type == BUTTON_EVENT_TYPE_DOUBLE_PRESS)
     {
         if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
@@ -330,7 +328,7 @@ static bool screen_button_up_press(screen_t *screen, const button_event_t *ev)
 {
     tracker_t *t = screen->internal.tracker;
 
-    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS || ev->type == BUTTON_EVENT_TYPE_DOUBLE_PRESS)
     {
         if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
@@ -345,7 +343,7 @@ static bool screen_button_down_press(screen_t *screen, const button_event_t *ev)
 {
     tracker_t *t = screen->internal.tracker;
 
-    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS || ev->type == BUTTON_EVENT_TYPE_DOUBLE_PRESS)
     {
         if (t->internal.status == TRACKER_STATUS_MANUAL)
         {

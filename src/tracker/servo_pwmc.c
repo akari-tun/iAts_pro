@@ -34,6 +34,7 @@ void servo_pwm_configuration(servo_pwmc_status_t *status, hal_gpio_t gpio)
     status->currtent_degree = DEFAULT_SERVO_MIN_DEGREE;
     status->currtent_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
     status->last_pulsewidth = DEFAULT_SERVO_MIN_PLUSEWIDTH;
+    status->next_tick = time_millis_now();
 
     status->step_positon = DEFAULT_EASE_MAX_STEPS;
     status->is_easing = false;
