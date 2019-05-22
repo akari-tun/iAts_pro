@@ -17,12 +17,6 @@ typedef struct tracker_s tracker_t;
 typedef struct wifi_s wifi_t;
 #endif
 
-// #if defined(ESP32) && defined(USE_MCPWM)
-// typedef struct servo_mcpwm_s servo_t;
-// #else
-// typedef struct servo_pwmc_s servo_t;
-// #endif
-
 typedef enum
 {
     SCREEN_MODE_MAIN,

@@ -1,4 +1,4 @@
-#include "../src/target/target.h"
+#include "target/target.h"
 
 #ifdef USE_SCREEN
 #include <math.h>
@@ -26,7 +26,7 @@
 #define ANIMATION_FRAME_DURATION_MS 500
 #define ANIMATION_TOTAL_DURATION_MS (ANIMATION_REPEAT * ANIMATION_COUNT * ANIMATION_FRAME_DURATION_MS)
 
-static const char *TAG = "Servo";
+static const char *TAG = "Screen";
 
 typedef enum
 {
@@ -75,6 +75,7 @@ void screen_power_on(screen_t *screen)
 void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode)
 {
     screen->internal.secondary_mode = mode;
+    LOG_I(TAG, "SCREEN_SECONDARY_MODE -> %d\n", mode);
 }
 
 static void screen_splash_task(void *arg)
@@ -236,9 +237,16 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
     switch (ev->type)
     {
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
+        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
+        {
+            wifi_smartconfig_stop(screen->internal.wifi);
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+            wifi_start(screen->internal.wifi);
+            return true;
+        }
         break;
     case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
-        if (t->internal.status == TRACKER_STATUS_TRACKING) 
+        if (t->internal.status >= TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL) 
         {
             t->internal.status_changed(t, TRACKER_STATUS_MANUAL);
         } 
@@ -251,13 +259,6 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
         {
             screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_SMARTCONFIG);
-            return true;
-        }
-        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
-        {
-            wifi_smartconfig_stop(screen->internal.wifi);
-            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
-            wifi_start(screen->internal.wifi);
             return true;
         }
         if (t->internal.status == TRACKER_STATUS_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
@@ -647,15 +648,19 @@ static void screen_draw_main(screen_t *s)
 #ifdef USE_BATTERY_MEASUREMENT
     // battery icon
     u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
+    
     float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
-    if (voltage >= DEFAULT_BATTERY_CENTER_VOLTAGE)
+
+    battery_t *b = s->internal.battery;
+
+    if (voltage >= b->center_voltage)
     {
-        per_voltage = (((voltage - DEFAULT_BATTERY_CENTER_VOLTAGE) / (DEFAULT_BATTERY_MAX_VOLTAGE - DEFAULT_BATTERY_CENTER_VOLTAGE) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
+        per_voltage = (((voltage - b->center_voltage) / (b->max_voltage - b->center_voltage) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
     }
-    else if (voltage >= DEFAULT_BATTERY_MIN_VOLTAGE)
+    else if (voltage >= b->min_voltage)
     {
-        per_voltage = ((voltage - DEFAULT_BATTERY_MIN_VOLTAGE) / (DEFAULT_BATTERY_CENTER_VOLTAGE - DEFAULT_BATTERY_MIN_VOLTAGE)) * (BATTERY_BOX_WIDTH / 2);
+        per_voltage = ((voltage - b->min_voltage) / (b->center_voltage - b->min_voltage)) * (BATTERY_BOX_WIDTH / 2);
     }
     u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
@@ -892,7 +897,6 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
 
 void screen_update(screen_t *screen)
 {
-
     if (screen->internal.splashing)
     {
         return;

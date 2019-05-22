@@ -46,6 +46,9 @@ typedef struct ui_s
     struct
     {
         tracker_t *tracker;
+#if defined(USE_WIFI)
+        wifi_t *wifi;
+#endif
         ui_config_t cfg;
 #if defined(USE_BEEPER)
         beeper_t beeper;

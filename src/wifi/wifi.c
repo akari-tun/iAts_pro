@@ -140,10 +140,10 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
                 },
             };
 
-            // strcpy((char *)&wifi_config.sta.ssid, ssid);
-            // strcpy((char *)&wifi_config.sta.password, password);
-            strcpy((char *)&wifi_config.sta.ssid, "tan_wifi");
-            strcpy((char *)&wifi_config.sta.password, "B048BEA833");
+            strcpy((char *)&wifi_config.sta.ssid, ssid);
+            strcpy((char *)&wifi_config.sta.password, password);
+            // strcpy((char *)&wifi_config.sta.ssid, "tan_wifi");
+            // strcpy((char *)&wifi_config.sta.password, "B048BEA833");
             
             LOG_I(TAG, "Connecting to ap SSID:%s PWD:%s", wifi_config.sta.ssid, wifi_config.sta.password);
 

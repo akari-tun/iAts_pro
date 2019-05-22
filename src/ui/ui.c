@@ -55,6 +55,8 @@ static void ui_status_updated(void *notifier, void *s)
 
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WIFI_CONFIG;
+        // screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_WIFI_CONFIG);
+        // ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_WIFI_CONFIG;
 #endif
 
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
@@ -282,6 +284,7 @@ static void ui_handle_noscreen_button_event(const button_event_t *ev, void *user
 
 static void ui_settings_handler(const setting_t *setting, void *user_data)
 {
+    ui_t *ui = user_data;
 
 #ifdef USE_SCREEN
 #define UPDATE_SCREEN_SETTING(k, f)                                              \
@@ -293,18 +296,76 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         }                                                                        \
     } while (0)
 
-    ui_t *ui = user_data;
-
     UPDATE_SCREEN_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, screen_set_brightness);
 
     if (SETTING_IS(setting, SETTING_KEY_SCREEN_AUTO_OFF) && screen_is_available(&ui->internal.screen))
     {
         ui_set_screen_set_autooff(ui, setting_get_u8(setting));
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_DIAGNOSTICS_DEBUG_INFO))
     {
         screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_DEBUG_INFO);
+        return;
+    }
+#endif
+
+#ifdef USE_BATTERY_MEASUREMENT
+    battery_t *b = ui->internal.screen.internal.battery;
+    
+    if (SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE))
+    {
+        b->voltage_scale = setting_get_u16(setting) / 100.00f;
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE))
+    {
+        b->max_voltage = setting_get_u16(setting) / 100.00f;
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE))
+    {
+        b->min_voltage = setting_get_u16(setting) / 100.00f;
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE))
+    {
+        b->center_voltage = setting_get_u16(setting) / 100.00f;
+        return;
+    }
+#endif
+
+#if defined(USE_BEEPER)
+    if (SETTING_IS(setting, SETTING_KEY_BEEPER_ENABLE))
+    {
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_NONE);
+        ui->internal.beeper.enable = setting_get_bool(setting);
+        if (ui->internal.beeper.enable && ui->internal.tracker->internal.status == TRACKER_STATUS_WIFI_CONNECTING)
+        {
+            beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
+        }
+        return;
+    }
+#endif
+
+#if defined(USE_WIFI)
+    if (SETTING_IS(setting, SETTING_KEY_WIFI_SMART_CONFIG))
+    {
+        menu_t *menu = menu_get_active();
+
+        // There's nothing overriding the screen, draw the normal interface
+        while (menu != NULL)
+        {
+            menu_pop_active();
+            menu = menu_get_active();
+        }
+
+        ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_SMARTCONFIG);
+        return;
     }
 #endif
 }
@@ -421,6 +482,7 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
         ui_wifi_status_observer.Name = "UI wifi status observer";
         ui_wifi_status_observer.Update = ui_wifi_status_update;
         wifi->status_change_notifier->mSubject.Attach(wifi->status_change_notifier, &ui_wifi_status_observer);
+        ui->internal.wifi = wifi;
         ui->internal.screen.internal.wifi = wifi;
 #endif
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
