@@ -1,3 +1,5 @@
+#pragma once
+
 #include <driver/adc.h>
 #include <hal/gpio.h>
 #include "default.h"
@@ -11,7 +13,7 @@
 #define SCREEN_I2C_ADDR 0x3c
 #define SCREEN_GPIO_SDA 32
 #define SCREEN_GPIO_SCL 33
-#define SCREEN_GPIO_RST 0
+#define SCREEN_GPIO_RST HAL_GPIO_NONE
 
 #define USE_BEEPER
 #define BEEPER_GPIO 13
