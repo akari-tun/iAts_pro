@@ -18,6 +18,10 @@ void battery_init(battery_t *battery)
     HAL_ERR_ASSERT_OK(hal_adc_init(&battery->config));
 
     battery->vref = (uint32_t *)vref;
+    battery->center_voltage = DEFAULT_BATTERY_CENTER_VOLTAGE;
+    battery->max_voltage = DEFAULT_BATTERY_MAX_VOLTAGE;
+    battery->min_voltage = DEFAULT_BATTERY_MIN_VOLTAGE;
+    battery->voltage_scale = BATTEYR_PARTIAL_PRESSURE_VALUE;
 
     kalman1_init(&kalman_state, 0, 0);
 }
@@ -37,6 +41,6 @@ float battery_get_voltage(battery_t *battery)
     avg_voltage = (avg_voltage + voltage) / 10;
 
     //Calculate the correct voltage according to the partial voltage resistance ratio
-    return kalman1_filter(&kalman_state, (avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE)); 
+    return kalman1_filter(&kalman_state, (avg_voltage / battery->voltage_scale)); 
     // return avg_voltage / BATTEYR_PARTIAL_PRESSURE_VALUE; 
 }
