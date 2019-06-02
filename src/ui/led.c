@@ -59,9 +59,8 @@ static const led_stage_t none_stages[] = {
 LED_PATTERN(none_pattern, none_stages, LED_REPEAT_NONE);
 
 static const led_stage_t wait_connect_stages[] = {
-    LED_STAGE(255, HAL_WS2812_RED, 2500, 2500),
-    LED_STAGE_OFF(2500, 2500),
-    LED_STAGE_OFF(2500, 0),
+    LED_STAGE(128, HAL_WS2812_RED, 100, 0),
+    LED_STAGE_OFF(1500, 0),
 };
 LED_PATTERN(wait_connect_pattern, wait_connect_stages, LED_REPEAT_FOREVER);
 
@@ -94,9 +93,8 @@ static const led_stage_t tracking_stages[] = {
 LED_PATTERN_GRADUAL(tracking_pattern, tracking_stages, LED_REPEAT_FOREVER, true, 255);
 
 static const led_stage_t config_stages[] = {
-    LED_STAGE(255, HAL_WS2812_BLUE, 2500, 2500),
-    LED_STAGE_OFF(2500, 2500),
-    LED_STAGE_OFF(2500, 0),
+    LED_STAGE(128, HAL_WS2812_BLUE, 100, 0),
+    LED_STAGE_OFF(1500, 0),
 };
 LED_PATTERN(config_pattern, config_stages, LED_REPEAT_FOREVER);
 

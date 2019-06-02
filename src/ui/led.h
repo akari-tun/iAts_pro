@@ -6,6 +6,10 @@
 
 #include "util/time.h"
 
+#if defined(LED_USE_WS2812)
+#include <hal/ws2812.h>
+#endif
+
 #if defined(LED_1_GPIO)
 #define USE_LED
 #endif
@@ -20,10 +24,6 @@
 
 #if defined(LED_USE_PWM) || defined(LED_USE_WS2812)
 #define LED_USE_FADING
-#endif
-
-#if defined(LED_USE_WS2812)
-#include <hal/ws2812.h>
 #endif
 
 #define LED_REPEAT_NONE 0
