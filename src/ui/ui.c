@@ -111,9 +111,13 @@ static void ui_status_updated(void *notifier, void *s)
             led_mode_remove(LED_MODE_SMART_CONFIG);
         if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
             led_mode_remove(LED_MODE_WAIT_CONNECT);
+        if (led_mode_is_enable(LED_MODE_WAIT_SERVER))
+            led_mode_remove(LED_MODE_WAIT_SERVER);
 
-        if (!(ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) && !led_mode_is_enable(LED_MODE_WAIT_SERVER))
-            led_mode_add(LED_MODE_WAIT_SERVER);
+        // if (!(ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) && 
+        //     ui->internal.wifi->status != WIFI_STATUS_UDP_CONNECTED && 
+        //     !led_mode_is_enable(LED_MODE_WAIT_SERVER))
+        //     led_mode_add(LED_MODE_WAIT_SERVER);
 
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING);
         break;
@@ -159,7 +163,7 @@ static void ui_flag_updated(void *notifier, void *f)
         ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_UDP_CONNECTED);
 #endif
     }
-    else if (ui->internal.tracker->internal.status < TRACKER_STATUS_MANUAL)
+    else if (ui->internal.tracker->internal.status < TRACKER_STATUS_MANUAL && ui->internal.wifi->status == WIFI_STATUS_CONNECTED)
     {
         led_mode_set(LED_MODE_WAIT_SERVER, true);
     }
@@ -189,43 +193,46 @@ static void ui_wifi_status_update(void *notifier, void *s)
     ui_t *ui = (ui_t *)obs->Obj;
     tracker_t *t = ui->internal.tracker;
 
-    if (t->internal.status != TRACKER_STATUS_MANUAL)
+    switch (*status)
     {
-        switch (*status)
+    case WIFI_STATUS_NONE:
+        break;
+    case WIFI_STATUS_SMARTCONFIG:
+        if (t->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
         {
-        case WIFI_STATUS_NONE:
-            break;
-        case WIFI_STATUS_SMARTCONFIG:
-            if (t->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
-            {
-                t->internal.status_changed(t, TRACKER_STATUS_WIFI_SMART_CONFIG);
-            }
-            break;
-        case WIFI_STATUS_DISCONNECTED:
-            if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
-            {
-                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
-            }
-            break;
-        case WIFI_STATUS_CONNECTING:
-            if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING)
-            {
-                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
-            }
-            break;
-        case WIFI_STATUS_CONNECTED:
-            if (t->internal.status <= TRACKER_STATUS_WIFI_CONNECTING)
-            {
-                t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTED);
-            }
-            break;
-        case WIFI_STATUS_UDP_CONNECTED:
-            if (t->internal.status != TRACKER_STATUS_MANUAL && t->internal.status != TRACKER_STATUS_TRACKING)
-            {
-                t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
-            }
-            break;
+            t->internal.status_changed(t, TRACKER_STATUS_WIFI_SMART_CONFIG);
         }
+        if (ui->internal.screen.internal.main_mode != SCREEN_MODE_WIFI_CONFIG)
+        {
+            ui->internal.screen.internal.main_mode = SCREEN_MODE_WIFI_CONFIG;
+        }
+        break;
+    case WIFI_STATUS_DISCONNECTED:
+        if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL)
+        {
+            t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
+        }
+        break;
+    case WIFI_STATUS_CONNECTING:
+        if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL)
+        {
+            t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
+        }
+        break;
+    case WIFI_STATUS_CONNECTED:
+        if (t->internal.status <= TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL)
+        {
+            t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTED);
+        }
+        break;
+    case WIFI_STATUS_UDP_CONNECTED:
+        if (t->internal.status != TRACKER_STATUS_MANUAL && t->internal.status != TRACKER_STATUS_TRACKING)
+        {
+            t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
+        }
+        if (led_mode_is_enable(LED_MODE_WAIT_SERVER))
+            led_mode_remove(LED_MODE_WAIT_SERVER);
+        break;
     }
 }
 #endif
@@ -323,7 +330,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 
 #ifdef USE_BATTERY_MEASUREMENT
     battery_t *b = ui->internal.screen.internal.battery;
-    
+
     if (SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE))
     {
         b->voltage_scale = setting_get_u16(setting) / 100.00f;
@@ -439,7 +446,7 @@ static void ui_status_check(ui_t *ui)
     {
         time_millis_t now = time_millis_now();
 
-        if (ui->internal.tracker->last_ack + 6000 < now)
+        if (ui->internal.tracker->last_ack + 7000 < now)
         {
 #if defined(USE_WIFI)
             ui->internal.tracker->internal.flag &= ~TRACKER_FLAG_SERVER_CONNECTED;
@@ -447,6 +454,7 @@ static void ui_status_check(ui_t *ui)
             ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_CONNECTED);
 #endif
             LOG_I(TAG, "Server was losted...");
+            led_mode_add(LED_MODE_WAIT_SERVER);
         }
     }
 }
