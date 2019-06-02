@@ -11,6 +11,8 @@
 float easeing(ease_out_t out, float t, float b, float c, float d) {
     switch (out)
     {
+        case EASE_OUT_QUAD:
+            return easeOutQuad(t, b, c, d);
         case EASE_OUT_QUART:
             return easeOutQuart(t, b, c, d);
         case EASE_OUT_CIRC:
@@ -24,11 +26,22 @@ float easeing(ease_out_t out, float t, float b, float c, float d) {
     }
 }
 
-float easeOutQuart(float t, float b, float c, float d) {
+float easeOutQuad(float t, float b, float c, float d) {
 	t /= d/2;
 	if (t < 1) return c/2*t*t + b;
 	t--;
 	return -c/2 * (t*(t-2) - 1) + b;
+};
+
+float easeOutQuart(float t, float b, float c, float d) {
+	// t /= d/2;
+	// if (t < 1) return c/2*t*t + b;
+	// t--;
+	// return -c/2 * (t*(t-2) - 1) + b;
+    t /= d/2;
+	if (t < 1) return c/2*t*t*t*t*t + b;
+	t -= 2;
+	return c/2*(t*t*t*t*t + 2) + b;
 }
 
 float easeOutCirc(float t, float b, float c, float d) {
