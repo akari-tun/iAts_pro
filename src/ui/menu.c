@@ -516,14 +516,18 @@ static bool menu_handle_double_press(menu_t *active, const button_event_t *ev)
     switch (button_event_id(ev))
     {
     case BUTTON_ID_ENTER:
-        if ((SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
-             SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
-             SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
-             SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE)) &&
-            setting_get_value_is_tmp(setting))
+        // if ((SETTING_IS(setting, SETTING_KEY_SERVO_COURSE) || 
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
+        //      SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
+        //      SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE) ||
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_DEGREE) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_DEGREE) ||
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_DEGREE) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_DEGREE)) &&
+        //     setting_get_value_is_tmp(setting))
+        if (setting_is_has_tmp(setting) && setting_get_value_is_tmp(setting))
         {
             setting_set_value_is_tmp(setting, false);
-            LOG_D(TAG, "[%s] cancel edit.", setting->name);
+            LOG_I(TAG, "[%s] cancel edit.", setting->name);
             return true;
         }
         break;
@@ -554,16 +558,17 @@ static bool menu_handle_long_press(menu_t *active, const button_event_t *ev)
     switch (button_event_id(ev))
     {
     case BUTTON_ID_ENTER:
-        if ((SETTING_IS(setting, SETTING_KEY_SERVO_COURSE) ||
-             SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
-             SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
-             SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
-             SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE)) &&
-            setting_get_value_is_tmp(setting))
+        // if ((SETTING_IS(setting, SETTING_KEY_SERVO_COURSE) ||
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+        //      SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
+        //      SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
+        //      SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE)) &&
+        //     setting_get_value_is_tmp(setting))
+        if (setting_is_has_tmp(setting) && setting_get_value_is_tmp(setting))
         {
             setting_set_u16(setting, setting_get_tmp_u16(setting));
             setting_set_value_is_tmp(setting, false);
-            LOG_D(TAG, "[%s] set to -> %d", setting->name, setting_get_tmp_u16(setting));
+            LOG_I(TAG, "[%s] set to -> %d", setting->name, setting_get_tmp_u16(setting));
             return true;
         }
         else
@@ -627,11 +632,12 @@ void menu_handle_button_still_down(menu_t *active, button_t *btn)
     if (setting == NULL)
         return;
 
-    if (SETTING_IS(setting, SETTING_KEY_SERVO_COURSE) ||
-        SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
-        SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
-        SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
-        SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE))
+    // if (SETTING_IS(setting, SETTING_KEY_SERVO_COURSE) ||
+    //     SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH) ||
+    //     SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH) || SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH) ||
+    //     SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE) || SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE) ||
+    //     SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE))
+    if (setting_is_has_tmp(setting))
     {
         if (btn->id == BUTTON_ID_LEFT || btn->id == BUTTON_ID_RIGHT)
         {
