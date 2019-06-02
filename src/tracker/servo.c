@@ -17,17 +17,25 @@ void servo_init(servo_t *servo)
     uint8_t pan_zero = settings_get_key_u8(SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH);
     uint16_t pan_max_plusewidth = settings_get_key_u16(SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH);
     uint16_t pan_min_plusewidth = settings_get_key_u16(SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH);
+    uint16_t pan_max_degree = settings_get_key_u16(SETTING_KEY_SERVO_PAN_MAX_DEGREE);
+    uint16_t pan_min_degree = settings_get_key_u16(SETTING_KEY_SERVO_PAN_MIN_DEGREE);
     uint8_t tilt_zero = settings_get_key_u8(SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH);
     uint16_t tilt_max_plusewidth = settings_get_key_u16(SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH);
     uint16_t tilt_min_plusewidth = settings_get_key_u16(SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH);
+    uint16_t tilt_max_degree = settings_get_key_u16(SETTING_KEY_SERVO_TILT_MAX_DEGREE);
+    uint16_t tilt_min_degree = settings_get_key_u16(SETTING_KEY_SERVO_TILT_MIN_DEGREE);
 
     servo->internal.course = course;
     servo->internal.pan.config.zero_degree_pwm = pan_zero;
     servo->internal.pan.config.max_pulsewidth = pan_max_plusewidth;
     servo->internal.pan.config.min_pulsewidth = pan_min_plusewidth;
+    servo->internal.pan.config.max_degree = pan_max_degree;
+    servo->internal.pan.config.min_degree = pan_min_degree;
     servo->internal.tilt.config.zero_degree_pwm = tilt_zero;
     servo->internal.tilt.config.max_pulsewidth = tilt_max_plusewidth;
     servo->internal.tilt.config.min_pulsewidth = tilt_min_plusewidth;
+    servo->internal.tilt.config.max_degree = tilt_max_degree;
+    servo->internal.tilt.config.min_degree = tilt_min_degree;
 }
 
 void servo_update(servo_t *servo)
@@ -54,10 +62,11 @@ void servo_reverse_check(servo_t *servo)
     bool reverse = servo->internal.pan.currtent_degree >= 180;
     if (servo->is_reversing != reverse)
     {
-        // servo->internal.tilt.is_reverse = reverse;
+        servo->internal.tilt.is_reverse = reverse;
         servo->internal.pan.is_reverse = reverse;
         servo->is_reversing = reverse;
         servo->internal.reverse_notifier->mSubject.Notify(servo->internal.reverse_notifier, &reverse);
+        servo_pulsewidth_control(&servo->internal.tilt, &servo->internal.ease_config);
     }
 }
 
@@ -70,9 +79,10 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
         uint32_t pwm_error = abs(status->last_pulsewidth - status->currtent_pulsewidth);
         if (pwm_error > ease_config->min_pulsewidth) {
             status->is_easing = true;
+            status->ease_start_pulsewidth = pwm_error;
             status->step_positon = 0;
-            status->step_to = pwm_error > DEFAULT_EASE_MAX_STEPS ? DEFAULT_EASE_MAX_STEPS : pwm_error;
-            status->step_sleep_ms = DEFAULT_EASE_STEP_MS;
+            status->step_to = pwm_error > ease_config->max_steps ?  ease_config->max_steps : pwm_error;
+            status->step_sleep_ms = ease_config->step_ms;
             if (status->step_sleep_ms * status->step_to > ease_config->max_ms) status->step_sleep_ms = ease_config->max_ms / status->step_to;
             if (status->step_sleep_ms * status->step_to < ease_config->min_ms) status->step_sleep_ms = ease_config->min_ms / status->step_to;
             out_pulsewidth = servo_ease_cal(ease_config, status);
@@ -81,6 +91,7 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
         }
     } else {
         out_pulsewidth = servo_ease_cal(ease_config, status);
+        // LOG_D(TAG, "positon:%d -> to:%d | sleep:%dms\n", status->step_positon, status->step_to, status->step_sleep_ms);
     }
 
     servo_pulsewidth_out(status, out_pulsewidth);
@@ -91,8 +102,6 @@ uint16_t servo_pan_per_degree_cal(servo_config_t *config, uint16_t degree_of_rot
     degree_of_rotation = degree_of_rotation % config->max_degree;
 
     uint16_t pwm_of_degree = ((config->max_pulsewidth - config->min_pulsewidth) * degree_of_rotation) / config->max_degree;
-    // return (config->min_pulsewidth + (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
-    // return (config->max_pulsewidth - (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
     return config->zero_degree_pwm > 0 ? (config->max_pulsewidth - pwm_of_degree) : (config->min_pulsewidth + pwm_of_degree);
 }
 
@@ -100,10 +109,6 @@ uint16_t servo_tilt_per_degree_cal(servo_config_t *config, uint16_t degree_of_ro
 {
     uint16_t cal_pulsewidth;
     degree_of_rotation = degree_of_rotation == config->max_degree ? config->max_degree : degree_of_rotation % config->max_degree;
-    // cal_pulsewidth = (config->min_pulsewidth + (((config->max_pulsewidth - config->min_pulsewidth) * (degree_of_rotation)) / (config->max_degree)));
-    // if (!is_reverse) {
-    //     cal_pulsewidth = config->max_pulsewidth - (cal_pulsewidth - config->min_pulsewidth);
-    // }
     uint16_t pwm_of_degree = ((config->max_pulsewidth - config->min_pulsewidth) * degree_of_rotation) / config->max_degree;
 
     if (config->zero_degree_pwm > 0)
