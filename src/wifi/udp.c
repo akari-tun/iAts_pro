@@ -12,6 +12,7 @@ static const char *TAG = "Udp";
 static udp_t udp;
 // static int socket_obj = 0;
 
+static struct sockaddr_in server_addr;
 static struct sockaddr_in remote_addr;
 static unsigned int socklen;
 
@@ -71,9 +72,9 @@ esp_err_t wifi_create_udp_client() {
 		return ESP_FAIL;
 	}
 	/*for client remote_addr is also server_addr*/
-	remote_addr.sin_family = AF_INET;
-	remote_addr.sin_port = htons(UDP_PORT);
-	remote_addr.sin_addr.s_addr = udp.server_ip;
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(UDP_PORT);
+	server_addr.sin_addr.s_addr = udp.server_ip;
 
 	return ESP_OK;
 }
@@ -128,14 +129,17 @@ void wifi_udp_close()
 void wifi_udp_set_server_ip(uint32_t *ip)
 {
 	udp.server_ip = *ip;
-    remote_addr.sin_addr.s_addr = udp.server_ip;
+    server_addr.sin_addr.s_addr = udp.server_ip;
+	server_addr.sin_port = htons(UDP_PORT);
 }
 
 int wifi_udp_send(char *buffer, int length) 
-{
-	int result = sendto(udp.socket_obj_client, buffer, length, 0,
-			(struct sockaddr *) &remote_addr, sizeof(remote_addr));
+{	int result = sendto(udp.socket_obj_client, buffer, length, 0,
+			(struct sockaddr *) &server_addr, sizeof(server_addr));
 	// LOG_I(TAG, "Send Data: %d", result);
+
+	LOG_D(TAG, "Send to : %s:%u -> %d", inet_ntoa(server_addr.sin_addr), ntohs(server_addr.sin_port), length);
+
 	return result;
 }
 
@@ -151,13 +155,14 @@ int wifi_udp_receive(char *buffer, int length)
 	// print recived data
 	if (len > 0) 
 	{
-		if (udp.remote_ip == 0 || udp.remote_ip != remote_addr.sin_addr.s_addr)
+		if (udp.remote_ip == 0 || udp.remote_ip != remote_addr.sin_addr.s_addr || remote_addr.sin_addr.s_addr != server_addr.sin_addr.s_addr)
 		{
 			udp.remote_ip = remote_addr.sin_addr.s_addr;
+			server_addr.sin_addr.s_addr = remote_addr.sin_addr.s_addr;
 			LOG_I(TAG, "Remote ip: %d.%d.%d.%d", (uint8_t)(udp.remote_ip), (uint8_t)(udp.remote_ip >> 8), (uint8_t)(udp.remote_ip >> 16), (uint8_t)(udp.remote_ip >> 24));
 		}
 
-		// LOG_I(TAG, "Receive Data: %d", len);
+		LOG_D(TAG, "Receive Data: %d", len);
 	}
 	if (len <= 0 && LOG_LOCAL_LEVEL >= ESP_LOG_DEBUG) {
 		show_socket_error_reason(udp.socket_obj_server);

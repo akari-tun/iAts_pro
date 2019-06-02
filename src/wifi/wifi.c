@@ -68,9 +68,12 @@ static void task_receive(void *arg)
             vTaskDelay(MILLIS_TO_TICKS(10));
         }
     }
-
+    
     wifi->reciving = false;
     LOG_I(TAG, "Stop receive task.");
+
+    ESP_ERROR_CHECK(esp_wifi_disconnect());
+    LOG_I(TAG, "Stop wifi connect.");
 
     free(buffer);
     vTaskDelete(NULL);
@@ -145,7 +148,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             strcpy((char *)&wifi_config.sta.ssid, ssid);
             strcpy((char *)&wifi_config.sta.password, password);
             // strcpy((char *)&wifi_config.sta.ssid, "tan_wifi");
-            // strcpy((char *)&wifi_config.sta.password, "B048BEA833");
+            // strcpy((char *)&wifi_config.sta.password, "B04811BEA833");
             
             LOG_I(TAG, "Connecting to ap SSID:%s PWD:%s", wifi_config.sta.ssid, wifi_config.sta.password);
 
@@ -203,6 +206,17 @@ static void wifi_status_change(void *w, uint8_t status)
     wifi_t *wifi = (wifi_t*)w;
     
     LOG_I(TAG, "WIFI_STATUS_CHANGE -> %d", status);
+
+    if (wifi->status == WIFI_STATUS_UDP_CONNECTED && status == WIFI_STATUS_CONNECTED)
+    {
+        ip4_addr_t broadcast_addr = {
+            .addr = (u32_t)(wifi->ip | 0xff000000)
+        };
+
+        LOG_I(TAG, "Broadcast Address: %s", ip4addr_ntoa(&broadcast_addr));
+        wifi_udp_set_server_ip(&broadcast_addr.addr);
+    }
+
     wifi->status = status;
     wifi->status_change_notifier->mSubject.Notify(wifi->status_change_notifier, &wifi->status);
 }
