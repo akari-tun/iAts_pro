@@ -43,6 +43,7 @@ typedef struct servo_mcpwm_status_s
     uint16_t currtent_degree;
     uint16_t currtent_pulsewidth;
     uint16_t last_pulsewidth;
+    uint16_t ease_start_pulsewidth;
     time_millis_t next_tick;
 
     uint16_t step_positon;

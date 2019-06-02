@@ -4,7 +4,7 @@
 
 #include <hal/log.h>
 
-static const char *TAG = "servo";
+static const char *TAG = "servo_mcpwm";
 
 void servo_pwm_initialize(servo_mcpwm_t *servo)
 {
@@ -14,7 +14,7 @@ void servo_pwm_initialize(servo_mcpwm_t *servo)
     mcpwm_gpio_init(SERVO_MCPWM_UNIT, SERVO_PAN_MCPWM_IO_SIGNALS, servo->internal.pan.config.gpio);
     mcpwm_gpio_init(SERVO_MCPWM_UNIT, SERVO_TILT_MCPWM_IO_SIGNALS, servo->internal.tilt.config.gpio);
 
-    LOG_I(TAG, "servo gpio init [PAN:%d] [TILT:%d] ", servo->internal.pan.config.gpio, servo->internal.tilt.config.gpio);
+    LOG_I(TAG, "servo mcpwm gpio init [PAN:%d] [TILT:%d] ", servo->internal.pan.config.gpio, servo->internal.tilt.config.gpio);
 
     mcpwm_config_t pwm_config;
     pwm_config.frequency = SERVO_MCPWM_FREQUENCY;    //frequency = 50Hz, i.e. for every servo motor time period should be 20ms
