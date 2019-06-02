@@ -577,9 +577,9 @@ static void screen_draw_servo(screen_t *s)
 
     u8g2_SetFontPosTop(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lat:%-3.7f", get_plane_lat());
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lat:%03.7f", get_plane_lat());
     u8g2_DrawStr(&u8g2, 0, per_h * 12, buf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lon:%-3.7f", get_plane_lon());
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lon:%03.7f", get_plane_lon());
     u8g2_DrawStr(&u8g2, 0, (per_h * 14), buf);
 }
 
@@ -617,6 +617,7 @@ static void screen_draw_main(screen_t *s)
     char *buf = SCREEN_BUF(s);
 
     uint8_t icon_index = 0;
+    uint16_t tw = 0;
 
     if (s->internal.tracker->internal.flag & TRACKER_FLAG_WIFI_CONNECTED)
     {
@@ -644,9 +645,6 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawHLine(&u8g2, icon_index, 1, 2);
 
 #ifdef USE_BATTERY_MEASUREMENT
-    // battery icon
-    u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
-    
     float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
 
@@ -660,15 +658,22 @@ static void screen_draw_main(screen_t *s)
     {
         per_voltage = ((voltage - b->min_voltage) / (b->center_voltage - b->min_voltage)) * (BATTERY_BOX_WIDTH / 2);
     }
-    u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
+
+    if (voltage > b->center_voltage - ((b->center_voltage - b->min_voltage) / 2) || (TIME_CYCLE_EVERY_MS(500, 2) == 0))
+    {
+        // battery icon
+        u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
+        u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
+    }
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
-    u8g2_DrawStr(&u8g2, 80, 0, buf);
+    tw = u8g2_GetStrWidth(&u8g2, buf) + 1;
+    u8g2_DrawStr(&u8g2, s->internal.w - BATTERY_WIDTH - tw, 0, buf);
 #endif
 
     if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL)
     {
-         screen_draw_servo(s);
+        screen_draw_servo(s);
     }
     else
     {
@@ -808,7 +813,6 @@ static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
         y += MENU_LINE_HEIGHT;
     }
 }
-
 
 static void screen_draw_debug_info(screen_t *s)
 {

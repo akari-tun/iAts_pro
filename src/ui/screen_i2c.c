@@ -77,7 +77,7 @@ void screen_i2c_shutdown(screen_i2c_config_t *cfg, u8g2_t *u8g2)
         // No RST pin, just turn on powersave mode
         u8g2_SetPowerSave(u8g2, 1);
     }
-    return false;
+    return;
 }
 
 void screen_i2c_power_on(screen_i2c_config_t *cfg, u8g2_t *u8g2)
