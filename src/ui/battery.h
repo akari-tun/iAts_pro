@@ -1,3 +1,6 @@
+#pragma once
+
+#if defined(USE_BATTERY_MONITORING)
 
 #include <hal/adc.h>
 
@@ -12,3 +15,5 @@ typedef struct battery_s {
 
 void battery_init(battery_t *battery);
 float battery_get_voltage(battery_t *battery);
+
+#endif
