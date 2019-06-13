@@ -91,7 +91,6 @@ void servo_pulsewidth_control(servo_status_t *status, ease_config_t *ease_config
         }
     } else {
         out_pulsewidth = servo_ease_cal(ease_config, status);
-        // LOG_D(TAG, "positon:%d -> to:%d | sleep:%dms\n", status->step_positon, status->step_to, status->step_sleep_ms);
     }
 
     servo_pulsewidth_out(status, out_pulsewidth);
@@ -133,7 +132,7 @@ uint16_t servo_ease_cal(ease_config_t *ease_config, servo_status_t *status)
         easing_pulsewidth = status->last_pulsewidth - easeing(ease_config->ease_out, status->step_positon, 0, status->last_pulsewidth - status->currtent_pulsewidth, status->step_to);
     }
 
-    if (++status->step_positon >= status->step_to) {
+    if (++status->step_positon >= status->step_to || abs(status->last_pulsewidth - status->currtent_pulsewidth) < 20) {
         status->is_easing = false;
     }
 
