@@ -7,7 +7,7 @@
 
 #include "ui/button.h"
 #include "ui/screen_i2c.h"
-#ifdef USE_BATTERY_MEASUREMENT
+#ifdef USE_BATTERY_MONITORING
 #include "ui/battery.h"
 #endif
 
@@ -74,7 +74,7 @@ typedef struct screen_s
 #if defined(USE_WIFI)
         wifi_t *wifi;
 #endif
-#if defined(USE_BATTERY_MEASUREMENT)
+#if defined(USE_BATTERY_MONITORING)
         battery_t *battery;
 #endif
         bool available;

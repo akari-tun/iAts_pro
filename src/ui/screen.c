@@ -575,12 +575,15 @@ static void screen_draw_servo(screen_t *s)
     uint16_t tw = u8g2_GetStrWidth(&u8g2, s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL ? manual : tracking);
     u8g2_DrawStr(&u8g2, s->internal.w - tw, per_h * 14, s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL ? manual : tracking);
 
-    u8g2_SetFontPosTop(&u8g2);
-    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lat:%03.7f", get_plane_lat());
-    u8g2_DrawStr(&u8g2, 0, per_h * 12, buf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lon:%03.7f", get_plane_lon());
-    u8g2_DrawStr(&u8g2, 0, (per_h * 14), buf);
+    if (s->internal.tracker->internal.show_coordinate)
+    {
+        u8g2_SetFontPosTop(&u8g2);
+        u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lat:%03.7f", get_plane_lat());
+        u8g2_DrawStr(&u8g2, 0, per_h * 12, buf);
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "lon:%03.7f", get_plane_lon());
+        u8g2_DrawStr(&u8g2, 0, (per_h * 14), buf);
+    }
 }
 
 
@@ -644,7 +647,7 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawHLine(&u8g2, icon_index, 0, 2);
     u8g2_DrawHLine(&u8g2, icon_index, 1, 2);
 
-#ifdef USE_BATTERY_MEASUREMENT
+#ifdef USE_BATTERY_MONITORING
     float voltage = battery_get_voltage(s->internal.battery);
     int per_voltage = 0;
 
@@ -818,13 +821,29 @@ static void screen_draw_debug_info(screen_t *s)
 {
     char *buf = SCREEN_BUF(s);
     u8g2_SetDrawColor(&u8g2, 1);
-    u8g2_SetFontPosTop(&u8g2);
+    u8g2_SetFontPosBottom(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
 
-    uint16_t y = 0;
+    uint16_t y = 8;
 
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%.02f C", system_temperature());
     screen_draw_label_value(s, "Core Temp:", buf, SCREEN_W(s), y, 3);
+    y += 8;
+
+    if (s->internal.tracker->internal.flag && TRACKER_FLAG_HOMESETED)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%03.7f", get_tracker_lat());
+        screen_draw_label_value(s, "Lat:", buf, SCREEN_W(s), y, 3);
+        y += 8;
+
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%03.7f", get_tracker_lon());
+        screen_draw_label_value(s, "Lon:", buf, SCREEN_W(s), y, 3);
+        y += 8;
+
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%05.2f", get_tracker_alt());
+        screen_draw_label_value(s, "Alt:", buf, SCREEN_W(s), y, 3);
+        y += 8;
+    }
 }
 
 static void screen_draw(screen_t *screen)
