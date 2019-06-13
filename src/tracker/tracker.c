@@ -235,6 +235,7 @@ void tracker_init(tracker_t *t)
     servo.internal.ease_config = e_cfg;
 
     // t->internal.mode = TRACKER_MODE_AUTO;
+    t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE),
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -281,7 +282,7 @@ void task_tracker(void *arg)
             {
                 servo.internal.pan.next_tick = now + servo_get_easing_sleep(&servo.internal.pan);
                 servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-                //LOG_D(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
+                // LOG_I(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
             }
             else
             {
@@ -383,6 +384,26 @@ float get_plane_lat()
 float get_plane_lon()
 {
     return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
+}
+
+float get_plane_alt()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE)) / 10000000.0f;
+}
+
+float get_tracker_lat()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+}
+
+float get_tracker_lon()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+}
+
+float get_tracker_alt()
+{
+    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE)) / 100.0f;
 }
 
 void tracker_pan_move(tracker_t *t, int v)

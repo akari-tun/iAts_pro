@@ -51,6 +51,7 @@ typedef struct tracker_s
 
     struct
     {
+        bool show_coordinate;
         uint8_t flag;
         tracker_status_e status;
         // tracker_mode_e mode;
@@ -73,5 +74,9 @@ uint8_t get_tracker_flag(const tracker_t *t);
 bool get_tracker_reversing(const tracker_t *t);
 float get_plane_lat();
 float get_plane_lon();
+float get_plane_alt();
+float get_tracker_lat();
+float get_tracker_lon();
+float get_tracker_alt();
 void tracker_pan_move(tracker_t *t, int v);
 void tracker_tilt_move(tracker_t *t, int v);
