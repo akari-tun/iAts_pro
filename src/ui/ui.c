@@ -24,7 +24,7 @@
 static const char *TAG = "UI";
 #endif
 
-#ifdef USE_BATTERY_MEASUREMENT
+#ifdef USE_BATTERY_MONITORING
 static battery_t battery;
 #endif
 
@@ -328,7 +328,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     }
 #endif
 
-#ifdef USE_BATTERY_MEASUREMENT
+#ifdef USE_BATTERY_MONITORING
     battery_t *b = ui->internal.screen.internal.battery;
 
     if (SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE))
@@ -385,6 +385,11 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         return;
     }
 #endif
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_SHOW_COORDINATE))
+    {
+        ui->internal.tracker->internal.show_coordinate = setting_get_bool(setting);
+        return;
+    }
 }
 
 #if defined(USE_BEEPER)
@@ -538,7 +543,7 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
 #endif
     settings_add_listener(ui_settings_handler, ui);
 
-#ifdef USE_BATTERY_MEASUREMENT
+#ifdef USE_BATTERY_MONITORING
     battery_init(&battery);
     ui->internal.screen.internal.battery = &battery;
 #endif
