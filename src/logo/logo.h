@@ -25,6 +25,7 @@
 #include "Home.xbm"
 #include "Airplane.xbm"
 #include "Small_Wifi.xbm"
+#include "Power.xbm"
 
 #define AF_LOGO_WIDTH 39
 #define AF_LOGO_HEIGHT 31
@@ -89,3 +90,7 @@ static const uint8_t *SMALL_WIFI_ICON = (uint8_t *)Small_Wifi_bits;
 #define AIRPLANE_WIDTH Airplane_width
 #define AIRPLANE_HEIGHT Airplane_height
 static const uint8_t *AIRPLANE_ICON = (uint8_t *)Airplane_bits;
+
+#define POWER_WIDTH Power_width
+#define POWER_HEIGHT Power_height
+static const uint8_t *POWER_ICON = (uint8_t *)Power_bits;

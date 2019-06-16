@@ -7,8 +7,8 @@
 
 #include "ui/button.h"
 #include "ui/screen_i2c.h"
-#ifdef USE_BATTERY_MONITORING
-#include "ui/battery.h"
+#ifdef USE_MONITORING
+    #include "ui/monitor.h"
 #endif
 
 typedef struct tracker_s tracker_t;
@@ -76,6 +76,9 @@ typedef struct screen_s
 #endif
 #if defined(USE_BATTERY_MONITORING)
         battery_t *battery;
+#endif
+#if defined(USE_POWER_MONITORING)
+        power_t *power;
 #endif
         bool available;
         int8_t main_mode;      // from screen_main_mode_e

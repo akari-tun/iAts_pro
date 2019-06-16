@@ -28,6 +28,10 @@ static const char *TAG = "UI";
 static battery_t battery;
 #endif
 
+#ifdef USE_POWER_MONITORING
+static power_t power;
+#endif
+
 static Observer ui_status_observer;
 static Observer ui_flag_observer;
 static Observer ui_reverse_observer;
@@ -59,8 +63,8 @@ static void ui_status_updated(void *notifier, void *s)
         // ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_WIFI_CONFIG;
 #endif
 
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_WIFI_CONNECTED ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_SERVER_CONNECTED, 0);
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 0);
         break;
     case TRACKER_STATUS_WIFI_CONNECTING:
 
@@ -77,8 +81,8 @@ static void ui_status_updated(void *notifier, void *s)
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
 #endif
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_SERVER_CONNECTED ^ (uint8_t)0xff));
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & (TRACKER_FLAG_WIFI_CONNECTED ^ (uint8_t)0xff));
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_SERVER_CONNECTED, 0);
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 0);
 
         break;
     case TRACKER_STATUS_WIFI_CONNECTED:
@@ -99,7 +103,7 @@ static void ui_status_updated(void *notifier, void *s)
         ATP_SET_U32(TAG_TRACKER_T_IP, ui->internal.screen.internal.wifi->ip, now);
         ATP_SET_U16(TAG_TRACKER_T_PORT, 8898, now);
 
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED);
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 1);
         break;
     case TRACKER_STATUS_TRACKING:
 
@@ -119,7 +123,7 @@ static void ui_status_updated(void *notifier, void *s)
         //     !led_mode_is_enable(LED_MODE_WAIT_SERVER))
         //     led_mode_add(LED_MODE_WAIT_SERVER);
 
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING);
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING, 1);
         break;
     case TRACKER_STATUS_MANUAL:
 
@@ -134,7 +138,7 @@ static void ui_status_updated(void *notifier, void *s)
         if (led_mode_is_enable(LED_MODE_WAIT_SERVER))
             led_mode_remove(LED_MODE_WAIT_SERVER);
 
-        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, ui->internal.tracker->internal.flag & ~TRACKER_FLAG_TRACKING);
+        ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_TRACKING, 0);
         break;
     }
 }
@@ -145,7 +149,7 @@ static void ui_flag_updated(void *notifier, void *f)
     uint8_t *flag = (uint8_t *)f;
     ui_t *ui = (ui_t *)obs->Obj;
 
-    if (*flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED))
+    if (*flag & TRACKER_FLAG_HOMESETED && ui->internal.tracker->internal.flag & TRACKER_FLAG_HOMESETED)
     {
         led_mode_add(LED_MODE_SETED);
 #if defined(USE_BEEPER)
@@ -153,7 +157,15 @@ static void ui_flag_updated(void *notifier, void *f)
 #endif
     }
 
-    if (*flag & TRACKER_FLAG_SERVER_CONNECTED)
+    if (*flag & TRACKER_FLAG_PLANESETED && ui->internal.tracker->internal.flag & TRACKER_FLAG_PLANESETED)
+    {
+        led_mode_add(LED_MODE_SETED);
+#if defined(USE_BEEPER)
+        beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED);
+#endif
+    }
+
+    if (*flag & TRACKER_FLAG_SERVER_CONNECTED && ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED)
     {
         led_mode_set(LED_MODE_WAIT_SERVER, false);
 #if defined(USE_BEEPER)
@@ -212,12 +224,20 @@ static void ui_wifi_status_update(void *notifier, void *s)
         {
             t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
         }
+        // if (ui->internal.screen.internal.main_mode != SCREEN_MODE_WAIT_CONNECT)
+        // {
+        //     ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
+        // }
         break;
     case WIFI_STATUS_CONNECTING:
         if (t->internal.status != TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL)
         {
             t->internal.status_changed(t, TRACKER_STATUS_WIFI_CONNECTING);
         }
+        // if (ui->internal.screen.internal.main_mode != SCREEN_MODE_WAIT_CONNECT)
+        // {
+        //     ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
+        // }
         break;
     case WIFI_STATUS_CONNECTED:
         if (t->internal.status <= TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL)
@@ -331,27 +351,59 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #ifdef USE_BATTERY_MONITORING
     battery_t *b = ui->internal.screen.internal.battery;
 
-    if (SETTING_IS(setting, SETTING_KEY_BATTERY_VOLTAGE_SCALE))
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_VOLTAGE_SCALE))
     {
         b->voltage_scale = setting_get_u16(setting) / 100.00f;
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_BATTERY_MAX_VOLTAGE))
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_MAX_VOLTAGE))
     {
         b->max_voltage = setting_get_u16(setting) / 100.00f;
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE))
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_MIN_VOLTAGE))
     {
         b->min_voltage = setting_get_u16(setting) / 100.00f;
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE))
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_CENTER_VOLTAGE))
     {
         b->center_voltage = setting_get_u16(setting) / 100.00f;
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_ENABLE))
+    {
+        b->enable = setting_get_bool(setting) ? 1 : 0;
+        return;
+    }
+#endif
+
+#ifdef USE_POWER_MONITORING
+    power_t *p = ui->internal.screen.internal.power;
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE))
+    {
+        p->enable = setting_get_bool(setting) ? 1 : 0;
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_POWER_TURN))
+    {
+        if (setting_get_bool(setting))
+        {
+            power_turn_on(p);
+            LOG_I(TAG, "FPDK power was turn ON.");
+        }
+        else
+        {
+            power_turn_off(p);
+            LOG_I(TAG, "FPDK power was turn OFF.");
+        }
+        
         return;
     }
 #endif
@@ -454,7 +506,7 @@ static void ui_status_check(ui_t *ui)
         if (ui->internal.tracker->last_ack + 7000 < now)
         {
 #if defined(USE_WIFI)
-            ui->internal.tracker->internal.flag &= ~TRACKER_FLAG_SERVER_CONNECTED;
+            ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_SERVER_CONNECTED, 0);
             ATP_SET_U8(TAG_TRACKER_FLAG, ui->internal.tracker->internal.flag, now);
             ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_CONNECTED);
 #endif
@@ -545,7 +597,16 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
 
 #ifdef USE_BATTERY_MONITORING
     battery_init(&battery);
-    ui->internal.screen.internal.battery = &battery;
+    #ifdef USE_SCREEN
+        ui->internal.screen.internal.battery = &battery;
+    #endif
+#endif
+
+#ifdef USE_POWER_MONITORING
+    power_init(&power);
+    #ifdef USE_SCREEN
+        ui->internal.screen.internal.power = &power;
+    #endif
 #endif
 }
 

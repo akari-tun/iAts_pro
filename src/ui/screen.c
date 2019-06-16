@@ -640,6 +640,18 @@ static void screen_draw_main(screen_t *s)
         icon_index += AIRPLANE_WIDTH + 4;
     }
 
+#ifdef USE_POWER_MONITORING
+    if (s->internal.power->enable && s->internal.power->turn_status)
+    {
+        if (power_get_power_good(s->internal.power) || (TIME_CYCLE_EVERY_MS(500, 2) == 0))
+        {
+            u8g2_DrawXBM(&u8g2, icon_index, 0, POWER_WIDTH, POWER_HEIGHT, POWER_ICON);
+        }
+
+        icon_index += POWER_WIDTH + 4;
+    }
+#endif
+
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "C->%d", s->internal.tracker->servo->internal.course);
     u8g2_DrawStr(&u8g2, icon_index, 0, buf);
@@ -648,30 +660,32 @@ static void screen_draw_main(screen_t *s)
     u8g2_DrawHLine(&u8g2, icon_index, 1, 2);
 
 #ifdef USE_BATTERY_MONITORING
-    float voltage = battery_get_voltage(s->internal.battery);
-    int per_voltage = 0;
 
-    battery_t *b = s->internal.battery;
+    if (s->internal.battery->enable)
+    {
+        float voltage = battery_get_voltage(s->internal.battery);
+        int per_voltage = 0;
 
-    if (voltage >= b->center_voltage)
-    {
-        per_voltage = (((voltage - b->center_voltage) / (b->max_voltage - b->center_voltage) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
-    }
-    else if (voltage >= b->min_voltage)
-    {
-        per_voltage = ((voltage - b->min_voltage) / (b->center_voltage - b->min_voltage)) * (BATTERY_BOX_WIDTH / 2);
-    }
+        if (voltage >= s->internal.battery->center_voltage)
+        {
+            per_voltage = (((voltage - s->internal.battery->center_voltage) / (s->internal.battery->max_voltage - s->internal.battery->center_voltage) * 0.5) + 0.5) * BATTERY_BOX_WIDTH;
+        }
+        else if (voltage >= s->internal.battery->min_voltage)
+        {
+            per_voltage = ((voltage - s->internal.battery->min_voltage) / (s->internal.battery->center_voltage - s->internal.battery->min_voltage)) * (BATTERY_BOX_WIDTH / 2);
+        }
 
-    if (voltage > b->center_voltage - ((b->center_voltage - b->min_voltage) / 2) || (TIME_CYCLE_EVERY_MS(500, 2) == 0))
-    {
-        // battery icon
-        u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
-        u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
+        if (voltage > s->internal.battery->center_voltage - ((s->internal.battery->center_voltage - s->internal.battery->min_voltage) / 2) || (TIME_CYCLE_EVERY_MS(500, 2) == 0))
+        {
+            // battery icon
+            u8g2_DrawXBM(&u8g2, s->internal.w - BATTERY_WIDTH, 0, BATTERY_WIDTH, BATTERY_HEIGHT, BATTERY_IMG);
+            u8g2_DrawBox(&u8g2, s->internal.w - BATTERY_WIDTH + 1, 1, per_voltage, BATTERY_BOX_HEIGHT);
+        }
+        u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
+        tw = u8g2_GetStrWidth(&u8g2, buf) + 1;
+        u8g2_DrawStr(&u8g2, s->internal.w - BATTERY_WIDTH - tw, 0, buf);
     }
-    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
-    tw = u8g2_GetStrWidth(&u8g2, buf) + 1;
-    u8g2_DrawStr(&u8g2, s->internal.w - BATTERY_WIDTH - tw, 0, buf);
 #endif
 
     if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL)
