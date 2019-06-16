@@ -41,7 +41,7 @@ typedef enum
 } tracker_mode_e;
 
 typedef void (*pTr_status_changed)(void *t, tracker_status_e s);
-typedef void (*pTr_flag_changed)(void *t, uint8_t f);
+typedef void (*pTr_flag_changed)(void *t, uint8_t f, uint8_t v);
 typedef void (*pTr_telemetry_changed)(void *t, uint8_t tag);
 
 typedef struct tracker_s

@@ -40,12 +40,22 @@ static void tracker_status_changed(void *t, tracker_status_e s)
     tracker->internal.status_changed_notifier->mSubject.Notify(tracker->internal.status_changed_notifier, &s);
 }
 
-static void tracker_flag_changed(void *t, uint8_t f)
+static void tracker_flag_changed(void *t, uint8_t f, uint8_t v)
 {
     tracker_t *tracker = t;
-    LOG_I(TAG, "TRACKER_FLAG_CHANGED -> %d | %d = %d", tracker->internal.flag, f, tracker->internal.flag | f);
+    uint8_t flag = tracker->internal.flag;
 
-    tracker->internal.flag |= f;
+    if (v > 0)
+    {
+        tracker->internal.flag |= f;
+    }
+    else 
+    {
+        tracker->internal.flag &= ~f;
+    }
+    
+    LOG_I(TAG, "TRACKER_FLAG_CHANGED -> %d set %d to %d = %d", flag, f, v, tracker->internal.flag);
+
     time_micros_t now = time_micros_now();
 
     ATP_SET_U8(TAG_TRACKER_FLAG, tracker->internal.flag, now);
@@ -61,24 +71,24 @@ static void tracker_telemetry_changed(void *t, uint8_t tag)
     case TAG_BASE_ACK:
         if (!(telemetry_get_u8(atp_get_tag_val(TAG_TRACKER_FLAG)) & TRACKER_FLAG_SERVER_CONNECTED))
         {
-            tracker->internal.flag_changed(tracker, TRACKER_FLAG_SERVER_CONNECTED);
+            tracker->internal.flag_changed(tracker, TRACKER_FLAG_SERVER_CONNECTED, 1);
         }
         tracker->last_ack = time_millis_now();
         break;
     case TAG_PLANE_LONGITUDE:
         if (!(tracker->internal.flag & TRACKER_FLAG_PLANESETED))
-            tracker->internal.flag_changed(tracker, TRACKER_FLAG_PLANESETED);
+            tracker->internal.flag_changed(tracker, TRACKER_FLAG_PLANESETED, 1);
         break;
     case TAG_PLANE_LATITUDE:
         if (!(tracker->internal.flag & TRACKER_FLAG_PLANESETED))
-            tracker->internal.flag_changed(tracker, TRACKER_FLAG_PLANESETED);
+            tracker->internal.flag_changed(tracker, TRACKER_FLAG_PLANESETED, 1);
         break;
     case TAG_TRACKER_LONGITUDE:
         if (!(tracker->internal.flag & TRACKER_FLAG_HOMESETED))
-            tracker->internal.flag_changed(tracker, TRACKER_FLAG_HOMESETED);
+            tracker->internal.flag_changed(tracker, TRACKER_FLAG_HOMESETED, 1);
     case TAG_TRACKER_LATITUDE:
         if (!(tracker->internal.flag & TRACKER_FLAG_HOMESETED))
-            tracker->internal.flag_changed(tracker, TRACKER_FLAG_HOMESETED);
+            tracker->internal.flag_changed(tracker, TRACKER_FLAG_HOMESETED, 1);
         break;
     case TAG_TRACKER_MODE:
         tracker->internal.status = telemetry_get_u8(atp_get_tag_val(tag));
