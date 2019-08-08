@@ -9,7 +9,7 @@
 #include "monitor.h"
 
 #if defined(USE_BATTERY_MONITORING)
-static uint32_t vref[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static uint32_t vref[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 static kalman1_state_t kalman_state;
 
@@ -23,6 +23,7 @@ void battery_init(battery_t *battery)
     HAL_ERR_ASSERT_OK(hal_adc_init(&battery->config));
 
     battery->vref = (uint32_t *)vref;
+    battery->voltage = 0.00f;
     battery->center_voltage = settings_get_key_u16(SETTING_KEY_TRACKER_MONITOR_BATTERY_CENTER_VOLTAGE) / 100.00f;
     battery->max_voltage = settings_get_key_u16(SETTING_KEY_TRACKER_MONITOR_BATTERY_MAX_VOLTAGE) / 100.00f;
     battery->min_voltage = settings_get_key_u16(SETTING_KEY_TRACKER_MONITOR_BATTERY_MIN_VOLTAGE) / 100.00f;
@@ -36,22 +37,38 @@ void battery_init(battery_t *battery)
 
 float battery_get_voltage(battery_t *battery)
 {   
+    // int voltage = kalman1_filter(&kalman_state, get_adc_voltage(&battery->config));
+    // uint32_t avg_voltage = 0;
+    // uint8_t count = sizeof(vref) / sizeof(vref[0]);
+
+    // for (uint8_t i = count - 1; i >= 1; i--)
+    // {
+    //     vref[i] = vref[i - 1];
+    //     avg_voltage += vref[i];
+    // }
+
+    // vref[0] = voltage;
+    // avg_voltage = (avg_voltage + voltage) / count;
+
+    // //Calculate the correct voltage according to the partial voltage resistance ratio
+    // return avg_voltage / battery->voltage_scale;
+
     uint32_t voltage = get_adc_voltage(&battery->config);
     uint32_t avg_voltage = 0;
+    uint8_t count = sizeof(vref) / sizeof(vref[0]);
 
-    for (uint8_t i = 9; i >= 1; i--)
+    for (uint8_t i = count - 1; i >= 1; i--)
     {
         vref[i] = vref[i - 1];
         avg_voltage += vref[i];
     }
 
     vref[0] = voltage;
-    avg_voltage = (avg_voltage + voltage) / 10;
+    avg_voltage = (avg_voltage + voltage) / count;
 
     int filter_voltage =  kalman1_filter(&kalman_state, avg_voltage);
-    // printf("voltage -> %d | filted -> %d\n", avg_voltage, filter_voltage);
+
     //Calculate the correct voltage according to the partial voltage resistance ratio
-    //return kalman1_filter(&kalman_state, (avg_voltage / battery->voltage_scale)); 
     return filter_voltage / battery->voltage_scale; 
 }
 #endif
@@ -64,9 +81,10 @@ void power_init(power_t *power)
     power->enable = settings_get_key_bool(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE) ? 1 : 0;
 
     HAL_ERR_ASSERT_OK(hal_gpio_setup(power->monitoring_gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_DOWN));
-    HAL_ERR_ASSERT_OK(hal_gpio_setup(power->remote_gpio, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_UP));
+    HAL_ERR_ASSERT_OK(hal_gpio_setup(power->remote_gpio, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_BOTH));
 
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_HIGH));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, settings_get_key_bool(SETTING_KEY_TRACKER_MONITOR_POWER_TURN) ? HAL_GPIO_LOW : HAL_GPIO_HIGH));
+
     power->turn_status = 1;
 }
 
@@ -77,14 +95,14 @@ uint8_t power_get_power_good(power_t *power)
 
 void power_turn_on(power_t *power)
 {
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_HIGH));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_LOW));
     power->turn_status = 1;
 
 }
 
 void power_turn_off(power_t *power)
 {
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_LOW));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_HIGH));
     power->turn_status = 0;
 }
 #endif

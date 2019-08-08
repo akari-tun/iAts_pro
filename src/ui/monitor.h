@@ -9,6 +9,7 @@
 typedef struct battery_s {
     adc_config_t config;
     uint32_t *vref;
+    float voltage;
     float voltage_scale;
     float max_voltage;
     float min_voltage;

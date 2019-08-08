@@ -641,7 +641,7 @@ static void screen_draw_main(screen_t *s)
     }
 
 #ifdef USE_POWER_MONITORING
-    if (s->internal.power->enable && s->internal.power->turn_status)
+    if (s->internal.power->enable && settings_get_key_bool(SETTING_KEY_TRACKER_MONITOR_POWER_TURN))
     {
         if (power_get_power_good(s->internal.power) || (TIME_CYCLE_EVERY_MS(500, 2) == 0))
         {
@@ -685,6 +685,21 @@ static void screen_draw_main(screen_t *s)
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%2.2fv", voltage);
         tw = u8g2_GetStrWidth(&u8g2, buf) + 1;
         u8g2_DrawStr(&u8g2, s->internal.w - BATTERY_WIDTH - tw, 0, buf);
+
+        s->internal.battery->voltage = voltage;
+
+        if (s->internal.power->enable)
+        {
+            if (voltage < s->internal.battery->min_voltage && s->internal.power->turn_status)
+            {
+                power_turn_off(s->internal.power);
+            }
+
+            if (!s->internal.power->turn_status && voltage > s->internal.battery->min_voltage && settings_get_key_bool(SETTING_KEY_TRACKER_MONITOR_POWER_TURN))
+            {
+                power_turn_on(s->internal.power);
+            }
+        }
     }
 #endif
 

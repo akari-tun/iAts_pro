@@ -25,8 +25,6 @@
 #include "util/time.h"
 #include "util/macros.h"
 
-// static const char *TAG = "MAIN";
-
 static ui_t ui;
 #if defined(USE_WIFI)
 static wifi_t wifi;
