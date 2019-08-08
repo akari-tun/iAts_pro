@@ -57,6 +57,7 @@ dkms.conf
 # platformIO
 .pioenvs
 .piolibdeps
+.pio
 
 # make
 /build
