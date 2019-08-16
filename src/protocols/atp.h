@@ -85,6 +85,8 @@
 #define TAG_STRING_MAX_SIZE 20
 #define ATP_ASSERT_TYPE(id, typ) assert(telemetry_get_type(id) == typ)
 
+#define ATP_FRAME_BUFFER_SIZE 256
+
 // typedef struct tracker_s tracker_t;
 typedef struct _Notifier notifier_t;
 
@@ -122,10 +124,10 @@ typedef struct atp_frame_s
     uint8_t atp_tag_len;
     uint8_t atp_crc;
     uint8_t buffer_index;
-    uint8_t *buffer;
+    uint8_t buffer[ATP_FRAME_BUFFER_SIZE];
 } atp_frame_t;
 
-typedef void (*pTr_atp_decode)(void *buffer, int offset, int len);
+typedef void (*pTr_atp_decode)(void *t, void *buffer, int offset, int len);
 typedef void (*pTr_atp_send)(void *buffer, int len);
 typedef void (*pTr_tag_value_changed)(void *t, uint8_t tag);
 
@@ -138,6 +140,7 @@ typedef struct atp_s
 
     atp_frame_t *dec_frame;
     atp_frame_t *enc_frame;
+
     telemetry_t *plane_vals;
     telemetry_t *tracker_vals;
     telemetry_t *param_vals;

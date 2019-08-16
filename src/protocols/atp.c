@@ -4,15 +4,15 @@
 #include "tracker/observer.h"
 
 // static const char *TAG = "atp";
-static atp_frame_t atp_dec_frame;
-static atp_frame_t atp_enc_frame;
+//static atp_frame_t atp_dec_frame;
+//static atp_frame_t atp_enc_frame;
 static telemetry_t plane_vals[TAG_PLANE_COUNT];
 static telemetry_t tracker_vals[TAG_TRACKER_COUNT];
 static telemetry_t param_vals[TAG_PARAM_COUNT];
 static atp_t *atp;
 
-static uint8_t dec_buff[512];
-static uint8_t enc_buff[512];
+//static uint8_t dec_buff[512];
+//static uint8_t enc_buff[512];
 
 // pTr_flag_change flag_change;
 // void *tracker;
@@ -395,74 +395,75 @@ static void atp_tag_analysis(atp_frame_t *frame)
     }
 }
 
-static void atp_frame_decode(void *data, int offset, int len)
+static void atp_frame_decode(void *t, void *data, int offset, int len)
 {
     uint8_t *buffer = (uint8_t *)data;
-    atp_dec_frame.atp_status = IDLE;
+    atp_t *atp = (atp_t *)t;
+    atp->dec_frame->atp_status = IDLE;
     // printf("ATP -> OFFSET:%d | LEN:%d\n", offset, len);
 
     for (int i = offset; i < offset + len; i++)
     {
-        switch (atp_dec_frame.atp_status)
+        switch (atp->dec_frame->atp_status)
         {
         case IDLE:
             if (buffer[i] == TP_PACKET_LEAD) 
             {
-                atp_dec_frame.atp_status = STATE_LEAD;
+                atp->dec_frame->atp_status = STATE_LEAD;
             }
             // printf("ATP -> LEAD %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
             break;
         case STATE_LEAD:
             if (buffer[i] == TP_PACKET_START)
             {
-                atp_dec_frame.atp_status = STATE_START;
+                atp->dec_frame->atp_status = STATE_START;
             }
             else
             {
-                atp_dec_frame.atp_status = IDLE;
+                atp->dec_frame->atp_status = IDLE;
             }
             // printf("ATP -> START %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
             break;
         case STATE_START:
-            atp_dec_frame.atp_status = STATE_CMD;
-            atp_dec_frame.atp_cmd = buffer[i];
+            atp->dec_frame->atp_status = STATE_CMD;
+            atp->dec_frame->atp_cmd = buffer[i];
             // printf("ATP -> CMD %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
             break;
         case STATE_CMD:
-            atp_dec_frame.atp_status = STATE_INDEX;
-            atp_dec_frame.atp_index = buffer[i];
+            atp->dec_frame->atp_status = STATE_INDEX;
+            atp->dec_frame->atp_index = buffer[i];
             // printf("ATP -> INDEX %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
             break;
         case STATE_INDEX:
-            atp_dec_frame.atp_status = STATE_LEN;
-            atp_dec_frame.atp_tag_len = buffer[i];
-            atp_dec_frame.atp_crc = buffer[i];
+            atp->dec_frame->atp_status = STATE_LEN;
+            atp->dec_frame->atp_tag_len = buffer[i];
+            atp->dec_frame->atp_crc = buffer[i];
             // printf("ATP -> LEN %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
             break;
         case STATE_LEN:
-            atp_dec_frame.atp_status = STATE_DATA;
+            atp->dec_frame->atp_status = STATE_DATA;
             // printf("ATP -> DATA %#X | STATUS:%d | CRC:%d\n", buffer[i], atp_dec_frame.atp_status,  atp_dec_frame.atp_crc);
-            atp_dec_frame.atp_crc ^= buffer[i];
+            atp->dec_frame->atp_crc ^= buffer[i];
             break;
         case STATE_DATA:
             // printf("ATP -> DATA %#X | STATUS:%d | CRC:%d INDEX:%d\n", buffer[i], atp_dec_frame.atp_status,  atp_dec_frame.atp_crc, atp_dec_frame.buffer_index);
-            atp_dec_frame.atp_crc ^= buffer[i];
-            if (atp_dec_frame.buffer_index - 4 == atp_dec_frame.atp_tag_len)
+            atp->dec_frame->atp_crc ^= buffer[i];
+            if (atp->dec_frame->buffer_index - 4 == atp->dec_frame->atp_tag_len)
             {
                 // printf("ATP -> DECODE DONE\n");
-                if (atp_dec_frame.atp_crc == 0)
+                if (atp->dec_frame->atp_crc == 0)
                 {
-                    atp_dec_frame.buffer_index = 5;
-                    memcpy(atp_dec_frame.buffer, &buffer[offset], len);
-                    atp_tag_analysis(&atp_dec_frame);
+                    atp->dec_frame->buffer_index = 5;
+                    memcpy(atp->dec_frame->buffer, &buffer[offset], len);
+                    atp_tag_analysis(atp->dec_frame);
                     // printf("ATP -> Success\n");
                 }
-                atp_dec_frame.atp_status = IDLE;
+                atp->dec_frame->atp_status = IDLE;
             }
             break;
         }
 
-        atp_dec_frame.buffer_index = i - offset;
+        atp->dec_frame->buffer_index = i - offset;
         //atp_dec_frame.atp_status = state;
     }
 }
@@ -515,11 +516,8 @@ void atp_init(atp_t *t)
     t->plane_vals = (telemetry_t *)&plane_vals;
     t->tracker_vals = (telemetry_t *)&tracker_vals;
     t->param_vals = (telemetry_t *)&param_vals;
-    t->dec_frame = &atp_dec_frame;
-    t->enc_frame = &atp_enc_frame;
-
-    atp_dec_frame.buffer = (uint8_t *)&dec_buff;
-    atp_enc_frame.buffer = (uint8_t *)&enc_buff;
+    t->dec_frame = (atp_frame_t *)malloc(sizeof(atp_frame_t));
+    t->enc_frame = (atp_frame_t *)malloc(sizeof(atp_frame_t));
 
     for(int i = 0; i < TAG_PLANE_COUNT + TAG_TRACKER_COUNT + TAG_PARAM_COUNT; i++)
     {

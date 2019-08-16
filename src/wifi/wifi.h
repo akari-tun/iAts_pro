@@ -16,7 +16,7 @@ typedef enum
     WIFI_STATUS_UDP_CONNECTED = 5,
 } iats_wifi_status_e;
 
-typedef void (*pTr_Analysis)(void *data, int offset, int len);
+typedef void (*pTr_Analysis)(void *t, void *data, int offset, int len);
 typedef void (*pTr_Send)(void *buffer, int len);
 typedef void (*pTr_wifi_status_change)(void *w, uint8_t s);
 
@@ -28,6 +28,7 @@ typedef struct wifi_s
     uint32_t ip;
 
     wifi_config_t *config;
+    void *t;
     pTr_Analysis callback;
     pTr_Send send;
     pTr_wifi_status_change status_change;

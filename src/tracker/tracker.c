@@ -189,23 +189,24 @@ static bool tracker_check_atp_cmd(tracker_t *t)
     {
         if (now > t->last_heartbeat + 1000)
         {
-            // printf("!TRACKER_FLAG_SERVER_CONNECTED\n");
-
+            //printf("!TRACKER_FLAG_SERVER_CONNECTED\n");
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
+
             if (t->atp->enc_frame->buffer_index > 0)
             {
                 t->atp->atp_send(buff, t->atp->enc_frame->buffer_index);
                 t->last_heartbeat = now;
                 return true;
             }
+            printf("5\n");
         }
     }
     else
     {
         if (now > t->last_heartbeat + 5000)
         {
-            // printf("RACKER_FLAG_SERVER_CONNECTED\n");
+            //printf("RTACKER_FLAG_SERVER_CONNECTED\n");
 
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
