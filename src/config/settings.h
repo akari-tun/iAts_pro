@@ -198,6 +198,7 @@ typedef enum
     SETTING_FLAG_DYNAMIC = 1 << 4,
     SETTING_FLAG_VALUE = 1 << 5,
     SETTING_FLAG_FLOAT = 1 << 6,
+    SETTING_FLAG_IGNORE_CHANGE = 1 << 7,
 } setting_flag_e;
 
 typedef union {
