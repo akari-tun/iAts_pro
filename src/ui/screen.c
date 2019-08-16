@@ -888,6 +888,15 @@ static void screen_draw(screen_t *screen)
     if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
     {
         screen_draw_menu(screen, menu, 0);
+
+#ifdef USE_BATTERY_MONITORING
+        if (screen->internal.battery->enable)
+        {
+            screen->internal.battery->voltage = battery_get_voltage(screen->internal.battery);
+            const setting_t *setting_voltage = settings_get_key(SETTING_KEY_TRACKER_MONITOR_BATTERY_VOLTAGE);
+            setting_set_u16(setting_voltage, screen->internal.battery->voltage * 100);
+        }
+#endif
     }
     else
     {

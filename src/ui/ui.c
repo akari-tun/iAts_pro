@@ -378,6 +378,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_BATTERY_ENABLE))
     {
         b->enable = setting_get_bool(setting) ? 1 : 0;
+        if (!b->enable) b->voltage = 0;
         return;
     }
 #endif
