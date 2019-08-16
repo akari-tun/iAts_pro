@@ -10,6 +10,7 @@ typedef struct hal_spi_device_config_s
     uint8_t command_bits;
     uint8_t address_bits;
     uint32_t clock_speed_hz;
+    uint8_t spi_mode;
     hal_gpio_t cs;
 } hal_spi_device_config_t;
 
@@ -21,3 +22,6 @@ hal_err_t hal_spi_device_transmit(const hal_spi_device_handle_t *dev, uint16_t c
                                   const void *tx, size_t tx_size,
                                   void *rx, size_t rx_size);
 hal_err_t hal_spi_device_transmit_u8(const hal_spi_device_handle_t *dev, uint16_t cmd, uint32_t addr, uint8_t c, uint8_t *out);
+hal_err_t hal_spi_device_transmit_bits(const hal_spi_device_handle_t *dev, uint16_t cmd, uint32_t addr,
+                                  const void *tx, size_t tx_size,
+                                  void *rx, size_t rx_size);

@@ -22,7 +22,7 @@ hal_err_t hal_spi_bus_add_device(hal_spi_bus_t bus, const hal_spi_device_config_
     devcfg.command_bits = cfg->command_bits;
     devcfg.address_bits = cfg->address_bits;
     devcfg.clock_speed_hz = cfg->clock_speed_hz;
-    devcfg.mode = 0; // SPI mode 0
+    devcfg.mode = cfg->spi_mode; //mode 0-3
     devcfg.spics_io_num = cfg->cs;
     devcfg.queue_size = 4;
     // Attach the device
@@ -64,4 +64,20 @@ hal_err_t hal_spi_device_transmit_u8(const hal_spi_device_handle_t *dev, uint16_
         *out = t.rx_data[0];
     }
     return err;
+}
+
+hal_err_t hal_spi_device_transmit_bits(const hal_spi_device_handle_t *dev, uint16_t cmd, uint32_t addr,
+                                  const void *tx, size_t tx_size,
+                                  void *rx, size_t rx_size)
+{
+    spi_transaction_t t = {
+        .cmd = cmd,
+        .addr = addr,
+        .length = tx_size,
+        .rxlength = rx_size,
+        .tx_buffer = tx,
+        .rx_buffer = rx,
+        .flags = 0,
+    };
+    return spi_device_transmit(dev->dev, &t);
 }
