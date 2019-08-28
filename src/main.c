@@ -82,6 +82,7 @@ void iats_ui_init(void)
 void iats_wifi_init(void)
 {
 	wifi_init(&wifi);
+	wifi.t = tracker.atp;
 	wifi.callback = tracker.atp->atp_decode;
 	tracker.atp->atp_send = wifi.send;
 }
@@ -105,6 +106,8 @@ void task_ui(void *arg)
 
 void app_main()
 {
+	esp_log_level_set("*", ESP_LOG_INFO);
+
 	settings_init();
 	settings_add_listener(setting_changed, NULL);
 

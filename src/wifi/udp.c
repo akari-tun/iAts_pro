@@ -164,9 +164,10 @@ int wifi_udp_receive(char *buffer, int length)
 
 		LOG_D(TAG, "Receive Data: %d", len);
 	}
-	if (len <= 0 && LOG_LOCAL_LEVEL >= ESP_LOG_DEBUG) {
-		show_socket_error_reason(udp.socket_obj_server);
-	}
+
+	// if (len <= 0 && LOG_LOCAL_LEVEL >= ESP_LOG_DEBUG) {
+	// 	show_socket_error_reason(udp.socket_obj_server);
+	// }
 
     return len;
 }

@@ -2,56 +2,81 @@
 #include <string.h>
 #include "atp.h"
 #include "tracker/observer.h"
+#include "config/settings.h"
 
-// static const char *TAG = "atp";
-//static atp_frame_t atp_dec_frame;
-//static atp_frame_t atp_enc_frame;
+static const char *TAG = "atp";
 static telemetry_t plane_vals[TAG_PLANE_COUNT];
 static telemetry_t tracker_vals[TAG_TRACKER_COUNT];
 static telemetry_t param_vals[TAG_PARAM_COUNT];
+// static telemetry_t iats_pro_param_vals[TAG_PARAM_IATS_PRO_COUNT];
+static atp_cmd_t atp_cmd;
+static atp_ctr_t atp_ctr;
 static atp_t *atp;
 
-//static uint8_t dec_buff[512];
-//static uint8_t enc_buff[512];
-
-// pTr_flag_change flag_change;
-// void *tracker;
-
 static const atp_tag_info_t atp_tag_infos[] = {
-    {TAG_PLANE_LONGITUDE,           TELEMETRY_TYPE_INT32,   "Lon",      telemetry_format_coordinate},                 
-    {TAG_PLANE_LATITUDE,            TELEMETRY_TYPE_INT32,   "Lat",      telemetry_format_coordinate},
-    {TAG_PLANE_ALTITUDE,            TELEMETRY_TYPE_INT32,   "Alt",      telemetry_format_altitude},
-    {TAG_PLANE_SPEED,               TELEMETRY_TYPE_INT16,   "Spd",      telemetry_format_horizontal_speed},
-    {TAG_PLANE_DISTANCE,            TELEMETRY_TYPE_UINT32,  "Dist",     telemetry_format_metre},
-    {TAG_PLANE_STAR,                TELEMETRY_TYPE_INT16,   "GPS Sta.", telemetry_format_u8},
-    {TAG_PLANE_FIX,                 TELEMETRY_TYPE_UINT8,   "GPS Fix.", telemetry_format_gps_fix},
-    {TAG_PLANE_PITCH,               TELEMETRY_TYPE_INT16,   "Pitch",    telemetry_format_deg},
-    {TAG_PLANE_ROLL,                TELEMETRY_TYPE_INT16,   "Roll",     telemetry_format_deg},
-    {TAG_PLANE_HEADING,             TELEMETRY_TYPE_UINT16,  "Heading",  telemetry_format_deg},
-    {TAG_TRACKER_LONGITUDE,         TELEMETRY_TYPE_INT32,   "Lon",      telemetry_format_coordinate},
-    {TAG_TRACKER_LATITUDE,          TELEMETRY_TYPE_INT32,   "Lat",      telemetry_format_coordinate},
-    {TAG_TRACKER_ALTITUDE,          TELEMETRY_TYPE_INT32,   "Alt",      telemetry_format_altitude},
-    {TAG_TRACKER_HEADING,           TELEMETRY_TYPE_UINT16,  "Heading",  telemetry_format_deg},
-    {TAG_TRACKER_PITCH,             TELEMETRY_TYPE_INT16,   "Pitch",    telemetry_format_deg},
-    {TAG_TRACKER_VOLTAGE,           TELEMETRY_TYPE_UINT16,  "Batt. V.", telemetry_format_voltage},
-    {TAG_TRACKER_MODE,              TELEMETRY_TYPE_UINT8,   "Mode",     telemetry_format_tracker_mode},
-    {TAG_TRACKER_DECLINATION,       TELEMETRY_TYPE_INT8,    "Dec.",     telemetry_format_deg},
-    {TAG_TRACKER_T_IP,              TELEMETRY_TYPE_UINT32,  "T IP.",    telemetry_format_ip},
-    {TAG_TRACKER_T_PORT,            TELEMETRY_TYPE_UINT16,  "T Port.",  telemetry_format_u16},
-    {TAG_TRACKER_S_IP,              TELEMETRY_TYPE_UINT32,  "S IP.",    telemetry_format_ip},
-    {TAG_TRACKER_S_PORT,            TELEMETRY_TYPE_UINT16,  "S Port.",  telemetry_format_u16},
-    {TAG_TRACKER_FLAG,              TELEMETRY_TYPE_UINT8,   "Flag",     telemetry_format_u8},
-    {TAG_PARAM_PID_P,               TELEMETRY_TYPE_UINT16,  "P",        telemetry_format_u16},
-    {TAG_PARAM_PID_I,               TELEMETRY_TYPE_UINT16,  "I",        telemetry_format_u16},
-    {TAG_PARAM_PID_D,               TELEMETRY_TYPE_UINT16,  "D",        telemetry_format_u16},
-    {TAG_PARAM_TITL_0,              TELEMETRY_TYPE_UINT16,  "Titl 0",   telemetry_format_u16},
-    {TAG_PARAM_TITL_90,             TELEMETRY_TYPE_UINT16,  "Titl 90",  telemetry_format_u16},
-    {TAG_PARAM_PAN_0,               TELEMETRY_TYPE_UINT16,  "Pan 0",    telemetry_format_u16},
-    {TAG_PARAM_OFFSET,              TELEMETRY_TYPE_INT16,   "Offset",   telemetry_format_deg},
-    {TAG_PARAM_TRACKING_DISTANCE,   TELEMETRY_TYPE_UINT8,   "Start m.", telemetry_format_metre},
-    {TAG_PARAM_MAX_PID_ERROR,       TELEMETRY_TYPE_UINT16,  "PID err.", telemetry_format_u16},
-    {TAG_PARAM_MIN_PAN_SPEED,       TELEMETRY_TYPE_UINT8,   "Pan spd.", telemetry_format_u8},
-    {TAG_PARAM_DECLINATION,         TELEMETRY_TYPE_INT8,    "Decl.",    telemetry_format_deg},
+    { TAG_PLANE_LONGITUDE,                         TELEMETRY_TYPE_INT32,   "Lon",            telemetry_format_coordinate },                 
+    { TAG_PLANE_LATITUDE,                          TELEMETRY_TYPE_INT32,   "Lat",            telemetry_format_coordinate },
+    { TAG_PLANE_ALTITUDE,                          TELEMETRY_TYPE_INT32,   "Alt",            telemetry_format_altitude },
+    { TAG_PLANE_SPEED,                             TELEMETRY_TYPE_INT16,   "Spd",            telemetry_format_horizontal_speed },
+    { TAG_PLANE_DISTANCE,                          TELEMETRY_TYPE_UINT32,  "Dist",           telemetry_format_metre },
+    { TAG_PLANE_STAR,                              TELEMETRY_TYPE_INT16,   "GPS Sta.",       telemetry_format_u8 },
+    { TAG_PLANE_FIX,                               TELEMETRY_TYPE_UINT8,   "GPS Fix.",       telemetry_format_gps_fix },
+    { TAG_PLANE_PITCH,                             TELEMETRY_TYPE_INT16,   "Pitch",          telemetry_format_deg },
+    { TAG_PLANE_ROLL,                              TELEMETRY_TYPE_INT16,   "Roll",           telemetry_format_deg },
+    { TAG_PLANE_HEADING,                           TELEMETRY_TYPE_UINT16,  "Heading",        telemetry_format_deg },
+    { TAG_TRACKER_LONGITUDE,                       TELEMETRY_TYPE_INT32,   "Lon",            telemetry_format_coordinate },
+    { TAG_TRACKER_LATITUDE,                        TELEMETRY_TYPE_INT32,   "Lat",            telemetry_format_coordinate },
+    { TAG_TRACKER_ALTITUDE,                        TELEMETRY_TYPE_INT32,   "Alt",            telemetry_format_altitude },
+    { TAG_TRACKER_HEADING,                         TELEMETRY_TYPE_UINT16,  "Heading",        telemetry_format_deg },
+    { TAG_TRACKER_PITCH,                           TELEMETRY_TYPE_INT16,   "Pitch",          telemetry_format_deg },
+    { TAG_TRACKER_VOLTAGE,                         TELEMETRY_TYPE_UINT16,  "Batt. V.",       telemetry_format_voltage },
+    { TAG_TRACKER_MODE,                            TELEMETRY_TYPE_UINT8,   "Mode",           telemetry_format_tracker_mode },
+    { TAG_TRACKER_DECLINATION,                     TELEMETRY_TYPE_INT8,    "Dec.",           telemetry_format_deg} ,
+    { TAG_TRACKER_T_IP,                            TELEMETRY_TYPE_UINT32,  "T IP.",          telemetry_format_ip },
+    { TAG_TRACKER_T_PORT,                          TELEMETRY_TYPE_UINT16,  "T Port.",        telemetry_format_u16 },
+    { TAG_TRACKER_S_IP,                            TELEMETRY_TYPE_UINT32,  "S IP.",          telemetry_format_ip },
+    { TAG_TRACKER_S_PORT,                          TELEMETRY_TYPE_UINT16,  "S Port.",        telemetry_format_u16 },
+    { TAG_TRACKER_FLAG,                            TELEMETRY_TYPE_UINT8,   "Flag",           telemetry_format_u8 },
+    { TAG_PARAM_PID_P,                             TELEMETRY_TYPE_UINT16,  "P",              telemetry_format_u16 },
+    { TAG_PARAM_PID_I,                             TELEMETRY_TYPE_UINT16,  "I",              telemetry_format_u16 },
+    { TAG_PARAM_PID_D,                             TELEMETRY_TYPE_UINT16,  "D",              telemetry_format_u16 },
+    { TAG_PARAM_TITL_0,                            TELEMETRY_TYPE_UINT16,  "Titl 0",         telemetry_format_u16 },
+    { TAG_PARAM_TITL_90,                           TELEMETRY_TYPE_UINT16,  "Titl 90",        telemetry_format_u16 },
+    { TAG_PARAM_PAN_0,                             TELEMETRY_TYPE_UINT16,  "Pan 0",          telemetry_format_u16 },
+    { TAG_PARAM_OFFSET,                            TELEMETRY_TYPE_INT16,   "Offset",         telemetry_format_deg },
+    { TAG_PARAM_TRACKING_DISTANCE,                 TELEMETRY_TYPE_UINT8,   "Start m.",       telemetry_format_metre },
+    { TAG_PARAM_MAX_PID_ERROR,                     TELEMETRY_TYPE_UINT16,  "PID err.",       telemetry_format_u16 },
+    { TAG_PARAM_MIN_PAN_SPEED,                     TELEMETRY_TYPE_UINT8,   "Pan spd.",       telemetry_format_u8 },
+    { TAG_PARAM_DECLINATION,                       TELEMETRY_TYPE_INT8,    "Decl.",          telemetry_format_deg },
+    // { TAG_PARAM_SHOW_COORDINATE,                   TELEMETRY_TYPE_UINT8,   "Show C.",        telemetry_format_u8 },     //是否在主界面显示坐标 L:1
+    // { TAG_PARAM_MONITOR_BATTERY_ENABLE,            TELEMETRY_TYPE_UINT8,   "Bat.Enable",     telemetry_format_u8 },     //是否监控电池电压 L:1
+    // { TAG_PARAM_MONITOR_BATTERY_VOLTAGE_SCALE,     TELEMETRY_TYPE_UINT16,  "Bat.Scale",      telemetry_format_u16 },    //电池电压分压系数 L:2
+    // { TAG_PARAM_MONITOR_BATTERY_MAX_VOLTAGE,       TELEMETRY_TYPE_UINT16,  "Bat.V.Max",      telemetry_format_u16 },    //电池电压最大值 L:2
+    // { TAG_PARAM_MONITOR_BATTERY_MIN_VOLTAGE,       TELEMETRY_TYPE_UINT16,  "Bat.V.Min",      telemetry_format_u16 },    //电池电压最小值 L:2
+    // { TAG_PARAM_MONITOR_BATTERY_CENTER_VOLTAGE,    TELEMETRY_TYPE_UINT16,  "Bat.V.C",        telemetry_format_u16 },    //电池电压中间值 L:2
+    // { TAG_PARAM_MONITOR_POWER_ENABLE,              TELEMETRY_TYPE_UINT8,   "Pwr.Enable",     telemetry_format_u8 },     //监控舵机电源 L:1
+    // { TAG_PARAM_WIFI_SSID,                         TELEMETRY_TYPE_STRING,  "Wifi SSID",      telemetry_format_str },    //WIFI SSID L:32
+    // { TAG_PARAM_WIFI_PWD,                          TELEMETRY_TYPE_STRING,  "Wifi PWD",       telemetry_format_str },    //WIFI PWD L:32
+    // { TAG_PARAM_SERVO_COURSE,                      TELEMETRY_TYPE_UINT16,  "S.Course",       telemetry_format_u16 },    //正北位置舵机指向 L:2
+    // { TAG_PARAM_SERVO_PAN_MIN_PLUSEWIDTH,          TELEMETRY_TYPE_UINT16,  "S.P.PWM.MIN",    telemetry_format_u16 },    //水平舵机最小PWM L:2
+    // { TAG_PARAM_SERVO_PAN_MAX_PLUSEWIDTH,          TELEMETRY_TYPE_UINT16,  "S.P.PWM.MAX",    telemetry_format_u16 },    //水平舵机最大PWM L:2
+    // { TAG_PARAM_SERVO_PAN_MAX_DEGREE,              TELEMETRY_TYPE_UINT16,  "S.P.DEG.MAX",    telemetry_format_u16 },    //水平舵机最大角度 L:2
+    // { TAG_PARAM_SERVO_PAN_MIN_DEGREE,              TELEMETRY_TYPE_UINT16,  "S.P.DEG.MIN",    telemetry_format_u16 },    //水平舵机最小角度 L:2
+    // { TAG_PARAM_SERVO_PAN_DIRECTION,  TELEMETRY_TYPE_UINT8,   "S.P.Z.PWM",      telemetry_format_u8 },     //水平舵机零度PWM值 L:1
+    // { TAG_PARAM_SERVO_TILT_MIN_PLUSEWIDTH,         TELEMETRY_TYPE_UINT16,  "S.T.PWM.MIN",    telemetry_format_u16 },    //俯仰舵机最小PWM L:2
+    // { TAG_PARAM_SERVO_TILT_MAX_PLUSEWIDTH,         TELEMETRY_TYPE_UINT16,  "S.T.PWM.MAX",    telemetry_format_u16 },    //俯仰舵机最大PWM L:2
+    // { TAG_PARAM_SERVO_TILT_MAX_DEGREE,             TELEMETRY_TYPE_UINT16,  "S.T.DEG.MAX",    telemetry_format_u16 },    //俯仰舵机最大角度 L:2
+    // { TAG_PARAM_SERVO_TILT_MIN_DEGREE,             TELEMETRY_TYPE_UINT16,  "S.T.DEG.MIN",    telemetry_format_u16 },    //俯仰舵机最小角度 L:2
+    // { TAG_PARAM_SERVO_TILT_DIRECTION, TELEMETRY_TYPE_UINT8,   "S.T.Z.PWM",      telemetry_format_u8 },     //俯仰舵机零度PWM值 L:1
+    // { TAG_PARAM_SERVO_EASE_OUT_TYPE,               TELEMETRY_TYPE_UINT8,   "S.E.T",          telemetry_format_u8 },     //缓冲类型 L:1
+    // { TAG_PARAM_SERVO_EASE_MAX_STEPS,              TELEMETRY_TYPE_UINT16,  "S.E.T.MAX",      telemetry_format_u16 },    //缓冲最大步数 L:2
+    // { TAG_PARAM_SERVO_EASE_MIN_PULSEWIDTH,         TELEMETRY_TYPE_UINT16,  "S.E.PWM.MIN",    telemetry_format_u16 },    //缓冲最小PWM L:2
+    // { TAG_PARAM_SERVO_EASE_STEP_MS,                TELEMETRY_TYPE_UINT16,  "S.E.T.S",        telemetry_format_u16 },    //缓冲每步间隔（毫秒） L:2
+    // { TAG_PARAM_SERVO_EASE_MAX_MS,                 TELEMETRY_TYPE_UINT16,  "S.E.S.MAX",      telemetry_format_u16 },    //缓冲最大时间（毫秒） L:2
+    // { TAG_PARAM_SERVO_EASE_MIN_MS,                 TELEMETRY_TYPE_UINT16,  "S.E.S.MIN",      telemetry_format_u16 },    //缓冲最小时间（毫秒） L:2
+    // { TAG_PARAM_SCREEN_BRIGHTNESS,                 TELEMETRY_TYPE_UINT8,   "SC.BRI.",        telemetry_format_u8 },     //屏幕亮度 L:1
+    // { TAG_PARAM_SCREEN_AUTO_OFF,                   TELEMETRY_TYPE_UINT8,   "SC.A.OFF",       telemetry_format_u8 },     //自动关屏 L:1
+    // { TAG_PARAM_BEEPER_ENABLE,                     TELEMETRY_TYPE_UINT8,   "B.Enable",       telemetry_format_u8 },     //Beeper L:1
 };
 
 static uint8_t tagread_u8(atp_frame_t *frame)
@@ -73,7 +98,7 @@ static uint32_t tagread_u32(atp_frame_t *frame)
     return t;
 }
 
-static void tag_write(atp_frame_t *frame, telemetry_t *val)
+static void tag_write_telemetry(atp_frame_t *frame, telemetry_t *val)
 {
     switch (val->type)
     {
@@ -119,6 +144,73 @@ static void tag_write(atp_frame_t *frame, telemetry_t *val)
     }
 }
 
+static void tag_write_setting(atp_frame_t *frame, const char *key)
+{
+    const setting_t *setting = settings_get_key(key);
+
+    switch (setting->type)
+    {
+    case SETTING_TYPE_U8:
+        frame->buffer[frame->buffer_index++] = 1;
+        frame->buffer[frame->buffer_index++] = setting_get_u8(setting);
+        break;
+    case SETTING_TYPE_I8:
+        frame->buffer[frame->buffer_index++] = 1;
+        frame->buffer[frame->buffer_index++] = setting_get_i8(setting);
+        break;
+    case SETTING_TYPE_U16:
+        frame->buffer[frame->buffer_index++] = 2;
+        uint16_t val_u16 = setting_get_u16(setting);
+        frame->buffer[frame->buffer_index++] = (val_u16 >> 8 * 0) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_u16 >> 8 * 1) & 0xFF;
+        break;
+    case SETTING_TYPE_I16:
+        frame->buffer[frame->buffer_index++] = 2;
+        uint16_t val_i16 = setting_get_i16(setting);
+        frame->buffer[frame->buffer_index++] = (val_i16 >> 8 * 0) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_i16 >> 8 * 1) & 0xFF;
+        break;
+    case SETTING_TYPE_U32:
+        frame->buffer[frame->buffer_index++] = 4;
+        uint32_t val_u32 = setting_get_u32(setting);
+        frame->buffer[frame->buffer_index++] = (val_u32 >> 8 * 0) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_u32 >> 8 * 1) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_u32 >> 8 * 2) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_u32 >> 8 * 3) & 0xFF;
+        break;
+    case SETTING_TYPE_I32:
+        frame->buffer[frame->buffer_index++] = 4;
+        uint32_t val_i32 = setting_get_i32(setting);
+        frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 0) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 1) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 2) & 0xFF;
+        frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 3) & 0xFF;
+        break;
+    case SETTING_TYPE_STRING:
+        frame->buffer[frame->buffer_index] = 0;
+        size_t len = strlen(setting_get_string(setting));
+        frame->buffer[frame->buffer_index++] = len;
+        memcpy(&frame->buffer[frame->buffer_index], setting_get_string(setting), len);
+        frame->buffer_index += len;
+        break;
+    default:
+        break;
+    }
+}
+
+static void atp_add_control(uint8_t v, void *data, uint8_t len)
+{
+    for (int i = 0; i < 5; i++)
+    {
+        if (atp->atp_ctr->ctrs[i] == 0)
+        {
+            atp->atp_ctr->ctrs[i] = v;
+            memcpy((&atp->atp_ctr->data) + atp->atp_ctr->data_index, data, len);
+            break;
+        }
+    }
+}
+
 static void atp_cmd_ack(atp_frame_t *frame)
 {
     while (frame->buffer_index < frame->atp_tag_len + 5)
@@ -128,6 +220,7 @@ static void atp_cmd_ack(atp_frame_t *frame)
         case TAG_BASE_ACK:
             frame->buffer_index++;
             uint8_t tag = tagread_u8(frame);
+            UNUSED(tag);
             atp->tag_value_changed(atp->tracker, TAG_BASE_ACK);
             break;
         default:
@@ -168,13 +261,13 @@ static void atp_cmd_airplane(atp_frame_t *frame)
             frame->buffer_index++;
             ATP_SET_I32(TAG_PLANE_LONGITUDE, (int32_t)tagread_u32(frame), now);
             atp->tag_value_changed(atp->tracker, TAG_PLANE_LONGITUDE);
-            // printf("TAG_PLANE_LONGITUDE:%d\n", telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)));
+            // printf("TAG_PLANE_LONGITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)));
             break;
         case TAG_PLANE_LATITUDE:    //plane's latitude L:4
             frame->buffer_index++;
             ATP_SET_I32(TAG_PLANE_LATITUDE, (int32_t)tagread_u32(frame), now);
             atp->tag_value_changed(atp->tracker, TAG_PLANE_LATITUDE);
-            // printf("TAG_PLANE_LATITUDE:%d\n", telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)));
+            // printf("TAG_PLANE_LATITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)));
             break;
         case TAG_PLANE_ALTITUDE:    //plane's altitude L:4
             frame->buffer_index++;
@@ -228,19 +321,19 @@ static void atp_cmd_sethome(atp_frame_t *frame)
             frame->buffer_index++;
             ATP_SET_I32(TAG_TRACKER_LONGITUDE, (int32_t)tagread_u32(frame), now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_LONGITUDE);
-            // printf("TAG_TRACKER_LONGITUDE:%d\n", telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)));
+            // printf("TAG_TRACKER_LONGITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)));
             break;
         case TAG_TRACKER_LATITUDE: //tarcker's latitude L:4
             frame->buffer_index++;
             ATP_SET_I32(TAG_TRACKER_LATITUDE, (int32_t)tagread_u32(frame), now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_LATITUDE);
-            // printf("TAG_TRACKER_LATITUDE:%d\n", telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)));
+            // printf("TAG_TRACKER_LATITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)));
             break;
         case TAG_TRACKER_ALTITUDE: //tarcker's altitude L:4
             frame->buffer_index++;
             ATP_SET_I32(TAG_TRACKER_ALTITUDE, (int32_t)tagread_u32(frame), now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_ALTITUDE);
-            // printf("TAG_TRACKER_ALTITUDE:%d\n", telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE)));
+            // printf("TAG_TRACKER_ALTITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE)));
             break;
         case TAG_TRACKER_MODE: //tarcker's mode L:1
             frame->buffer_index++;
@@ -327,7 +420,7 @@ static void atp_cmd_setparam(atp_frame_t *frame)
 
 static void atp_cmd_control(atp_frame_t *frame)
 {
-    while (frame->buffer_index < frame->atp_tag_len)
+    while (frame->buffer_index < frame->atp_tag_len + 5)
     {
         switch (frame->buffer[frame->buffer_index++])
         {
@@ -361,6 +454,12 @@ static void atp_cmd_control(atp_frame_t *frame)
             // setReceiveCmd(TAG_CTR_TILT);
             // Receive_Cmd_Ctr_Tag[Receive_Cmd_Ctr_Tag_Count++] = TAG_CTR_TILT;
             break;
+        case TAG_CTR_REBOOT:
+            frame->buffer_index++;
+            uint8_t reboot_v = tagread_u8(frame);
+            atp_add_control(TAG_CTR_REBOOT, &reboot_v, sizeof(reboot_v));
+            LOG_D(TAG, "Set [REBOOT] command to stack -> %d", reboot_v);
+            break;
         default:
             frame->buffer_index++;
             break;
@@ -370,6 +469,8 @@ static void atp_cmd_control(atp_frame_t *frame)
 
 static void atp_tag_analysis(atp_frame_t *frame)
 {
+    LOG_D(TAG, "On frame got command -> %d", frame->atp_cmd);
+
     switch (frame->atp_cmd)
     {
     case CMD_ACK:
@@ -389,6 +490,19 @@ static void atp_tag_analysis(atp_frame_t *frame)
     case CMD_SET_HOME:
         atp_cmd_sethome(frame);
         break;
+    case CMD_GET_AIRPLANE:
+    case CMD_GET_TRACKER:
+    case CMD_GET_PARAM:
+    case CMD_GET_HOME:
+        for (int i = 0; i < 5; i++)
+        {
+            if (atp->atp_cmd->cmds[i] == 0)
+            {
+                atp->atp_cmd->cmds[i] = frame->atp_cmd;
+                break;
+            }
+        }
+        break;
     case CMD_CONTROL:
         atp_cmd_control(frame);
         break;
@@ -400,7 +514,6 @@ static void atp_frame_decode(void *t, void *data, int offset, int len)
     uint8_t *buffer = (uint8_t *)data;
     atp_t *atp = (atp_t *)t;
     atp->dec_frame->atp_status = IDLE;
-    // printf("ATP -> OFFSET:%d | LEN:%d\n", offset, len);
 
     for (int i = offset; i < offset + len; i++)
     {
@@ -411,7 +524,7 @@ static void atp_frame_decode(void *t, void *data, int offset, int len)
             {
                 atp->dec_frame->atp_status = STATE_LEAD;
             }
-            // printf("ATP -> LEAD %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
+            //printf("ATP -> LEAD %#X | STATUS:%d\n", buffer[i], atp->dec_frame->atp_status);
             break;
         case STATE_LEAD:
             if (buffer[i] == TP_PACKET_START)
@@ -422,35 +535,36 @@ static void atp_frame_decode(void *t, void *data, int offset, int len)
             {
                 atp->dec_frame->atp_status = IDLE;
             }
-            // printf("ATP -> START %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
+            //printf("ATP -> START %#X | STATUS:%d\n", buffer[i], atp->dec_frame->atp_status);
             break;
         case STATE_START:
             atp->dec_frame->atp_status = STATE_CMD;
             atp->dec_frame->atp_cmd = buffer[i];
-            // printf("ATP -> CMD %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
+            //printf("ATP -> CMD %#X | STATUS:%d\n", buffer[i], atp->dec_frame->atp_status);
             break;
         case STATE_CMD:
             atp->dec_frame->atp_status = STATE_INDEX;
             atp->dec_frame->atp_index = buffer[i];
-            // printf("ATP -> INDEX %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
+            //printf("ATP -> INDEX %#X | STATUS:%d\n", buffer[i], atp->dec_frame->atp_status);
             break;
         case STATE_INDEX:
             atp->dec_frame->atp_status = STATE_LEN;
             atp->dec_frame->atp_tag_len = buffer[i];
             atp->dec_frame->atp_crc = buffer[i];
-            // printf("ATP -> LEN %#X | STATUS:%d\n", buffer[i], atp_dec_frame.atp_status);
+            //printf("ATP -> LEN %#X | STATUS:%d\n", buffer[i], atp->dec_frame->atp_status);
+            if (atp->dec_frame->atp_tag_len == 0) atp->dec_frame->atp_status = STATE_DATA;
             break;
         case STATE_LEN:
             atp->dec_frame->atp_status = STATE_DATA;
-            // printf("ATP -> DATA %#X | STATUS:%d | CRC:%d\n", buffer[i], atp_dec_frame.atp_status,  atp_dec_frame.atp_crc);
+            //printf("ATP -> DATA %#X | STATUS:%d | CRC:%d\n", buffer[i], atp->dec_frame->atp_status,  atp->dec_frame->atp_crc);
             atp->dec_frame->atp_crc ^= buffer[i];
             break;
         case STATE_DATA:
-            // printf("ATP -> DATA %#X | STATUS:%d | CRC:%d INDEX:%d\n", buffer[i], atp_dec_frame.atp_status,  atp_dec_frame.atp_crc, atp_dec_frame.buffer_index);
+            //printf("ATP -> DATA %#X | STATUS:%d | CRC:%d INDEX:%d\n", buffer[i], atp->dec_frame->atp_status,  atp->dec_frame->atp_crc, atp->dec_frame->buffer_index);
             atp->dec_frame->atp_crc ^= buffer[i];
             if (atp->dec_frame->buffer_index - 4 == atp->dec_frame->atp_tag_len)
             {
-                // printf("ATP -> DECODE DONE\n");
+                //printf("ATP -> DECODE DONE\n");
                 if (atp->dec_frame->atp_crc == 0)
                 {
                     atp->dec_frame->buffer_index = 5;
@@ -484,13 +598,85 @@ uint8_t *atp_frame_encode(void *data)
     {
     case CMD_HEARTBEAT:
         frame->buffer[frame->buffer_index++] = TAG_TRACKER_T_IP;
-        tag_write(frame, atp_get_tag_val(TAG_TRACKER_T_IP));
+        tag_write_telemetry(frame, atp_get_telemetry_tag_val(TAG_TRACKER_T_IP));
         frame->buffer[frame->buffer_index++] = TAG_TRACKER_T_PORT;
-        tag_write(frame, atp_get_tag_val(TAG_TRACKER_T_PORT));
+        tag_write_telemetry(frame, atp_get_telemetry_tag_val(TAG_TRACKER_T_PORT));
         frame->buffer[frame->buffer_index++] = TAG_TRACKER_MODE;
-        tag_write(frame, atp_get_tag_val(TAG_TRACKER_MODE));
+        tag_write_telemetry(frame, atp_get_telemetry_tag_val(TAG_TRACKER_MODE));
         frame->buffer[frame->buffer_index++] = TAG_TRACKER_FLAG;
-        tag_write(frame, atp_get_tag_val(TAG_TRACKER_FLAG));
+        tag_write_telemetry(frame, atp_get_telemetry_tag_val(TAG_TRACKER_FLAG));
+        break;
+    case CMD_GET_PARAM:
+        // tracker
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SHOW_COORDINATE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_SHOW_COORDINATE);
+        // bettery
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_BATTERY_ENABLE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_ENABLE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_BATTERY_VOLTAGE_SCALE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_VOLTAGE_SCALE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_BATTERY_MAX_VOLTAGE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_MAX_VOLTAGE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_BATTERY_MIN_VOLTAGE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_MIN_VOLTAGE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_BATTERY_CENTER_VOLTAGE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_CENTER_VOLTAGE);
+        // power
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_POWER_ENABLE;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_MONITOR_POWER_ON;
+        tag_write_setting(frame, SETTING_KEY_TRACKER_MONITOR_POWER_TURN);
+        // wifi
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_WIFI_SSID;
+        tag_write_setting(frame, SETTING_KEY_WIFI_SSID);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_WIFI_PWD;
+        tag_write_setting(frame, SETTING_KEY_WIFI_PWD);
+        // servo
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_COURSE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_COURSE);
+        // servo pan
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_PAN_MIN_PLUSEWIDTH;
+        tag_write_setting(frame, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_PAN_MAX_PLUSEWIDTH;
+        tag_write_setting(frame, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_PAN_MAX_DEGREE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_PAN_MAX_DEGREE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_PAN_MIN_DEGREE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_PAN_MIN_DEGREE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_PAN_DIRECTION;
+        tag_write_setting(frame, SETTING_KEY_SERVO_PAN_DIRECTION);
+        // servo tilt
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_TILT_MIN_PLUSEWIDTH;
+        tag_write_setting(frame, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_TILT_MAX_PLUSEWIDTH;
+        tag_write_setting(frame, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_TILT_MAX_DEGREE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_TILT_MAX_DEGREE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_TILT_MIN_DEGREE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_TILT_MIN_DEGREE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_TILT_DIRECTION;
+        tag_write_setting(frame, SETTING_KEY_SERVO_TILT_DIRECTION);
+        // servo ease
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_OUT_TYPE;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_OUT_TYPE);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_MAX_STEPS;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_MAX_STEPS);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_MIN_PULSEWIDTH;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_MIN_PULSEWIDTH);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_STEP_MS;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_STEP_MS);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_MAX_MS;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_MAX_MS);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SERVO_EASE_MIN_MS;
+        tag_write_setting(frame, SETTING_KEY_SERVO_EASE_MIN_MS);
+        // screen
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SCREEN_BRIGHTNESS;
+        tag_write_setting(frame, SETTING_KEY_SCREEN_BRIGHTNESS);
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_SCREEN_AUTO_OFF;
+        tag_write_setting(frame, SETTING_KEY_SCREEN_AUTO_OFF);
+        // beeper
+        frame->buffer[frame->buffer_index++] = TAG_PARAM_BEEPER_ENABLE;
+        tag_write_setting(frame, SETTING_KEY_BEEPER_ENABLE);
         break;
     default:
         frame->buffer_index = 0;
@@ -511,22 +697,27 @@ uint8_t *atp_frame_encode(void *data)
 
 void atp_init(atp_t *t)
 {
+    esp_log_level_set(TAG, ESP_LOG_INFO);
+
     atp = t;
     t->atp_decode = atp_frame_decode;
     t->plane_vals = (telemetry_t *)&plane_vals;
     t->tracker_vals = (telemetry_t *)&tracker_vals;
     t->param_vals = (telemetry_t *)&param_vals;
+    // t->iats_pro_param_vals = (telemetry_t *)&iats_pro_param_vals;
+    t->atp_cmd = &atp_cmd;
+    t->atp_ctr = &atp_ctr;
     t->dec_frame = (atp_frame_t *)malloc(sizeof(atp_frame_t));
     t->enc_frame = (atp_frame_t *)malloc(sizeof(atp_frame_t));
 
     for(int i = 0; i < TAG_PLANE_COUNT + TAG_TRACKER_COUNT + TAG_PARAM_COUNT; i++)
     {
-        telemetry_t *val = atp_get_tag_val(atp_tag_infos[i].tag);
+        telemetry_t *val = atp_get_telemetry_tag_val(atp_tag_infos[i].tag);
         val->type = atp_tag_infos[i].type;
     }
 }
 
-uint8_t atp_get_tag_index(uint8_t tag)
+uint8_t atp_get_telemetry_tag_index(uint8_t tag)
 {
     if (tag >= TAG_PLANE_MASK && tag < (TAG_PLANE_MASK + TAG_PLANE_COUNT))
     {
@@ -539,12 +730,16 @@ uint8_t atp_get_tag_index(uint8_t tag)
     else if (tag >= TAG_PARAM_MASK && tag < (TAG_PARAM_MASK + TAG_PARAM_COUNT))
     {
         return tag ^ TAG_PARAM_MASK;
-    }
+    }    
+    // else if (tag >= TAG_PARAM_IATS_PRO_MASK && tag < (TAG_PARAM_IATS_PRO_MASK + TAG_PARAM_IATS_PRO_COUNT))
+    // {
+    //     return tag ^ TAG_PARAM_IATS_PRO_MASK;
+    // }
 
     return 0;
 }
 
-telemetry_t *atp_get_tag_val(uint8_t tag)
+telemetry_t *atp_get_telemetry_tag_val(uint8_t tag)
 {
     if (tag >= TAG_PLANE_MASK && tag < (TAG_PLANE_MASK + TAG_PLANE_COUNT))
     {
@@ -558,6 +753,46 @@ telemetry_t *atp_get_tag_val(uint8_t tag)
     {
         return &param_vals[tag ^ TAG_PARAM_MASK];
     }
+    // else if (tag >= TAG_PARAM_IATS_PRO_MASK && tag < (TAG_PARAM_IATS_PRO_MASK + TAG_PARAM_IATS_PRO_COUNT))
+    // {
+    //     return &iats_pro_param_vals[tag ^ TAG_PARAM_IATS_PRO_MASK];
+    // }
 
     return &plane_vals[0];
+}
+
+uint8_t atp_popup_cmd()
+{
+    int index = 0;
+    uint8_t ret = atp_cmd.cmds[index];
+    uint8_t cmd = ret;
+
+    while (cmd == 0 && index < 4)
+    {
+        atp_cmd.cmds[index] = atp_cmd.cmds[index + 1];
+        index++;
+        cmd = atp_cmd.cmds[index];
+    }
+
+    atp_cmd.cmds[index] = 0;  
+
+    return ret;  
+}
+
+void atp_remove_ctr(uint8_t len)
+{
+    int index = 0;
+    uint8_t ctr = atp_ctr.ctrs[index];
+
+    LOG_D(TAG, "Remove [%d] command from stack.", ctr);
+
+    while (ctr == 0 && index < 4)
+    {
+        atp_ctr.ctrs[index] = atp_ctr.ctrs[index + 1];
+        index++;
+        ctr = atp_ctr.ctrs[index];
+    }
+
+    atp_ctr.ctrs[index] = 0;  
+    atp_ctr.data_index -= len;
 }

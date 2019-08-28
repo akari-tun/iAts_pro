@@ -34,8 +34,7 @@ typedef struct servo_mcpwm_config_s
     uint16_t max_pulsewidth;
     uint16_t max_degree;
     uint16_t min_degree;
-
-    uint8_t zero_degree_pwm;
+    uint8_t direction;
 } servo_mcpwm_config_t;
 
 typedef struct servo_mcpwm_status_s

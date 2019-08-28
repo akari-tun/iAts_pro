@@ -60,7 +60,7 @@ static void task_receive(void *arg)
         len = wifi_udp_receive(buffer, BUFFER_LENGHT);
         if (len > 0)
         {
-            //LOG_I(TAG, "Recving data length -> %d", len);
+            LOG_D(TAG, "Recving data length -> %d", len);
             wifi->callback(wifi->t, buffer, 0, len);
         }
         else

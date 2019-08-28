@@ -31,6 +31,7 @@ typedef enum
     TRACKER_FLAG_AUTO_NORTH = 8,
     TRACKER_FLAG_WIFI_CONNECTED = 16,
     TRACKER_FLAG_SERVER_CONNECTED = 32,
+    TRACKER_FLAG_POWER_GOOD = 64,
 } tracker_flag_e;
 
 typedef enum

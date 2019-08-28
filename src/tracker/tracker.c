@@ -69,7 +69,7 @@ static void tracker_telemetry_changed(void *t, uint8_t tag)
     switch (tag)
     {
     case TAG_BASE_ACK:
-        if (!(telemetry_get_u8(atp_get_tag_val(TAG_TRACKER_FLAG)) & TRACKER_FLAG_SERVER_CONNECTED))
+        if (!(telemetry_get_u8(atp_get_telemetry_tag_val(TAG_TRACKER_FLAG)) & TRACKER_FLAG_SERVER_CONNECTED))
         {
             tracker->internal.flag_changed(tracker, TRACKER_FLAG_SERVER_CONNECTED, 1);
         }
@@ -91,7 +91,7 @@ static void tracker_telemetry_changed(void *t, uint8_t tag)
             tracker->internal.flag_changed(tracker, TRACKER_FLAG_HOMESETED, 1);
         break;
     case TAG_TRACKER_MODE:
-        tracker->internal.status = telemetry_get_u8(atp_get_tag_val(tag));
+        tracker->internal.status = telemetry_get_u8(atp_get_telemetry_tag_val(tag));
         break;
     case TAG_TRACKER_FLAG:
         break;
@@ -109,14 +109,14 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->servo->internal.course = setting_get_u16(setting);
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_ZERO_DEGREE_PLUSEWIDTH))
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_DIRECTION))
     {
-        t->servo->internal.pan.config.zero_degree_pwm = setting_get_u8(setting);
+        t->servo->internal.pan.config.direction = setting_get_u8(setting);
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_ZERO_DEGREE_PLUSEWIDTH))
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_DIRECTION))
     {
-        t->servo->internal.tilt.config.zero_degree_pwm = setting_get_u8(setting);
+        t->servo->internal.tilt.config.direction = setting_get_u8(setting);
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH))
@@ -176,6 +176,11 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
     {
         t->servo->internal.ease_config.min_ms = setting_get_u16(setting);
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_WIFI_IP))
+    {
+        ATP_SET_STR(TAG_TRACKER_T_IP, setting_get_string(setting), time_millis_now());
+    }
 }
 
 static bool tracker_check_atp_cmd(tracker_t *t)
@@ -192,22 +197,19 @@ static bool tracker_check_atp_cmd(tracker_t *t)
             //printf("!TRACKER_FLAG_SERVER_CONNECTED\n");
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
-
             if (t->atp->enc_frame->buffer_index > 0)
             {
                 t->atp->atp_send(buff, t->atp->enc_frame->buffer_index);
                 t->last_heartbeat = now;
                 return true;
             }
-            printf("5\n");
         }
     }
     else
     {
         if (now > t->last_heartbeat + 5000)
         {
-            //printf("RTACKER_FLAG_SERVER_CONNECTED\n");
-
+            //printf("TRTACKER_FLAG_SERVER_CONNECTED\n");
             t->atp->enc_frame->atp_cmd = CMD_HEARTBEAT;
             uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
             if (t->atp->enc_frame->buffer_index > 0)
@@ -217,11 +219,50 @@ static bool tracker_check_atp_cmd(tracker_t *t)
                 return true;
             }
         }
-
-        
+        else if (t->atp->atp_cmd->cmds[0] > 0)
+        {
+            t->atp->enc_frame->atp_cmd = atp_popup_cmd();;
+            uint8_t *buff = atp_frame_encode(t->atp->enc_frame);
+            if (t->atp->enc_frame->buffer_index > 0)
+            {
+                t->atp->atp_send(buff, t->atp->enc_frame->buffer_index);
+                return true;
+            }
+        }
     }
 
     return false;
+}
+
+static bool tracker_check_atp_ctr(tracker_t *t)
+{
+    const setting_t *setting;
+
+    if (t->atp->atp_ctr->ctrs[0] > 0)
+    {
+        switch (t->atp->atp_ctr->ctrs[0])
+        {
+        case TAG_CTR_MODE:
+            break;
+        case TAG_CTR_AUTO_POINT_TO_NORTH:
+            break;
+        case TAG_CTR_CALIBRATE:
+            break;
+        case TAG_CTR_HEADING:
+            break;
+        case TAG_CTR_TILT:
+            break;
+        case TAG_CTR_REBOOT:
+            LOG_D(TAG, "Control reboot...");
+
+            setting = settings_get_key(SETTING_KEY_DEVELOPER_REBOOT);
+            setting_set_u8(setting, t->atp->atp_ctr->data[0]);
+            atp_remove_ctr(sizeof(uint8_t));
+            break;
+        }
+    }
+
+    return true;
 }
 
 void tracker_init(tracker_t *t)
@@ -233,6 +274,8 @@ void tracker_init(tracker_t *t)
     //     .min_pulsewidth = DEFAULT_EASE_MIN_PULSEWIDTH,
     //     .ease_out = DEFAULT_EASE_OUT_TYPE,
     // };
+
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     ease_config_t e_cfg = {
         .max_steps = settings_get_key_u16(SETTING_KEY_SERVO_EASE_MAX_STEPS),
@@ -293,16 +336,16 @@ void task_tracker(void *arg)
             {
                 servo.internal.pan.next_tick = now + servo_get_easing_sleep(&servo.internal.pan);
                 servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-                // LOG_I(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
+                // LOG_D(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
             }
             else
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    float tracker_lat = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
-                    float tracker_lon = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
-                    float plane_lat = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
-                    float plane_lon = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
+                    float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+                    float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+                    float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
+                    float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
 
                     distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
 
@@ -339,8 +382,8 @@ void task_tracker(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    int32_t tracker_alt = telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE));
-                    int32_t plane_alt = telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE));
+                    int32_t tracker_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE));
+                    int32_t plane_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE));
 
                     uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
 
@@ -360,6 +403,7 @@ void task_tracker(void *arg)
         servo_reverse_check(&servo);
 
         tracker_check_atp_cmd(t);
+        tracker_check_atp_ctr(t);
 
         now = time_millis_now();
 
@@ -389,32 +433,32 @@ bool get_tracker_reversing(const tracker_t *t)
 
 float get_plane_lat()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
 }
 
 float get_plane_lon()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
 }
 
 float get_plane_alt()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_PLANE_ALTITUDE)) / 10000000.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)) / 10000000.0f;
 }
 
 float get_tracker_lat()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
 }
 
 float get_tracker_lon()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
 }
 
 float get_tracker_alt()
 {
-    return telemetry_get_i32(atp_get_tag_val(TAG_TRACKER_ALTITUDE)) / 100.0f;
+    return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE)) / 100.0f;
 }
 
 void tracker_pan_move(tracker_t *t, int v)
