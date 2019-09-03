@@ -60,3 +60,18 @@
     #define POWER_MONITORING_GPIO 2
     #define POWER_REMOTE_GPIO 15
 #endif
+
+#if defined(USE_RX5808)
+    /* The ratio of voltage resistors */
+    #define RX5808_RSSI_ADC_CHAENNL ADC1_CHANNEL_3
+    #define RX5808_RSSI_ADC_ATTEN ADC_ATTEN_DB_2_5
+    #define RX5808_RSSI_ADC_UNIT ADC_UNIT_1
+    #define RX5808_RSSI_ADC_WIDTH ADC_WIDTH_BIT_12
+    #define RX5808_SPI_BUS HSPI_HOST
+    #define RX5808_SPI_CLK_GPIO 6
+    #define RX5808_SPI_CS_GPIO 7
+    #define RX5808_SPI_MOSI_GPIO 8
+
+    #define RX5808_SPI_ADDRESS_SYNTH_A 0x01
+    #define RX5808_SPI_ADDRESS_POWER 0x0A
+#endif
