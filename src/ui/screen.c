@@ -239,8 +239,8 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
         if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
         {
-            wifi_smartconfig_stop(screen->internal.wifi);
             screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+            wifi_smartconfig_stop(screen->internal.wifi);
             wifi_start(screen->internal.wifi);
             return true;
         }
