@@ -103,6 +103,7 @@
 #define TAG_CTR_HEADING				               0xC3      //指向 L:2 0~359
 #define TAG_CTR_TILT				               0xC4      //俯仰 L:1 0~90
 #define TAG_CTR_REBOOT				               0xC5      //重启
+#define TAG_CTR_SMART_CONFIG    	               0xC6      //重启
    
 //-----------------命令字---------------------------------------------------
 #define CMD_HEARTBEAT							   0x00      //心跳

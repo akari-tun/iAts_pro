@@ -198,6 +198,50 @@ static void tag_write_setting(atp_frame_t *frame, const char *key)
     }
 }
 
+static void setting_write(atp_frame_t *frame, const char *key)
+{
+    const setting_t *setting = settings_get_key(key);
+
+    switch (setting->type)
+    {
+    case SETTING_TYPE_U8:
+        frame->buffer_index++;
+        setting_set_u8(setting, tagread_u8(frame));
+        break;
+    case SETTING_TYPE_I8:
+        frame->buffer_index++;
+        setting_set_u8(setting, (int8_t)tagread_u8(frame));
+        break;
+    case SETTING_TYPE_U16:
+        frame->buffer_index++;
+        setting_set_u16(setting, tagread_u16(frame));
+        break;
+    case SETTING_TYPE_I16:
+        frame->buffer_index++;
+        setting_set_u16(setting, (int16_t)tagread_u16(frame));
+        break;
+    case SETTING_TYPE_U32:
+        frame->buffer_index++;
+        setting_set_u32(setting, tagread_u32(frame));
+        break;
+    case SETTING_TYPE_I32:
+        frame->buffer_index++;
+        setting_set_u32(setting, (int32_t)tagread_u32(frame));
+        break;
+    case SETTING_TYPE_STRING:
+        frame->buffer_index++;
+        size_t len = frame->buffer[frame->buffer_index - 1];
+        char *str = (char *)malloc(len);
+        memcpy(&frame->buffer + frame->buffer_index, str, len);
+        setting_set_string(setting, str);
+        free(str);
+        frame->buffer_index += len;
+        break;
+    default:
+        break;
+    }
+}
+
 static void atp_add_control(uint8_t v, void *data, uint8_t len)
 {
     for (int i = 0; i < 5; i++)
@@ -356,60 +400,148 @@ static void atp_cmd_setparam(atp_frame_t *frame)
     {
         switch (frame->buffer[frame->buffer_index++])
         {
-        case TAG_PARAM_PID_P: //PID_P L:2
-            frame->buffer_index++;
-            // PTParam->pid_p = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->pid_p, PARAM_EPPROM_POS_PID_P);
+        // case TAG_PARAM_PID_P: //PID_P L:2
+        //     frame->buffer_index++;
+        //     // PTParam->pid_p = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->pid_p, PARAM_EPPROM_POS_PID_P);
+        //     break;
+        // case TAG_PARAM_PID_I: //PID_I L:2
+        //     frame->buffer_index++;
+        //     // PTParam->pid_i = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->pid_i, PARAM_EPPROM_POS_PID_I);
+        //     break;
+        // case TAG_PARAM_PID_D: //PID_D L:2
+        //     frame->buffer_index++;
+        //     // PTParam->pid_d = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->pid_d, PARAM_EPPROM_POS_PID_D);
+        //     break;
+        // case TAG_PARAM_TITL_0: //俯仰零度 L:2
+        //     frame->buffer_index++;
+        //     // PTParam->tilt_0 = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->tilt_0, PARAM_EPPROM_POS_TILT_0);
+        //     break;
+        // case TAG_PARAM_TITL_90: //俯仰90度 L:2
+        //     frame->buffer_index++;
+        //     // PTParam->tilt_90 = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->tilt_90, PARAM_EPPROM_POS_TILT_90);
+        //     break;
+        // case TAG_PARAM_PAN_0: //水平中立点 L:2
+        //     frame->buffer_index++;
+        //     // PTParam->pan_center = tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->pan_center, PARAM_EPPROM_POS_PAN_CENTER);
+        //     break;
+        // case TAG_PARAM_OFFSET: //罗盘偏移量 L:2
+        //     frame->buffer_index++;
+        //     // PTParam->compass_offset = (int8_t)tagread_u16();
+        //     // StoreToEEPROM_u16(PTParam->compass_offset, PARAM_EPPROM_POS_COMPASS_OFFSET);
+        //     break;
+        // case TAG_PARAM_TRACKING_DISTANCE: //开始跟踪距离 L:1
+        //     frame->buffer_index++;
+        //     // PTParam->start_tracking_distance = tagread_u8();
+        //     // StoreToEEPROM_u8(PTParam->start_tracking_distance, PARAM_EPPROM_POS_START_TRACKING_DISTANCE);
+        //     break;
+        // case TAG_PARAM_MAX_PID_ERROR: //最大角度偏移 L:1
+        //     frame->buffer_index++;
+        //     // PTParam->pid_max_error = tagread_u8();
+        //     // StoreToEEPROM_u8(PTParam->pid_max_error, PARAM_EPPROM_POS_PID_MAX_ERROR);
+        //     break;
+        // case TAG_PARAM_MIN_PAN_SPEED: //最小水平舵机速度 L:1
+        //     frame->buffer_index++;
+        //     // PTParam->pan_min_speed = tagread_u8();
+        //     // StoreToEEPROM_u8(PTParam->pan_min_speed, PARAM_EPPROM_POS_PAN_MIN_SPEED);
+        //     break;
+        // case TAG_PARAM_DECLINATION: //磁偏角 L:1
+        //     frame->buffer_index++;
+        //     // PTParam->compass_declination = (int8_t)tagread_u8();
+        //     // StoreToEEPROM_u8((uint8_t)PTParam->compass_declination, PARAM_EPPROM_POS_COMPASS_DECLINATION);
+        //     break;
+        case TAG_PARAM_SHOW_COORDINATE:                  //是否在主界面显示坐标 L:1
+            setting_write(frame, SETTING_KEY_TRACKER_SHOW_COORDINATE);
             break;
-        case TAG_PARAM_PID_I: //PID_I L:2
-            frame->buffer_index++;
-            // PTParam->pid_i = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->pid_i, PARAM_EPPROM_POS_PID_I);
+        case TAG_PARAM_MONITOR_BATTERY_ENABLE:           //是否监控电池电压 L:1
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_ENABLE);
             break;
-        case TAG_PARAM_PID_D: //PID_D L:2
-            frame->buffer_index++;
-            // PTParam->pid_d = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->pid_d, PARAM_EPPROM_POS_PID_D);
+        case TAG_PARAM_MONITOR_BATTERY_VOLTAGE_SCALE:    //电池电压分压系数 L:2
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_VOLTAGE_SCALE);
             break;
-        case TAG_PARAM_TITL_0: //俯仰零度 L:2
-            frame->buffer_index++;
-            // PTParam->tilt_0 = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->tilt_0, PARAM_EPPROM_POS_TILT_0);
+        case TAG_PARAM_MONITOR_BATTERY_MAX_VOLTAGE:      //电池电压最大值 L:2
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_MAX_VOLTAGE);
             break;
-        case TAG_PARAM_TITL_90: //俯仰90度 L:2
-            frame->buffer_index++;
-            // PTParam->tilt_90 = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->tilt_90, PARAM_EPPROM_POS_TILT_90);
+        case TAG_PARAM_MONITOR_BATTERY_MIN_VOLTAGE:      //电池电压最小值 L:2
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_MIN_VOLTAGE);
             break;
-        case TAG_PARAM_PAN_0: //水平中立点 L:2
-            frame->buffer_index++;
-            // PTParam->pan_center = tagread_u16();
-            // StoreToEEPROM_u16(PTParam->pan_center, PARAM_EPPROM_POS_PAN_CENTER);
+        case TAG_PARAM_MONITOR_BATTERY_CENTER_VOLTAGE:   //电池电压中间值 L:2
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_BATTERY_CENTER_VOLTAGE);
             break;
-        case TAG_PARAM_OFFSET: //罗盘偏移量 L:2
-            frame->buffer_index++;
-            // PTParam->compass_offset = (int8_t)tagread_u16();
-            // StoreToEEPROM_u16(PTParam->compass_offset, PARAM_EPPROM_POS_COMPASS_OFFSET);
+        case TAG_PARAM_MONITOR_POWER_ENABLE:             //监控舵机电源 L:1
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE);
             break;
-        case TAG_PARAM_TRACKING_DISTANCE: //开始跟踪距离 L:1
-            frame->buffer_index++;
-            // PTParam->start_tracking_distance = tagread_u8();
-            // StoreToEEPROM_u8(PTParam->start_tracking_distance, PARAM_EPPROM_POS_START_TRACKING_DISTANCE);
+        case TAG_PARAM_MONITOR_POWER_ON:                 //舵机电源打开 L:1
+            setting_write(frame, SETTING_KEY_TRACKER_MONITOR_POWER_TURN);
             break;
-        case TAG_PARAM_MAX_PID_ERROR: //最大角度偏移 L:1
-            frame->buffer_index++;
-            // PTParam->pid_max_error = tagread_u8();
-            // StoreToEEPROM_u8(PTParam->pid_max_error, PARAM_EPPROM_POS_PID_MAX_ERROR);
+        case TAG_PARAM_WIFI_SSID:                        //WIFI SSID L:32
+        case TAG_PARAM_WIFI_PWD:                         //WIFI PWD L:32
+            frame->buffer_index += frame->buffer[frame->buffer_index] + 1;
             break;
-        case TAG_PARAM_MIN_PAN_SPEED: //最小水平舵机速度 L:1
-            frame->buffer_index++;
-            // PTParam->pan_min_speed = tagread_u8();
-            // StoreToEEPROM_u8(PTParam->pan_min_speed, PARAM_EPPROM_POS_PAN_MIN_SPEED);
+        case TAG_PARAM_SERVO_COURSE:                     //正北位置舵机指向 L:2
+            setting_write(frame, SETTING_KEY_SERVO_COURSE);
             break;
-        case TAG_PARAM_DECLINATION: //磁偏角 L:1
-            frame->buffer_index++;
-            // PTParam->compass_declination = (int8_t)tagread_u8();
-            // StoreToEEPROM_u8((uint8_t)PTParam->compass_declination, PARAM_EPPROM_POS_COMPASS_DECLINATION);
+        case TAG_PARAM_SERVO_PAN_MIN_PLUSEWIDTH:         //水平舵机最小PWM L:2
+            setting_write(frame, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH);
+            break;
+        case TAG_PARAM_SERVO_PAN_MAX_PLUSEWIDTH:         //水平舵机最大PWM L:2
+            setting_write(frame, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH);
+            break;
+        case TAG_PARAM_SERVO_PAN_MAX_DEGREE:             //水平舵机最大角度 L:2
+            setting_write(frame, SETTING_KEY_SERVO_PAN_MAX_DEGREE);
+            break;
+        case TAG_PARAM_SERVO_PAN_MIN_DEGREE:             //水平舵机最小角度 L:2
+            setting_write(frame, SETTING_KEY_SERVO_PAN_MIN_DEGREE);
+            break;
+        case TAG_PARAM_SERVO_PAN_DIRECTION:              //水平舵机方向 L:1
+            setting_write(frame, SETTING_KEY_SERVO_PAN_DIRECTION);
+            break;
+        case TAG_PARAM_SERVO_TILT_MIN_PLUSEWIDTH:        //俯仰舵机最小PWM L:2
+            setting_write(frame, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH);
+            break;
+        case TAG_PARAM_SERVO_TILT_MAX_PLUSEWIDTH:        //俯仰舵机最大PWM L:2
+            setting_write(frame, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH);
+            break;
+        case TAG_PARAM_SERVO_TILT_MAX_DEGREE:            //俯仰舵机最大角度 L:2
+            setting_write(frame, SETTING_KEY_SERVO_TILT_MAX_DEGREE);
+            break;
+        case TAG_PARAM_SERVO_TILT_MIN_DEGREE:            //俯仰舵机最小角度 L:2
+            setting_write(frame, SETTING_KEY_SERVO_TILT_MIN_DEGREE);
+            break;
+        case TAG_PARAM_SERVO_TILT_DIRECTION:             //俯仰舵机方向 L:1
+            setting_write(frame, SETTING_KEY_SERVO_TILT_DIRECTION);
+            break;
+        case TAG_PARAM_SERVO_EASE_OUT_TYPE:              //缓冲类型 L:1
+            setting_write(frame, SETTING_KEY_SERVO_EASE_OUT_TYPE);
+            break;
+        case TAG_PARAM_SERVO_EASE_MAX_STEPS:             //缓冲最大步数 L:2
+            setting_write(frame, SETTING_KEY_SERVO_EASE_MAX_STEPS);
+            break;
+        case TAG_PARAM_SERVO_EASE_MIN_PULSEWIDTH:        //缓冲最小PWM L:2
+            setting_write(frame, SETTING_KEY_SERVO_EASE_MIN_PULSEWIDTH);
+            break;
+        case TAG_PARAM_SERVO_EASE_STEP_MS:               //缓冲每步间隔（毫秒） L:2
+            setting_write(frame, SETTING_KEY_SERVO_EASE_STEP_MS);
+            break;
+        case TAG_PARAM_SERVO_EASE_MAX_MS:                //缓冲最大时间（毫秒） L:2
+            setting_write(frame, SETTING_KEY_SERVO_EASE_MAX_MS);
+            break;
+        case TAG_PARAM_SERVO_EASE_MIN_MS:                //缓冲最小时间（毫秒） L:2
+            setting_write(frame, SETTING_KEY_SERVO_EASE_MIN_MS);
+            break;
+        case TAG_PARAM_SCREEN_BRIGHTNESS:                //屏幕亮度 L:1
+            setting_write(frame, SETTING_KEY_SCREEN_BRIGHTNESS);
+            break;
+        case TAG_PARAM_SCREEN_AUTO_OFF:                  //自动关屏 L:1
+            setting_write(frame, SETTING_KEY_SCREEN_AUTO_OFF);
+            break;
+        case TAG_PARAM_BEEPER_ENABLE:                    //Beeper L:1
+            setting_write(frame, SETTING_KEY_BEEPER_ENABLE);
             break;
         default:
             frame->buffer_index++;
@@ -458,7 +590,13 @@ static void atp_cmd_control(atp_frame_t *frame)
             frame->buffer_index++;
             uint8_t reboot_v = tagread_u8(frame);
             atp_add_control(TAG_CTR_REBOOT, &reboot_v, sizeof(reboot_v));
-            LOG_D(TAG, "Set [REBOOT] command to stack -> %d", reboot_v);
+            LOG_I(TAG, "Set [REBOOT] command to stack -> %d", reboot_v);
+            break;
+        case TAG_CTR_SMART_CONFIG:
+            frame->buffer_index++;
+            uint8_t sc_v = tagread_u8(frame);
+            atp_add_control(TAG_CTR_SMART_CONFIG, &sc_v, sizeof(sc_v));
+            LOG_I(TAG, "Set [SMART_CONFIG] command to stack -> %d", sc_v);
             break;
         default:
             frame->buffer_index++;
@@ -469,8 +607,6 @@ static void atp_cmd_control(atp_frame_t *frame)
 
 static void atp_tag_analysis(atp_frame_t *frame)
 {
-    LOG_D(TAG, "On frame got command -> %d", frame->atp_cmd);
-
     switch (frame->atp_cmd)
     {
     case CMD_ACK:
@@ -481,19 +617,23 @@ static void atp_tag_analysis(atp_frame_t *frame)
         break;
     case CMD_SET_AIRPLANE:
         atp_cmd_airplane(frame);
+        LOG_D(TAG, "On frame got command -> [SET_AIRPLANE]");
         break;
     case CMD_SET_TRACKER:
         break;
     case CMD_SET_PARAM:
+        LOG_I(TAG, "On frame got command -> [SET_PARAM]");
         atp_cmd_setparam(frame);
         break;
     case CMD_SET_HOME:
         atp_cmd_sethome(frame);
+        LOG_I(TAG, "On frame got command -> [SET_AIRPLANE]");
         break;
     case CMD_GET_AIRPLANE:
     case CMD_GET_TRACKER:
     case CMD_GET_PARAM:
     case CMD_GET_HOME:
+        LOG_I(TAG, "On frame got command -> %d", frame->atp_cmd);
         for (int i = 0; i < 5; i++)
         {
             if (atp->atp_cmd->cmds[i] == 0)
@@ -784,7 +924,7 @@ void atp_remove_ctr(uint8_t len)
     int index = 0;
     uint8_t ctr = atp_ctr.ctrs[index];
 
-    LOG_D(TAG, "Remove [%d] command from stack.", ctr);
+    LOG_I(TAG, "Remove [%d] command from stack.", ctr);
 
     while (ctr == 0 && index < 4)
     {
