@@ -639,17 +639,20 @@ void menu_handle_button_still_down(menu_t *active, button_t *btn)
     //     SETTING_IS(setting, SETTING_KEY_BATTERY_MIN_VOLTAGE) || SETTING_IS(setting, SETTING_KEY_BATTERY_CENTER_VOLTAGE))
     if (setting_is_has_tmp(setting))
     {
-        if (btn->id == BUTTON_ID_LEFT || btn->id == BUTTON_ID_RIGHT)
-        {
-            if (!setting_get_value_is_tmp(setting))
-            {
-                setting_set_tmp_u16(setting, setting_get_u16(setting));
-                setting_set_value_is_tmp(setting, true);
-            }
+        // if (btn->id == BUTTON_ID_LEFT || btn->id == BUTTON_ID_RIGHT)
+        // {
+            // if (!setting_get_value_is_tmp(setting))
+            // {
+            //     setting_set_tmp_u16(setting, setting_get_u16(setting));
+            //     setting_set_value_is_tmp(setting, true);
+            // }
 
-            uint16_t v = setting_get_tmp_u16(setting);
-            setting_set_tmp_u16(setting, btn->id == BUTTON_ID_LEFT ? --v : ++v);
-        }
+            // uint16_t v = setting_get_tmp_u16(setting);
+            // setting_set_tmp_u16(setting, btn->id == BUTTON_ID_LEFT ? --v : ++v);
+        // }
+
+        if (btn->id == BUTTON_ID_LEFT) setting_decrement(setting);
+        if (btn->id == BUTTON_ID_RIGHT) setting_increment(setting);
     }
 }
 
