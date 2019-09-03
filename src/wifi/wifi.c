@@ -177,6 +177,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
         LOG_I(TAG, "SSID:%s PWD:%s IP:%s", wifi->config->sta.ssid, wifi->config->sta.password, ip_str);
         wifi->status_change(wifi, WIFI_STATUS_CONNECTED);
+        LOG_I(TAG, "Create Wifi receive task at Core:%d", xPortGetCoreID());
         xTaskCreatePinnedToCore(task_receive, "RECEIVE", 4096, wifi, 1, NULL, xPortGetCoreID());
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -194,8 +195,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         }
         break;
     case SYSTEM_EVENT_STA_STOP:
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	    ESP_ERROR_CHECK(esp_wifi_start());
+        if (wifi->enable)
+        {
+            ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	        ESP_ERROR_CHECK(esp_wifi_start());
+        }
+        else
+        {
+            wifi->status_change(wifi, WIFI_STATUS_NO_USE);
+        }
         break;
     default:
         break;
