@@ -1,3 +1,6 @@
 [submodule "lib/esp-idf"]
 	path = lib/esp-idf
 	url = git@github.com:espressif/esp-idf.git
+[submodule "lib/c_library_v2"]
+	path = lib/c_library_v2
+	url = git@github.com:mavlink/c_library_v2.git
