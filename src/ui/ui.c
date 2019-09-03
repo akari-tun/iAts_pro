@@ -191,7 +191,7 @@ static void ui_reverse_updated(void *notifier, void *r)
     ui_t *ui = (ui_t *)obs->Obj;
     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_REVERSING);
 #endif
-    LOG_I(TAG, "Reversing...");
+    LOG_I(TAG, "Sevro turn round.");
 }
 
 #if defined(USE_WIFI)
