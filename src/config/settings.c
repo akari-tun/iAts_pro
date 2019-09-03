@@ -164,7 +164,7 @@ static const setting_t settings[] = {
     U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH, "Min PWM", SETTING_FLAG_VALUE, FOLDER_ID_PAN, 0, 1500, DEFAULT_SERVO_MIN_PLUSEWIDTH, 5),
     U16_SETTING(SETTING_KEY_SERVO_PAN_MAX_DEGREE, "Max Degree", SETTING_FLAG_VALUE | SETTING_FLAG_IGNORE_CHANGE, FOLDER_ID_PAN, 180, 360, DEFAULT_SERVO_MAX_DEGREE),
     U16_SETTING(SETTING_KEY_SERVO_PAN_MIN_DEGREE, "Min Degree", SETTING_FLAG_VALUE | SETTING_FLAG_IGNORE_CHANGE, FOLDER_ID_PAN, 0, 360, DEFAULT_SERVO_MIN_DEGREE),
-    U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_DIRECTION, "DirectionM", 0, FOLDER_ID_PAN, servo_zero_degree_pwm_table, MIN_PLUSEWIDTH),
+    U8_MAP_SETTING(SETTING_KEY_SERVO_PAN_DIRECTION, "Direction", 0, FOLDER_ID_PAN, servo_zero_degree_pwm_table, MIN_PLUSEWIDTH),
     FOLDER(SETTING_KEY_SERVO_EASE, "Ease", FOLDER_ID_EASE, FOLDER_ID_SERVO, NULL),
     U8_MAP_SETTING(SETTING_KEY_SERVO_EASE_OUT_TYPE, "Type", 0, FOLDER_ID_EASE, servo_ease_type_table, 0),
     U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_EASE_MAX_STEPS, "Max Steps", SETTING_FLAG_VALUE, FOLDER_ID_EASE, 5, 100, DEFAULT_EASE_MAX_STEPS, 6),
@@ -241,6 +241,9 @@ static void setting_save(const setting_t *setting)
     {
         return;
     }
+
+    LOG_I(TAG, "Setting [%s] changed and save.", setting->key);
+    
     switch (setting->type)
     {
     case SETTING_TYPE_U8:
@@ -272,7 +275,6 @@ static void setting_save(const setting_t *setting)
 
 static void setting_changed(const setting_t *setting)
 {
-    LOG_I(TAG, "Setting %s changed", setting->key);
     for (int ii = 0; ii < ARRAY_COUNT(listeners); ii++)
     {
         if (listeners[ii].callback)
