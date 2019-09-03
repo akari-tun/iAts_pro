@@ -176,11 +176,6 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
     {
         t->servo->internal.ease_config.min_ms = setting_get_u16(setting);
     }
-
-    if (SETTING_IS(setting, SETTING_KEY_WIFI_IP))
-    {
-        ATP_SET_STR(TAG_TRACKER_T_IP, setting_get_string(setting), time_millis_now());
-    }
 }
 
 static bool tracker_check_atp_cmd(tracker_t *t)
@@ -253,9 +248,15 @@ static bool tracker_check_atp_ctr(tracker_t *t)
         case TAG_CTR_TILT:
             break;
         case TAG_CTR_REBOOT:
-            LOG_D(TAG, "Control reboot...");
+            LOG_I(TAG, "Execute [REBOOT]");
 
             setting = settings_get_key(SETTING_KEY_DEVELOPER_REBOOT);
+            setting_set_u8(setting, t->atp->atp_ctr->data[0]);
+            atp_remove_ctr(sizeof(uint8_t));
+        case TAG_CTR_SMART_CONFIG:
+            LOG_D(TAG, "Execute [SMART_CONFIG]");
+
+            setting = settings_get_key(SETTING_KEY_WIFI_SMART_CONFIG);
             setting_set_u8(setting, t->atp->atp_ctr->data[0]);
             atp_remove_ctr(sizeof(uint8_t));
             break;
