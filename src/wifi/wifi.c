@@ -183,6 +183,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         LOG_I(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
         if (wifi->status == WIFI_STATUS_SMARTCONFIG)
         {
+            LOG_I(TAG, "Smartconfig stop");
+            ESP_ERROR_CHECK(esp_smartconfig_stop());
             ESP_ERROR_CHECK(esp_wifi_stop());
         }
         else
