@@ -72,8 +72,8 @@ static void task_receive(void *arg)
     wifi->reciving = false;
     LOG_I(TAG, "Stop receive task.");
 
-    ESP_ERROR_CHECK(esp_wifi_disconnect());
-    LOG_I(TAG, "Stop wifi connect.");
+    // ESP_ERROR_CHECK(esp_wifi_disconnect());
+    // LOG_I(TAG, "Stop wifi connect.");
 
     free(buffer);
     vTaskDelete(NULL);
@@ -190,8 +190,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         }
         else
         {
-            ESP_ERROR_CHECK(esp_wifi_connect());
-            wifi->status_change(wifi, WIFI_STATUS_DISCONNECTED);
+            if (wifi->enable)
+            {
+                ESP_ERROR_CHECK(esp_wifi_connect());
+                wifi->status_change(wifi, WIFI_STATUS_DISCONNECTED);
+            }
+            else
+            {
+                wifi->status_change(wifi, WIFI_STATUS_NO_USE);
+            }
         }
         break;
     case SYSTEM_EVENT_STA_STOP:
@@ -249,6 +256,9 @@ void wifi_init(wifi_t *wifi)
     wifi->send = wifi_send;
     wifi->status_change_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
 
+    const setting_t *wifi_enable_setting = settings_get_key(SETTING_KEY_WIFI_ENABLE);
+    wifi->enable = setting_get_bool(wifi_enable_setting);
+
     wifi->status_change(wifi, WIFI_STATUS_NONE);
 
     tcpip_adapter_init();
@@ -264,6 +274,12 @@ void wifi_start(wifi_t *wifi)
 {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+void wifi_stop(wifi_t *wifi)
+{
+    ESP_ERROR_CHECK(esp_smartconfig_stop());
+    ESP_ERROR_CHECK(esp_wifi_stop());
 }
 
 void wifi_smartconfig_stop(wifi_t *wifi)

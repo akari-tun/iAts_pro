@@ -246,6 +246,7 @@ static void ui_wifi_status_update(void *notifier, void *s)
         }
         break;
     case WIFI_STATUS_UDP_CONNECTED:
+    case WIFI_STATUS_NO_USE:
         if (t->internal.status != TRACKER_STATUS_MANUAL && t->internal.status != TRACKER_STATUS_TRACKING)
         {
             t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
@@ -423,6 +424,20 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #endif
 
 #if defined(USE_WIFI)
+    if (SETTING_IS(setting, SETTING_KEY_WIFI_ENABLE))
+    {
+        ui->internal.wifi->enable = setting_get_bool(setting);
+        if (ui->internal.wifi->enable)
+        {
+            ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_NONE);
+            wifi_start(ui->internal.wifi);
+        }
+        else
+        {
+            wifi_stop(ui->internal.wifi);
+        }
+    }
+
     if (SETTING_IS(setting, SETTING_KEY_WIFI_SMART_CONFIG))
     {
         menu_t *menu = menu_get_active();
@@ -500,19 +515,32 @@ static void ui_handle_button_still_down(ui_t *ui, button_t *btn)
 
 static void ui_status_check(ui_t *ui)
 {
+    time_millis_t now = time_millis_now();
+
     if (ui->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED)
     {
-        time_millis_t now = time_millis_now();
-
         if (ui->internal.tracker->last_ack + 7000 < now)
         {
 #if defined(USE_WIFI)
             ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_SERVER_CONNECTED, 0);
             ATP_SET_U8(TAG_TRACKER_FLAG, ui->internal.tracker->internal.flag, now);
-            ui->internal.screen.internal.wifi->status_change(ui->internal.screen.internal.wifi, WIFI_STATUS_CONNECTED);
-#endif
+            if (ui->internal.wifi->enable)
+            {
+                ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_CONNECTED);
+            }
+            
             LOG_I(TAG, "Server was losted...");
             led_mode_add(LED_MODE_WAIT_SERVER);
+#endif
+        }
+    }
+
+    if (ui->internal.tracker->internal.flag & TRACKER_FLAG_WIFI_CONNECTED)
+    {
+        if (ui->internal.wifi->status < WIFI_STATUS_CONNECTED || ui->internal.wifi->status == WIFI_STATUS_NO_USE)
+        {
+            ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 0);
+            ATP_SET_U8(TAG_TRACKER_FLAG, ui->internal.tracker->internal.flag, now);
         }
     }
 }
