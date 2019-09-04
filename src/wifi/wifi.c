@@ -134,7 +134,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             wifi->status_change(wifi, WIFI_STATUS_SMARTCONFIG);
         }
 
-        if (wifi->status == WIFI_STATUS_NONE)
+        if (wifi->status == WIFI_STATUS_CONNECTING)
         {
             wifi_config_t wifi_config = {
                 .sta = {
@@ -197,7 +197,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             }
             else
             {
-                wifi->status_change(wifi, WIFI_STATUS_NO_USE);
+                wifi->status_change(wifi, WIFI_STATUS_NONE);
             }
         }
         break;
@@ -209,7 +209,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         }
         else
         {
-            wifi->status_change(wifi, WIFI_STATUS_NO_USE);
+            wifi->status_change(wifi, WIFI_STATUS_NONE);
         }
         break;
     default:
@@ -259,7 +259,7 @@ void wifi_init(wifi_t *wifi)
     const setting_t *wifi_enable_setting = settings_get_key(SETTING_KEY_WIFI_ENABLE);
     wifi->enable = setting_get_bool(wifi_enable_setting);
 
-    wifi->status_change(wifi, WIFI_STATUS_NONE);
+    wifi->status_change(wifi, WIFI_STATUS_CONNECTING);
 
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, wifi));

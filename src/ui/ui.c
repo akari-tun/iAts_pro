@@ -177,7 +177,9 @@ static void ui_flag_updated(void *notifier, void *f)
     }
     else if (ui->internal.tracker->internal.status < TRACKER_STATUS_MANUAL && ui->internal.wifi->status == WIFI_STATUS_CONNECTED)
     {
+#if defined(USE_WIFI)
         led_mode_set(LED_MODE_WAIT_SERVER, true);
+#endif
     }
 }
 
@@ -207,8 +209,6 @@ static void ui_wifi_status_update(void *notifier, void *s)
 
     switch (*status)
     {
-    case WIFI_STATUS_NONE:
-        break;
     case WIFI_STATUS_SMARTCONFIG:
         if (t->internal.status != TRACKER_STATUS_WIFI_SMART_CONFIG)
         {
@@ -246,7 +246,8 @@ static void ui_wifi_status_update(void *notifier, void *s)
         }
         break;
     case WIFI_STATUS_UDP_CONNECTED:
-    case WIFI_STATUS_NO_USE:
+    case WIFI_STATUS_NONE:
+    //case WIFI_STATUS_NO_USE:
         if (t->internal.status != TRACKER_STATUS_MANUAL && t->internal.status != TRACKER_STATUS_TRACKING)
         {
             t->internal.status_changed(t, TRACKER_STATUS_TRACKING);
@@ -429,7 +430,7 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         ui->internal.wifi->enable = setting_get_bool(setting);
         if (ui->internal.wifi->enable)
         {
-            ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_NONE);
+            ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_CONNECTING);
             wifi_start(ui->internal.wifi);
         }
         else
@@ -528,7 +529,7 @@ static void ui_status_check(ui_t *ui)
             {
                 ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_CONNECTED);
             }
-            
+
             LOG_I(TAG, "Server was losted...");
             led_mode_add(LED_MODE_WAIT_SERVER);
 #endif
@@ -537,7 +538,7 @@ static void ui_status_check(ui_t *ui)
 
     if (ui->internal.tracker->internal.flag & TRACKER_FLAG_WIFI_CONNECTED)
     {
-        if (ui->internal.wifi->status < WIFI_STATUS_CONNECTED || ui->internal.wifi->status == WIFI_STATUS_NO_USE)
+        if (ui->internal.wifi->status < WIFI_STATUS_CONNECTED)
         {
             ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 0);
             ATP_SET_U8(TAG_TRACKER_FLAG, ui->internal.tracker->internal.flag, now);

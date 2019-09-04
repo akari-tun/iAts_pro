@@ -137,8 +137,17 @@ static void screen_splash_task(void *arg)
         }
     }
 
-    screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
-    wifi_start(screen->internal.wifi);
+#ifdef USE_WIFI
+    if (screen->internal.wifi->enable)
+    {
+        screen->internal.tracker->internal.status_changed(screen->internal.tracker, TRACKER_STATUS_WIFI_CONNECTING);
+        wifi_start(screen->internal.wifi);
+    }
+    else
+    {
+        screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+    }
+#endif
 
     time_millis_delay(ANIMATION_FRAME_DURATION_MS);
 
@@ -237,13 +246,15 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
     switch (ev->type)
     {
     case BUTTON_EVENT_TYPE_SHORT_PRESS:
+#ifdef USE_WIFI
         if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
         {
-            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_CONNECTING);
             wifi_smartconfig_stop(screen->internal.wifi);
             wifi_start(screen->internal.wifi);
             return true;
         }
+#endif
         break;
     case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
         if (t->internal.status >= TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL) 
@@ -256,11 +267,13 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         }
         break;
     case BUTTON_EVENT_TYPE_LONG_PRESS:
+#ifdef USE_WIFI
         if (screen->internal.main_mode == SCREEN_MODE_WAIT_CONNECT)
         {
             screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_SMARTCONFIG);
             return true;
         }
+#endif
         if (t->internal.status == TRACKER_STATUS_MANUAL && screen->internal.main_mode == SCREEN_MODE_MAIN)
         {
             const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
@@ -703,7 +716,8 @@ static void screen_draw_main(screen_t *s)
     }
 #endif
 
-    if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL)
+    if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL 
+        || (s->internal.tracker->internal.status == TRACKER_STATUS_TRACKING && s->internal.wifi->status == WIFI_STATUS_NONE))
     {
         screen_draw_servo(s);
     }
@@ -713,6 +727,7 @@ static void screen_draw_main(screen_t *s)
     }
 }
 
+#ifdef USE_WIFI
 static void screen_draw_wifi_config(screen_t *s)
 {
     const char *sc_marker = "* * * * * * *";
@@ -745,10 +760,12 @@ static void screen_draw_wifi_config(screen_t *s)
         u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, (s->internal.h / 2) + 20, sc_marker);
     }
 }
+#endif
 
 uint8_t wifi_index = 0;
 bool last_flash = true;
 
+#ifdef USE_WIFI
 static void screen_draw_wait_connect(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
@@ -795,6 +812,7 @@ static void screen_draw_wait_connect(screen_t *s)
     uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
     u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h, buf);
 }
+#endif
 
 static void screen_draw_menu(screen_t *s, menu_t *menu, uint16_t y)
 {
@@ -873,6 +891,59 @@ static void screen_draw_debug_info(screen_t *s)
         screen_draw_label_value(s, "Alt:", buf, SCREEN_W(s), y, 3);
         y += 8;
     }
+
+    switch (s->internal.tracker->internal.status)
+    {
+    case TRACKER_STATUS_BOOTING:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "BOOTING");
+        break;
+    case TRACKER_STATUS_WIFI_SMART_CONFIG:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "WIFI_SMART_CONFIG");
+        break;
+    case TRACKER_STATUS_WIFI_CONNECTING:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "WIFI_CONNECTING");
+        break;
+    case TRACKER_STATUS_WIFI_CONNECTED:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "WIFI_CONNECTED");
+        break;
+    case TRACKER_STATUS_TRACKING:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "TRACKING");
+        break;
+    case TRACKER_STATUS_MANUAL:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "MANUAL");
+        break;
+    }
+
+    screen_draw_label_value(s, "T.Status:", buf, SCREEN_W(s), y, 3);
+    y += 8;
+
+    switch (s->internal.wifi->status)
+    {
+    case WIFI_STATUS_NONE:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "NONE");
+        break;
+    case WIFI_STATUS_SMARTCONFIG:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "SMARTCONFIG");
+        break;
+    case WIFI_STATUS_DISCONNECTED:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "DISCONNECTED");
+        break;
+    case WIFI_STATUS_CONNECTING:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "CONNECTING");
+        break;
+    case WIFI_STATUS_CONNECTED:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "CONNECTED");
+        break;
+    case WIFI_STATUS_UDP_CONNECTED:
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "UDP_CONNECTED");
+        break;
+    // case WIFI_STATUS_NO_USE:
+    //     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "NO_USE");
+    //     break;
+    }
+
+    screen_draw_label_value(s, "W.Status:", buf, SCREEN_W(s), y, 3);
+    y += 8;
 }
 
 static void screen_draw(screen_t *screen)
@@ -909,10 +980,14 @@ static void screen_draw(screen_t *screen)
                 screen_draw_main(screen);
                 break;
             case SCREEN_MODE_WIFI_CONFIG:
+#ifdef USE_WIFI
                 screen_draw_wifi_config(screen);
+#endif
                 break;
             case SCREEN_MODE_WAIT_CONNECT:
+#ifdef USE_WIFI
                 screen_draw_wait_connect(screen);
+#endif
                 break;
             }
             break;

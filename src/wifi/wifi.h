@@ -14,7 +14,6 @@ typedef enum
     WIFI_STATUS_CONNECTING = 3,
     WIFI_STATUS_CONNECTED = 4,
     WIFI_STATUS_UDP_CONNECTED = 5,
-    WIFI_STATUS_NO_USE = 6,
 } iats_wifi_status_e;
 
 typedef void (*pTr_Analysis)(void *t, void *data, int offset, int len);
