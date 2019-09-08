@@ -51,6 +51,9 @@ static char settings_string_storage[3][SETTING_STRING_BUFFER_SIZE];
 static const char *off_on_table[] = {"Off", "On"};
 static const char *no_yes_table[] = {"No", "Yes"};
 
+static char gpio_name_storage[HAL_GPIO_USER_COUNT][HAL_GPIO_NAME_LENGTH];
+static const char *gpio_names[HAL_GPIO_USER_COUNT];
+
 #define FOLDER(k, n, id, p, fn) \
     (setting_t) { .key = k, .name = n, .type = SETTING_TYPE_FOLDER, .flags = SETTING_FLAG_READONLY | SETTING_FLAG_EPHEMERAL, .folder = p, .def_val = U8(id), .data = fn, .tmp_index = 0 }
 #define STRING_SETTING(k, n, p) \
@@ -81,6 +84,8 @@ static const char *no_yes_table[] = {"No", "Yes"};
 
 #define CMD_SETTING(k, n, p, f, c_fl) U8_SETTING(k, n, f | SETTING_FLAG_EPHEMERAL | SETTING_FLAG_CMD, p, 0, 0, c_fl)
 
+#define GPIO_USER_SETTING(k, n, p, def) U8_MAP_SETTING(k, n, 0, p, gpio_names, def)
+
 #define SETTINGS_STORAGE_KEY "settings"
 
 static const char *servo_zero_degree_pwm_table[] = {
@@ -101,6 +106,10 @@ static const char *servo_ease_type_table[] = {
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
 #endif
+
+static const char *uart_in_out_type_table[] = {"Input", "Output"};
+static const char *uart_protocol_table[] = {"ATP", "MSP", "MAVLINK"};
+static const char *uart_baudrate_table[] = {"1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"};
 
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
@@ -152,6 +161,24 @@ static const setting_t settings[] = {
     CMD_SETTING(SETTING_KEY_WIFI_SMART_CONFIG, "Smart Config", FOLDER_ID_WIFI, 0, 0),
 #endif
 
+    FOLDER(SETTING_KEY_PORT, "Port", FOLDER_ID_PORT, FOLDER_ID_ROOT, NULL),
+
+    FOLDER(SETTING_KEY_PORT_UART1, "UART1", FOLDER_ID_UART1, FOLDER_ID_PORT, NULL),
+    BOOL_SETTING(SETTING_KEY_PORT_UART1_ENABLE, "Enable", SETTING_FLAG_NAME_MAP, FOLDER_ID_UART1, false),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART1_TYPE, "Type", 0, FOLDER_ID_UART1, uart_in_out_type_table, 0),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART1_PROTOCOL, "Protocol", 0, FOLDER_ID_UART1, uart_protocol_table, 2),
+    // GPIO_USER_SETTING(SETTING_KEY_PORT_UART1_PIN_RX, "RX Pin", FOLDER_ID_UART1, UART1_RX_DEFAULT_GPIO),
+    // GPIO_USER_SETTING(SETTING_KEY_PORT_UART1_PIN_TX, "TX Pin", FOLDER_ID_UART1, UART1_TX_DEFAULT_GPIO),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART1_BAUDRATE, "Baudrate", 0, FOLDER_ID_UART1, uart_baudrate_table, 7),
+
+    FOLDER(SETTING_KEY_PORT_UART2, "UART2", FOLDER_ID_UART2, FOLDER_ID_PORT, NULL),
+    BOOL_SETTING(SETTING_KEY_PORT_UART2_ENABLE, "Enable", SETTING_FLAG_NAME_MAP, FOLDER_ID_UART2, false),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART2_TYPE, "Type", 0, FOLDER_ID_UART2, uart_in_out_type_table, 0),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART2_PROTOCOL, "Protocol", 0, FOLDER_ID_UART2, uart_protocol_table, 2),
+    // GPIO_USER_SETTING(SETTING_KEY_PORT_UART2_PIN_RX, "RX Pin", FOLDER_ID_UART2, UART2_RX_DEFAULT_GPIO),
+    // GPIO_USER_SETTING(SETTING_KEY_PORT_UART2_PIN_TX, "TX Pin", FOLDER_ID_UART2, UART2_TX_DEFAULT_GPIO),
+    U8_MAP_SETTING(SETTING_KEY_PORT_UART2_BAUDRATE, "Baudrate", 0, FOLDER_ID_UART2, uart_baudrate_table, 7),
+
     FOLDER(SETTING_KEY_SERVO, "Servo", FOLDER_ID_SERVO, FOLDER_ID_ROOT, NULL),
     U16_HAS_TMP_SETTING(SETTING_KEY_SERVO_COURSE, "Course", SETTING_FLAG_VALUE, FOLDER_ID_SERVO, 0, 359, 0, 1),
     FOLDER(SETTING_KEY_SERVO_TILT, "Tilt", FOLDER_ID_TILT, FOLDER_ID_SERVO, NULL),
@@ -199,16 +226,16 @@ typedef struct settings_listener_s
 static settings_listener_t listeners[4];
 static storage_t storage;
 
-static void map_setting_keys(settings_view_t *view, const char *keys[], int size)
-{
-    view->count = 0;
-    for (int ii = 0; ii < size; ii++)
-    {
-        int idx;
-        ASSERT(settings_get_key_idx(keys[ii], &idx));
-        view->indexes[view->count++] = (uint8_t)idx;
-    }
-}
+// static void map_setting_keys(settings_view_t *view, const char *keys[], int size)
+// {
+//     view->count = 0;
+//     for (int ii = 0; ii < size; ii++)
+//     {
+//         int idx;
+//         ASSERT(settings_get_key_idx(keys[ii], &idx));
+//         view->indexes[view->count++] = (uint8_t)idx;
+//     }
+// }
 
 static setting_value_t *setting_get_val_ptr(const setting_t *setting)
 {
@@ -377,12 +404,12 @@ void settings_init(void)
     storage_init(&storage, SETTINGS_STORAGE_KEY);
 
     // Initialize GPIO names
-    // for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
-    // {
-    //     hal_gpio_t x = gpio_get_configurable_at(ii);
-    //     hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
-    //     gpio_names[ii] = gpio_name_storage[ii];
-    // }
+    for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
+    {
+        hal_gpio_t x = gpio_get_configurable_at(ii);
+        hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
+        gpio_names[ii] = gpio_name_storage[ii];
+    }
 
     unsigned string_storage_index = 0;
 

@@ -871,10 +871,6 @@ uint8_t atp_get_telemetry_tag_index(uint8_t tag)
     {
         return tag ^ TAG_PARAM_MASK;
     }    
-    // else if (tag >= TAG_PARAM_IATS_PRO_MASK && tag < (TAG_PARAM_IATS_PRO_MASK + TAG_PARAM_IATS_PRO_COUNT))
-    // {
-    //     return tag ^ TAG_PARAM_IATS_PRO_MASK;
-    // }
 
     return 0;
 }
@@ -893,10 +889,6 @@ telemetry_t *atp_get_telemetry_tag_val(uint8_t tag)
     {
         return &param_vals[tag ^ TAG_PARAM_MASK];
     }
-    // else if (tag >= TAG_PARAM_IATS_PRO_MASK && tag < (TAG_PARAM_IATS_PRO_MASK + TAG_PARAM_IATS_PRO_COUNT))
-    // {
-    //     return &iats_pro_param_vals[tag ^ TAG_PARAM_IATS_PRO_MASK];
-    // }
 
     return &plane_vals[0];
 }

@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "util/time.h"
+#include "input/input_mavlink.h"
 #include "telemetry.h"
 #include "servo.h"
 #include "observer.h"
@@ -63,12 +64,26 @@ typedef struct tracker_s
         notifier_t *flag_changed_notifier;
     } internal;
 
+    struct 
+    {
+        bool io_runing;
+        bool invalidate_input;
+        bool invalidate_output;
+        union {
+            input_mavlink_t mavlink;
+        } inputs;
+
+        void *input_config; 
+        input_t *input;
+    } io;
+    
     servo_t *servo;
     atp_t *atp;
 } tracker_t;
 
 void tracker_init(tracker_t *t);
-void task_tracker(void *arg);
+void tracker_io_update(void *arg);
+void tracker_task(void *arg);
 const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, size_t bufsize);
 tracker_status_e get_tracker_status(const tracker_t *t);
 uint8_t get_tracker_flag(const tracker_t *t);

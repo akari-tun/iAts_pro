@@ -196,7 +196,7 @@ typedef struct atp_s
     telemetry_t *param_vals;
     // telemetry_t *iats_pro_param_vals;
 
-    notifier_t *telemetry_val_notifier;
+    // notifier_t *telemetry_val_notifier;
 
     atp_cmd_t *atp_cmd;
     atp_ctr_t *atp_ctr;

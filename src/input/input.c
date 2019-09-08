@@ -1,10 +1,10 @@
 #include "input.h"
 
-bool input_open(atp_t *atp, input_t *input, void *config)
+bool input_open(void *data, input_t *input, void *config)
 {
     if (input)
     {
-        input->atp = atp;
+        input->data = data;
         if (!input->is_open && input->vtable.open)
         {
             input->is_open = input->vtable.open(input, config);
@@ -19,7 +19,7 @@ bool input_update(input_t *input, time_micros_t now)
     bool updated = false;
     if (input && input->is_open && input->vtable.update)
     {
-        updated = input->vtable.update(input, input->atp, now);
+        updated = input->vtable.update(input, input->data, now);
     }
     return updated;
 }

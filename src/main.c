@@ -104,6 +104,21 @@ void task_ui(void *arg)
 	}
 }
 
+void task_io(void *arg)
+{
+	if (settings_get_key_bool(SETTING_KEY_PORT_UART1_ENABLE) || settings_get_key_bool(SETTING_KEY_PORT_UART2_ENABLE))
+	{
+		tracker.io.io_runing = true;
+	}
+	
+	while (tracker.io.io_runing)
+	{
+		tracker_io_update(arg);
+	}
+
+	vTaskDelete(NULL);
+}
+
 void app_main()
 {
 	esp_log_level_set("*", ESP_LOG_INFO);
@@ -117,6 +132,7 @@ void app_main()
 #endif
 	iats_ui_init();
 
-	xTaskCreatePinnedToCore(task_tracker, "TRACKER", 4096, &tracker, 1, NULL, 1);
+	xTaskCreatePinnedToCore(tracker_task, "TRACKER", 4096, &tracker, 1, NULL, 1);
 	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
+	xTaskCreatePinnedToCore(task_io, "TRACKER.IO", 4096, &tracker, 1, NULL, 1);
 }

@@ -1,9 +1,11 @@
 #include <hal/log.h>
 #include <hal/wd.h>
 
+#include "util/macros.h"
 #include "config/settings.h"
 #include "tracker.h"
 #include "protocols/atp.h"
+#include "protocols/protocol.h"
 #include "util/calc.h"
 
 static const char *TAG = "Tarcker";
@@ -266,16 +268,56 @@ static bool tracker_check_atp_ctr(tracker_t *t)
     return true;
 }
 
+static void tracker_reconfigure_input(tracker_t *t)
+{
+    LOG_I(TAG, "Reconfigure input");
+
+    union {
+        input_mavlink_config_t mavlink;
+    } input_config;
+
+    if (t->io.input != NULL)
+    {
+        input_close(t->io.input, t->io.input_config);
+        t->io.input = NULL;
+        t->io.input_config = NULL;
+    }
+
+    memset(&t->io.inputs, 0, sizeof(t->io.inputs));
+
+    if (settings_get_key_bool(SETTING_KEY_PORT_UART1_ENABLE))
+    {
+        if (settings_get_key_bool(SETTING_KEY_PORT_UART1_TYPE) == PROTOCOL_IO_INPUT)
+        {
+            switch (settings_get_key_u8(SETTING_KEY_PORT_UART1_PROTOCOL))
+            {
+            case PROTOCOL_ATP:
+                /* code */
+                break;
+            case PROTOCOL_MSP:
+                /* code */
+                break;
+            case PROTOCOL_MAVLINK:
+                LOG_I(TAG, "Set [UART1] to [MAVLINK] for input.");
+                input_mavlink_init(&t->io.inputs.mavlink);
+                t->io.input = (input_t *)&t->io.inputs.mavlink;
+                input_config.mavlink.tx = UART1_TX_DEFAULT_GPIO;
+                input_config.mavlink.rx = UART1_RX_DEFAULT_GPIO;
+                input_config.mavlink.baudrate = PROTOCOL_BAUDRATE[settings_get_key_u8(SETTING_KEY_PORT_UART1_BAUDRATE)];
+                t->io.input_config = &input_config.mavlink;
+                break;
+            }
+        }
+    }
+
+    if (t->io.input != NULL)
+    {
+        input_open(&t->atp, t->io.input, t->io.input_config);
+    }
+}
+
 void tracker_init(tracker_t *t)
 {
-    // ease_config_t e_cfg = {
-    //     .max_steps = DEFAULT_EASE_MAX_STEPS,
-    //     .max_ms = DEFAULT_EASE_MAX_MS,
-    //     .min_ms = DEFAULT_EASE_MIN_MS,
-    //     .min_pulsewidth = DEFAULT_EASE_MIN_PULSEWIDTH,
-    //     .ease_out = DEFAULT_EASE_OUT_TYPE,
-    // };
-
     esp_log_level_set(TAG, ESP_LOG_INFO);
 
     ease_config_t e_cfg = {
@@ -289,7 +331,6 @@ void tracker_init(tracker_t *t)
 
     servo.internal.ease_config = e_cfg;
 
-    // t->internal.mode = TRACKER_MODE_AUTO;
     t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE),
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
@@ -305,13 +346,33 @@ void tracker_init(tracker_t *t)
     t->atp->tracker = t;
     t->atp->tag_value_changed = t->internal.telemetry_changed;
 
+    t->io.input_config = NULL;
+    t->io.input = NULL;
+    t->io.io_runing = false;
+    t->io.invalidate_input = true;
+    t->io.invalidate_output = true;
+
     settings_add_listener(tracker_settings_handler, t);
 
     servo_init(&servo);
     atp_init(&atp);
 }
 
-void task_tracker(void *arg)
+void tracker_io_update(void *arg)
+{
+    tracker_t *t = arg;
+
+    if (UNLIKELY(t->io.invalidate_input))
+    {
+        tracker_reconfigure_input(t);
+        t->io.invalidate_input = false;
+    }
+
+    time_micros_t now = time_micros_now();
+    t->io.input->vtable.update(t->io.input, t->atp, now);
+}
+
+void tracker_task(void *arg)
 {
     tracker_t *t = arg;
 
