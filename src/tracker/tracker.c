@@ -178,6 +178,55 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
     {
         t->servo->internal.ease_config.min_ms = setting_get_u16(setting);
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_SET))
+    {
+        if (t->internal.flag && TRACKER_FLAG_PLANESETED)
+        {
+            time_micros_t now = time_micros_now();
+
+            telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)), now);
+            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LAT), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)));
+            t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
+
+            telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)), now);
+            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LON), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)));
+            t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
+
+            telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)), now);
+            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)));
+            t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
+        }
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_RECOVER))
+    {
+        time_micros_t now = time_micros_now();
+
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_LAT), now);
+        t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_LON), now);
+        t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_ALT), now);
+        t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_CLEAR))
+    {
+        time_micros_t now = time_micros_now();
+        int32_t zero = 0;
+
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), zero, now);
+        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LAT), zero);
+
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), zero, now);
+        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LON), zero);
+
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), zero, now);
+        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), zero);
+
+        t->internal.flag_changed(t, TRACKER_FLAG_HOMESETED, 0);
+    }
 }
 
 static bool tracker_check_atp_cmd(tracker_t *t)
@@ -398,7 +447,7 @@ void tracker_task(void *arg)
             {
                 servo.internal.pan.next_tick = now + servo_get_easing_sleep(&servo.internal.pan);
                 servo_pulsewidth_control(&servo.internal.pan, &servo.internal.ease_config);
-                // LOG_D(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
+                LOG_D(TAG, "[pan] positon:%d -> to:%d | sleep:%dms | pwm:%d", servo.internal.pan.step_positon, servo.internal.pan.step_to, servo.internal.pan.step_sleep_ms, servo.internal.pan.last_pulsewidth);
             }
             else
             {
@@ -411,7 +460,7 @@ void tracker_task(void *arg)
 
                     distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
 
-                    //LOG_D(TAG, "t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d\n", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
+                    LOG_D(TAG, "t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
 
                     uint16_t course_deg = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon);
                     course_deg = course_deg + servo.internal.course;
@@ -438,7 +487,7 @@ void tracker_task(void *arg)
             {
                 servo.internal.tilt.next_tick = now + servo_get_easing_sleep(&servo.internal.tilt);
                 servo_pulsewidth_control(&servo.internal.tilt, &servo.internal.ease_config);
-                //LOG_D(TAG, "[tilt] positon:%d -> to:%d | sleep:%dms | pwm:%d\n", servo.internal.tilt.step_positon, servo.internal.tilt.step_to, servo.internal.tilt.step_sleep_ms, servo.internal.tilt.last_pulsewidth );
+                LOG_D(TAG, "[tilt] positon:%d -> to:%d | sleep:%dms | pwm:%d", servo.internal.tilt.step_positon, servo.internal.tilt.step_to, servo.internal.tilt.step_sleep_ms, servo.internal.tilt.last_pulsewidth );
             }
             else
             {
@@ -449,7 +498,7 @@ void tracker_task(void *arg)
 
                     uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
 
-                    //LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d\n", tracker_alt, plane_alt, distance, tilt_deg);
+                    LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
 
                     if (tilt_deg != servo.internal.tilt.currtent_degree || servo.internal.tilt.is_reverse != servo.internal.pan.is_reverse)
                     {

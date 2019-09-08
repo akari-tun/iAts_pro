@@ -19,6 +19,7 @@ void mavlink_init(mavlink_t *mavlink, io_t *io)
     mavlink->message = &mavlink_message;
 
     mavlink->message_value.global_position = (mavlink_global_position_int_t*)malloc(sizeof(mavlink_global_position_int_t));
+    mavlink->message_value.home_position = (mavlink_home_position_t*)malloc(sizeof(mavlink_home_position_t));
 
     memset(&mavlink->buf, 0, sizeof(mavlink->buf));
 
@@ -49,8 +50,7 @@ int mavlink_update(mavlink_t *mavlink, void *data)
     {
         if (mavlink_parse_char(chan, mavlink->buf[start], mavlink->message, mavlink->status))
         {
-            LOG_I(TAG, "Received message with ID [%d], sequence: [%d] from component [%d] of system [%d]", mavlink->message->msgid, mavlink->message->seq, mavlink->message->compid, mavlink->message->sysid);
-            // ... DECODE THE MESSAGE PAYLOAD HERE ...
+            LOG_D(TAG, "Received message with ID [%d], sequence: [%d] from component [%d] of system [%d]", mavlink->message->msgid, mavlink->message->seq, mavlink->message->compid, mavlink->message->sysid);
 
             mavlink->counter++;
 
@@ -62,18 +62,27 @@ int mavlink_update(mavlink_t *mavlink, void *data)
             }
 
             time_micros_t now = time_micros_now();
+            atp_t *atp = (atp_t *)data;
 
             switch(mavlink->message->msgid) 
             {
             case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: // ID for GLOBAL_POSITION_INT
                 // Get all fields in payload (into global_position)
                 mavlink_msg_global_position_int_decode(mavlink->message, mavlink->message_value.global_position);
-                atp_t *atp = (atp_t *)data;
                 ATP_SET_I32(TAG_PLANE_LONGITUDE,  mavlink->message_value.global_position->lon, now);
                 ATP_SET_I32(TAG_PLANE_LATITUDE, mavlink->message_value.global_position->lat, now);
-                ATP_SET_I32(TAG_PLANE_ALTITUDE, mavlink->message_value.global_position->alt, now);
+                ATP_SET_I32(TAG_PLANE_ALTITUDE, mavlink->message_value.global_position->alt / 10, now);
                 atp->tag_value_changed(atp->tracker, TAG_PLANE_LATITUDE);
                 atp->tag_value_changed(atp->tracker, TAG_PLANE_LONGITUDE);
+                break;
+            case MAVLINK_MSG_ID_HOME_POSITION:
+                mavlink_msg_home_position_decode(mavlink->message, mavlink->message_value.home_position);
+                ATP_SET_I32(TAG_TRACKER_LONGITUDE,  mavlink->message_value.home_position->longitude, now);
+                ATP_SET_I32(TAG_TRACKER_LATITUDE,  mavlink->message_value.home_position->latitude, now);
+                ATP_SET_I32(TAG_TRACKER_ALTITUDE,  mavlink->message_value.home_position->altitude / 10, now);
+                atp->tag_value_changed(atp->tracker, TAG_TRACKER_LONGITUDE);
+                atp->tag_value_changed(atp->tracker, TAG_TRACKER_LATITUDE);
+                atp->tag_value_changed(atp->tracker, TAG_TRACKER_ALTITUDE);
                 break;
             }
 

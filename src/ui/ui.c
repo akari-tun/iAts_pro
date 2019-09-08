@@ -254,6 +254,8 @@ static void ui_wifi_status_update(void *notifier, void *s)
         }
         if (led_mode_is_enable(LED_MODE_WAIT_SERVER))
             led_mode_remove(LED_MODE_WAIT_SERVER);
+        if (led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+            led_mode_remove(LED_MODE_WAIT_CONNECT);
         break;
     }
 }
@@ -437,20 +439,25 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         {
             wifi_stop(ui->internal.wifi);
         }
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_WIFI_SMART_CONFIG))
     {
-        menu_t *menu = menu_get_active();
-
-        // There's nothing overriding the screen, draw the normal interface
-        while (menu != NULL)
+        if (ui->internal.wifi->enable)
         {
-            menu_pop_active();
-            menu = menu_get_active();
+            menu_t *menu = menu_get_active();
+
+            // There's nothing overriding the screen, draw the normal interface
+            while (menu != NULL)
+            {
+                menu_pop_active();
+                menu = menu_get_active();
+            }
+
+            ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_SMARTCONFIG);
         }
 
-        ui->internal.wifi->status_change(ui->internal.wifi, WIFI_STATUS_SMARTCONFIG);
         return;
     }
 #endif

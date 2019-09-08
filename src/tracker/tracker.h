@@ -54,7 +54,7 @@ typedef struct tracker_s
     struct
     {
         bool show_coordinate;
-        uint8_t flag;
+        tracker_flag_e flag;
         tracker_status_e status;
         // tracker_mode_e mode;
         pTr_status_changed status_changed;

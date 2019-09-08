@@ -959,7 +959,7 @@ static void screen_draw(screen_t *screen)
     if (menu != NULL && screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_NONE)
     {
         screen_draw_menu(screen, menu, 0);
-
+        
 #ifdef USE_BATTERY_MONITORING
         if (screen->internal.battery->enable)
         {
