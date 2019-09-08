@@ -108,12 +108,21 @@ void task_io(void *arg)
 {
 	if (settings_get_key_bool(SETTING_KEY_PORT_UART1_ENABLE) || settings_get_key_bool(SETTING_KEY_PORT_UART2_ENABLE))
 	{
-		tracker.io.io_runing = true;
-	}
-	
-	while (tracker.io.io_runing)
-	{
-		tracker_io_update(arg);
+		tracker.uart1.io_runing = settings_get_key_bool(SETTING_KEY_PORT_UART1_ENABLE);
+		tracker.uart2.io_runing = settings_get_key_bool(SETTING_KEY_PORT_UART2_ENABLE);
+
+		while (tracker.uart1.io_runing || tracker.uart2.io_runing)
+		{
+			if (tracker.uart1.io_runing)
+			{
+				tracker_uart_update(&tracker, &tracker.uart1);
+			}
+
+			if (tracker.uart2.io_runing)
+			{
+				tracker_uart_update(&tracker, &tracker.uart2);
+			}
+		}
 	}
 
 	vTaskDelete(NULL);

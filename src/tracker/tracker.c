@@ -5,13 +5,13 @@
 #include "config/settings.h"
 #include "tracker.h"
 #include "protocols/atp.h"
-#include "protocols/protocol.h"
 #include "util/calc.h"
 
 static const char *TAG = "Tarcker";
 static servo_t servo;
 static atp_t atp;
 
+static int PROTOCOL_BAUDRATE[] = { PROTOCOL_BAUDRATE_1200, PROTOCOL_BAUDRATE_2400, PROTOCOL_BAUDRATE_4800, PROTOCOL_BAUDRATE_9600, PROTOCOL_BAUDRATE_19200, PROTOCOL_BAUDRATE_38400, PROTOCOL_BAUDRATE_57600,PROTOCOL_BAUDRATE_115200 };
 // static Observer telemetry_vals_observer;
 
 static void tracker_status_changed(void *t, tracker_status_e s)
@@ -317,7 +317,7 @@ static bool tracker_check_atp_ctr(tracker_t *t)
     return true;
 }
 
-static void tracker_reconfigure_input(tracker_t *t)
+static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
 {
     LOG_I(TAG, "Reconfigure input");
 
@@ -325,43 +325,40 @@ static void tracker_reconfigure_input(tracker_t *t)
         input_mavlink_config_t mavlink;
     } input_config;
 
-    if (t->io.input != NULL)
+    if (uart->input != NULL)
     {
-        input_close(t->io.input, t->io.input_config);
-        t->io.input = NULL;
-        t->io.input_config = NULL;
+        input_close(uart->input, uart->input_config);
+        uart->input = NULL;
+        uart->input_config = NULL;
     }
 
-    memset(&t->io.inputs, 0, sizeof(t->io.inputs));
+    memset(&uart->inputs, 0, sizeof(uart->inputs));
 
-    if (settings_get_key_bool(SETTING_KEY_PORT_UART1_ENABLE))
+    switch (uart->protocol)
     {
-        if (settings_get_key_bool(SETTING_KEY_PORT_UART1_TYPE) == PROTOCOL_IO_INPUT)
-        {
-            switch (settings_get_key_u8(SETTING_KEY_PORT_UART1_PROTOCOL))
-            {
-            case PROTOCOL_ATP:
-                /* code */
-                break;
-            case PROTOCOL_MSP:
-                /* code */
-                break;
-            case PROTOCOL_MAVLINK:
-                LOG_I(TAG, "Set [UART1] to [MAVLINK] for input.");
-                input_mavlink_init(&t->io.inputs.mavlink);
-                t->io.input = (input_t *)&t->io.inputs.mavlink;
-                input_config.mavlink.tx = UART1_TX_DEFAULT_GPIO;
-                input_config.mavlink.rx = UART1_RX_DEFAULT_GPIO;
-                input_config.mavlink.baudrate = PROTOCOL_BAUDRATE[settings_get_key_u8(SETTING_KEY_PORT_UART1_BAUDRATE)];
-                t->io.input_config = &input_config.mavlink;
-                break;
-            }
-        }
+    case PROTOCOL_ATP:
+    /* code */
+        break;
+    case PROTOCOL_MSP:
+        /* code */
+        break;
+    case PROTOCOL_MAVLINK:
+        LOG_I(TAG, "Set [UART] to [MAVLINK] for input.");
+        input_mavlink_init(&uart->inputs.mavlink);
+        uart->input = (input_t *)&uart->inputs.mavlink;
+        input_config.mavlink.tx = uart->gpio_tx;
+        input_config.mavlink.rx = uart->gpio_rx;
+        input_config.mavlink.baudrate = uart->baudrate;
+        uart->input_config = &input_config.mavlink;
+        break;
+    case PROTOCOL_LTM:
+        /* code */
+        break;
     }
 
-    if (t->io.input != NULL)
+    if (uart->input != NULL)
     {
-        input_open(&t->atp, t->io.input, t->io.input_config);
+        input_open(&t->atp, uart->input, uart->input_config);
     }
 }
 
@@ -395,11 +392,27 @@ void tracker_init(tracker_t *t)
     t->atp->tracker = t;
     t->atp->tag_value_changed = t->internal.telemetry_changed;
 
-    t->io.input_config = NULL;
-    t->io.input = NULL;
-    t->io.io_runing = false;
-    t->io.invalidate_input = true;
-    t->io.invalidate_output = true;
+    t->uart1.input_config = NULL;
+    t->uart1.input = NULL;
+    t->uart1.io_runing = false;
+    t->uart1.invalidate_input = true;
+    t->uart1.invalidate_output = true;
+    t->uart1.gpio_tx = UART1_TX_DEFAULT_GPIO;
+    t->uart1.gpio_rx = UART1_RX_DEFAULT_GPIO;
+    t->uart1.baudrate = PROTOCOL_BAUDRATE[settings_get_key_u8(SETTING_KEY_PORT_UART1_BAUDRATE)];
+    t->uart1.protocol = settings_get_key_u8(SETTING_KEY_PORT_UART1_PROTOCOL);
+    t->uart1.io_type = settings_get_key_u8(SETTING_KEY_PORT_UART1_TYPE);
+
+    t->uart2.input_config = NULL;
+    t->uart2.input = NULL;
+    t->uart2.io_runing = false;
+    t->uart2.invalidate_input = true;
+    t->uart2.invalidate_output = true;
+    t->uart2.gpio_tx = UART2_TX_DEFAULT_GPIO;
+    t->uart2.gpio_rx = UART2_RX_DEFAULT_GPIO;
+    t->uart2.baudrate = PROTOCOL_BAUDRATE[settings_get_key_u8(SETTING_KEY_PORT_UART2_BAUDRATE)];
+    t->uart2.protocol = settings_get_key_u8(SETTING_KEY_PORT_UART2_PROTOCOL);
+    t->uart2.io_type = settings_get_key_u8(SETTING_KEY_PORT_UART2_TYPE);
 
     settings_add_listener(tracker_settings_handler, t);
 
@@ -407,18 +420,19 @@ void tracker_init(tracker_t *t)
     atp_init(&atp);
 }
 
-void tracker_io_update(void *arg)
+void tracker_uart_update(tracker_t *t, uart_t *uart)
 {
-    tracker_t *t = arg;
-
-    if (UNLIKELY(t->io.invalidate_input))
+    if (UNLIKELY(uart->invalidate_input) && LIKELY(uart->io_type == PROTOCOL_IO_INPUT))
     {
-        tracker_reconfigure_input(t);
-        t->io.invalidate_input = false;
+        tracker_reconfigure_input(t, uart);
+        uart->invalidate_input = false;
     }
 
-    time_micros_t now = time_micros_now();
-    t->io.input->vtable.update(t->io.input, t->atp, now);
+    if (LIKELY(uart->input != NULL))
+    {
+        time_micros_t now = time_micros_now();
+        uart->input->vtable.update(uart->input, t->atp, now);
+    }
 }
 
 void tracker_task(void *arg)

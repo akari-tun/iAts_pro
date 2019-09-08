@@ -9,17 +9,17 @@ static mavlink_message_t mavlink_message;
 
 static const char *TAG = "Protocol.Mavlink";
 
-void mavlink_init(mavlink_t *mavlink, io_t *io)
+void mavlink_init(mavlink_t *mavlink)
 {
     esp_log_level_set(TAG, ESP_LOG_INFO);
 
-    mavlink->io = io;
+    mavlink->io = (io_t *)malloc(sizeof(io_t));;
     mavlink->buf_pos = 0;
     mavlink->status = &mavlink_status;
     mavlink->message = &mavlink_message;
 
-    mavlink->message_value.global_position = (mavlink_global_position_int_t*)malloc(sizeof(mavlink_global_position_int_t));
-    mavlink->message_value.home_position = (mavlink_home_position_t*)malloc(sizeof(mavlink_home_position_t));
+    mavlink->message_value.global_position = (mavlink_global_position_int_t *)malloc(sizeof(mavlink_global_position_int_t));
+    mavlink->message_value.home_position = (mavlink_home_position_t *)malloc(sizeof(mavlink_home_position_t));
 
     memset(&mavlink->buf, 0, sizeof(mavlink->buf));
 
@@ -116,4 +116,11 @@ bool mavlink_has_buffered_data(mavlink_t *mavlink)
 void mavlink_port_reset(mavlink_t *mavlink)
 {
     mavlink->buf_pos = 0;
+}
+
+void mavlink_destroy(mavlink_t *mavlink)
+{
+    free(mavlink->io);
+    free(mavlink->message_value.global_position);
+    free(mavlink->message_value.home_position);
 }

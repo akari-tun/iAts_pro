@@ -5,6 +5,7 @@
 #include "telemetry.h"
 #include "servo.h"
 #include "observer.h"
+#include "protocols/protocol.h"
 // #include "protocols/atp.h"
 
 // #if defined(USE_WIFI)
@@ -46,6 +47,25 @@ typedef void (*pTr_status_changed)(void *t, tracker_status_e s);
 typedef void (*pTr_flag_changed)(void *t, uint8_t f, uint8_t v);
 typedef void (*pTr_telemetry_changed)(void *t, uint8_t tag);
 
+typedef struct uart_s
+{
+    bool io_runing;
+    bool invalidate_input;
+    bool invalidate_output;
+    hal_gpio_t gpio_tx;
+    hal_gpio_t gpio_rx;
+    int baudrate;
+    protocol_e protocol;
+    protocol_io_type_e io_type;
+
+    union {
+        input_mavlink_t mavlink;
+    } inputs;
+
+    void *input_config; 
+    input_t *input;
+} uart_t;
+
 typedef struct tracker_s
 {
     time_millis_t last_heartbeat;
@@ -64,25 +84,27 @@ typedef struct tracker_s
         notifier_t *flag_changed_notifier;
     } internal;
 
-    struct 
-    {
-        bool io_runing;
-        bool invalidate_input;
-        bool invalidate_output;
-        union {
-            input_mavlink_t mavlink;
-        } inputs;
+    uart_t uart1;
+    uart_t uart2;
+    // struct 
+    // {
+    //     bool io_runing;
+    //     bool invalidate_input;
+    //     bool invalidate_output;
+    //     union {
+    //         input_mavlink_t mavlink;
+    //     } inputs;
 
-        void *input_config; 
-        input_t *input;
-    } io;
+    //     void *input_config; 
+    //     input_t *input;
+    // } io;
     
     servo_t *servo;
     atp_t *atp;
 } tracker_t;
 
 void tracker_init(tracker_t *t);
-void tracker_io_update(void *arg);
+void tracker_uart_update(tracker_t *t, uart_t *uart);
 void tracker_task(void *arg);
 const char *telemetry_format_tracker_mode(const telemetry_t *val, char *buf, size_t bufsize);
 tracker_status_e get_tracker_status(const tracker_t *t);

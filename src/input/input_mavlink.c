@@ -4,8 +4,8 @@
 
 static const char *TAG = "Input.Mavlink";
 
-static mavlink_t mavlink;
-static io_t mavlink_io;
+// static mavlink_t mavlink;
+// static io_t mavlink_io;
 
 static bool input_mavlink_update(void *input, void *data, time_micros_t now)
 {
@@ -26,6 +26,8 @@ static void input_mavlink_close(void *input, void *config)
 {
     input_mavlink_t *input_mavlink = input;
     serial_port_destroy(&input_mavlink->serial_port);
+    mavlink_destroy(input_mavlink->mavlink);
+    free(input_mavlink->mavlink);
 }
 
 static bool input_mavlink_open(void *input, void *config)
@@ -51,13 +53,15 @@ static bool input_mavlink_open(void *input, void *config)
 
     input_mavlink->serial_port = serial_port_open(&serial_config);
     LOG_I(TAG, "Open with Baudrate: %d, TX: %s, RX: %s", config_mavlink->baudrate, gpio_toa(config_mavlink->tx), gpio_toa(config_mavlink->rx));
-    // io_t mavlink_io = SERIAL_IO(input_mavlink->serial_port);
-    mavlink_io.write = (io_write_f)&serial_port_write;
-    mavlink_io.read = (io_read_f)&serial_port_read;
-    mavlink_io.flags = (io_flags_f)&serial_port_io_flags;
-    mavlink_io.data = input_mavlink->serial_port;
 
-    mavlink_init(input_mavlink->mavlink, &mavlink_io);
+    input_mavlink->mavlink = (mavlink_t *)malloc(sizeof(mavlink_t));
+
+    mavlink_init(input_mavlink->mavlink);
+
+    input_mavlink->mavlink->io->write = (io_write_f)&serial_port_write;
+    input_mavlink->mavlink->io->read = (io_read_f)&serial_port_read;
+    input_mavlink->mavlink->io->flags = (io_flags_f)&serial_port_io_flags;
+    input_mavlink->mavlink->io->data = input_mavlink->serial_port;
 
     return true;
 }
@@ -70,6 +74,4 @@ void input_mavlink_init(input_mavlink_t *input)
         .update = input_mavlink_update,
         .close = input_mavlink_close,
     };
-
-    input->mavlink = &mavlink;
 }

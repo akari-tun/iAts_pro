@@ -30,5 +30,6 @@ typedef struct mavlink_s
     
 } mavlink_t;
 
-void mavlink_init(mavlink_t *mavlink, io_t *io);
+void mavlink_init(mavlink_t *mavlink);
 int mavlink_update(mavlink_t *mavlink, void *data);
+void mavlink_destroy(mavlink_t *mavlink);
