@@ -107,7 +107,7 @@ static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
 #endif
 
-static const char *uart_in_out_type_table[] = {"Input", "Output"};
+static const char *uart_in_out_type_table[] = {"Input"};
 static const char *uart_protocol_table[] = {"ATP", "MSP", "MAVLINK", "LTM"};
 static const char *uart_baudrate_table[] = {"1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"};
 

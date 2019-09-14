@@ -105,7 +105,7 @@ static const led_stage_t wait_server_stages[] = {
 LED_PATTERN(wait_server_pattern, wait_server_stages, LED_REPEAT_FOREVER);
 
 static const led_stage_t seted_stages[] = {
-    LED_STAGE(255, HAL_WS2812_PURPLE, 50, 0),
+    LED_STAGE(255, HAL_WS2812_PURPLE, 75, 0),
 };
 LED_PATTERN(seted_pattern, seted_stages, 1);
 

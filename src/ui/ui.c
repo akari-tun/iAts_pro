@@ -424,6 +424,15 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         }
         return;
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_SERVO_COURSE))
+    {
+        if (ui->internal.tracker->servo->internal.course > 0)
+        {
+            led_mode_add(LED_MODE_SETED);
+            beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_SETED); 
+        }
+    }
 #endif
 
 #if defined(USE_WIFI)

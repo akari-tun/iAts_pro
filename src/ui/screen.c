@@ -75,7 +75,7 @@ void screen_power_on(screen_t *screen)
 void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode)
 {
     screen->internal.secondary_mode = mode;
-    LOG_I(TAG, "SCREEN_SECONDARY_MODE -> %d\n", mode);
+    LOG_I(TAG, "SCREEN_SECONDARY_MODE -> %d", mode);
 }
 
 static void screen_splash_task(void *arg)
@@ -281,9 +281,9 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
             uint16_t deg = (servo_pan->currtent_pulsewidth - config->min_pulsewidth) / ((config->max_pulsewidth - config->min_pulsewidth) / config->max_degree);
             if (servo_pan->is_reverse) deg = 359 - deg;
-            screen->internal.tracker->servo->internal.course = deg;
+            t->servo->internal.course = deg;
             setting_set_u16(setting_course, deg);
-
+            
             LOG_I(TAG, "Course degree set to %d", deg);
 
             return true;
@@ -880,15 +880,15 @@ static void screen_draw_debug_info(screen_t *s)
     if (s->internal.tracker->internal.flag && TRACKER_FLAG_HOMESETED)
     {
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%03.7f", get_tracker_lat());
-        screen_draw_label_value(s, "Lat:", buf, SCREEN_W(s), y, 3);
+        screen_draw_label_value(s, "H.Lat:", buf, SCREEN_W(s), y, 3);
         y += 8;
 
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%03.7f", get_tracker_lon());
-        screen_draw_label_value(s, "Lon:", buf, SCREEN_W(s), y, 3);
+        screen_draw_label_value(s, "H.Lon:", buf, SCREEN_W(s), y, 3);
         y += 8;
 
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%05.2f", get_tracker_alt());
-        screen_draw_label_value(s, "Alt:", buf, SCREEN_W(s), y, 3);
+        screen_draw_label_value(s, "H.Alt:", buf, SCREEN_W(s), y, 3);
         y += 8;
     }
 
@@ -937,9 +937,6 @@ static void screen_draw_debug_info(screen_t *s)
     case WIFI_STATUS_UDP_CONNECTED:
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "UDP_CONNECTED");
         break;
-    // case WIFI_STATUS_NO_USE:
-    //     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "NO_USE");
-    //     break;
     }
 
     screen_draw_label_value(s, "W.Status:", buf, SCREEN_W(s), y, 3);
