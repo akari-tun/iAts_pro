@@ -6,6 +6,7 @@
 #include "AFlogo_2.xbm"
 #include "AFlogo_3.xbm"
 #include "AFlogo_4.xbm"
+#include "AFlogo_5.xbm"
 
 #include "Wifi_0.xbm"
 #include "Wifi_1.xbm"
@@ -27,8 +28,8 @@
 #include "Small_Wifi.xbm"
 #include "Power.xbm"
 
-#define AF_LOGO_WIDTH 39
-#define AF_LOGO_HEIGHT 31
+#define AF_LOGO_WIDTH 37
+#define AF_LOGO_HEIGHT 34
 #define AF_LOGO_ANIMATION_COUNT 9
 #define AF_LOGO_ANIMATION_REPEAT 1
 
@@ -39,9 +40,10 @@ static const char *af_logo_images[] = {
     AFlogo_2_bits,
     AFlogo_3_bits,
     AFlogo_4_bits,
-    AFlogo_4_bits,
+    AFlogo_5_bits,
+    AFlogo_5_bits,
     AFlogo_0_bits,
-    AFlogo_4_bits,
+    AFlogo_5_bits,
     AFlogo_0_bits,
 };
 
