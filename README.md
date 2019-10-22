@@ -14,7 +14,7 @@ After I graduating from college, I never use C language to develop any project, 
 
 
 ## CONTROL APP
-This app can be control aat to course the right direction and view the aircraft's location and some status infomation from the telemetry data.Its supported two protocol now.
+I designed a android app for this project.this app can be control aat to course the right direction and view the aircraft's location and some status infomation from the telemetry data.Its supported two protocol now.
 
 ##### App Image
 
