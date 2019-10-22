@@ -12,6 +12,40 @@ After I graduating from college, I never use C language to develop any project, 
 
 [RavenLRS](https://github.com/RavenLRS) project is built on ESP32 module, its also the realization of the function of some of its similar to some of my ideas, I learn by [RavenLRS](https://github.com/RavenLRS) project by learned a lot of of C language development experience, and use a lot of RavenLRS code to my project,Thanks to [RavenLRS](https://github.com/RavenLRS) author [fiam](https://github.com/fiam) open source for such an excellent project.
 
+
+## CONTROL APP
+This app can be control aat to course the right direction and view the aircraft's location and some status infomation from the telemetry data.Its supported two protocol now.
+
+##### App Image
+
+<img src="doc/app/image/welcome.jpg?raw=true " width="320" height="" alt="welcome">
+
+main page
+
+<img src="doc/app/image/main.jpg?raw=true " width="" height="180" alt="main">
+<img src="doc/app/image/setting.jpg?raw=true " width="" height="180" alt="setting">
+
+##### Smartport from R9M
+Frsky R9m module can output Smartport, I diy a HC-05 module, It contains the inverter. So it's easy to plug to the R9m.
+
+My app use classic bluetooth to connect HC-05 and get Smartport.
+
+<img src="doc/app/image/bt_module_top.jpg?raw=true " width="240" height="320" alt="bt_module_top">
+<img src="doc/app/image/bt_module_bottom.jpg?raw=true " width="320" height="320" alt="bt_module_bottom">
+
+plugged to R9m
+
+<img src="doc/app/image/bt_module_plugged.jpg?raw=true " width="480" height="640" alt="bt_module_plugged">
+
+##### Raven LRS
+
+[RavenLRS](https://github.com/RavenLRS) provides telemetry service for BLE's gatt server, but it don't provides notify.So I add the gatt server notify to RavenLRS,my app can use BLE notify get telemetry data.
+
+You can find this module at here: [AF_TX_Lite](https://github.com/RavenLRS/raven-hardware/tree/AFelite)
+
+<img src="doc/app/image/AF_TX_Lite.jpg?raw=true " width="480" height="640" alt="AF_TX_Lite">
+
+
 ### PCB LAYOUT
 
 #### PCB_LAYOUT_TOP
@@ -50,36 +84,3 @@ After I graduating from college, I never use C language to develop any project, 
 
 #### Setup 6
 <img src="doc/design_sketch/image/IMG_1886.JPG?raw=true " width="" height="320" alt="TX">
-
-
-## CONTROL APP
-This app can be control aat to course the right direction and view the aircraft's location, some status infomation.Its supported two protocol now.
-
-##### App Image
-
-<img src="doc/app/image/welcome.JPG?raw=true " width="320" height="" alt="TX">
-
-main page
-
-<img src="doc/app/image/main.JPG?raw=true " width="" height="180" alt="TX">
-<img src="doc/app/image/setting.JPG?raw=true " width="" height="180" alt="TX">
-
-##### Smartport from R9M
-Frsky R9m module can output Smartport, I diy a HC-05 module, It Contains the inverter. So it's easy to plug to the R9m.
-
-My app use classic bluetooth to connect HC-05 and get Smartport.
-
-<img src="doc/app/image/bt_module_top.JPG?raw=true " width="240" height="320" alt="TX">
-<img src="doc/app/image/bt_module_bottom.JPG?raw=true " width="320" height="320" alt="TX">
-
-plugged to R9m
-
-<img src="doc/app/image/bt_module_plugged.JPG?raw=true " width="480" height="640" alt="TX">
-
-##### Raven LRS
-
-[RavenLRS](https://github.com/RavenLRS) provides telemetry service for BLE's gatt server, but it don't provides notify.So I add the gatt server notify to RavenLRS,my app can use BLE notify get telemetry data.
-
-You can find this module at here: [AF_TX_Lite](https://github.com/RavenLRS/raven-hardware/tree/AFelite)
-
-<img src="doc/app/image/AF_TX_Lite.JPG?raw=true " width="480" height="640" alt="TX">
