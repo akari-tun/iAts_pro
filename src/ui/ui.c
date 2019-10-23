@@ -475,6 +475,12 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         ui->internal.tracker->internal.show_coordinate = setting_get_bool(setting);
         return;
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_REAL_ALT))
+    {
+        ui->internal.tracker->internal.real_alt = setting_get_bool(setting);
+        return;
+    }
 }
 
 #if defined(USE_BEEPER)
