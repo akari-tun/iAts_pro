@@ -4,7 +4,7 @@
 #include "tracker/observer.h"
 #include "config/settings.h"
 
-static const char *TAG = "atp";
+static const char *TAG = "Protocol.Atp";
 static telemetry_t plane_vals[TAG_PLANE_COUNT];
 static telemetry_t tracker_vals[TAG_TRACKER_COUNT];
 static telemetry_t param_vals[TAG_PARAM_COUNT];
