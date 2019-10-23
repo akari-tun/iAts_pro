@@ -2,6 +2,7 @@
 
 #include "util/time.h"
 #include "input/input_mavlink.h"
+#include "input/input_ltm.h"
 #include "telemetry.h"
 #include "servo.h"
 #include "observer.h"
@@ -60,6 +61,7 @@ typedef struct uart_s
 
     union {
         input_mavlink_t mavlink;
+        input_ltm_t ltm;
     } inputs;
 
     void *input_config; 
@@ -74,6 +76,7 @@ typedef struct tracker_s
     struct
     {
         bool show_coordinate;
+        bool real_alt;
         tracker_flag_e flag;
         tracker_status_e status;
         // tracker_mode_e mode;

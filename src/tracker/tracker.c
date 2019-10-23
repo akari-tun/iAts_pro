@@ -323,6 +323,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
 
     union {
         input_mavlink_config_t mavlink;
+        input_ltm_config_t ltm;
     } input_config;
 
     if (uart->input != NULL)
@@ -352,7 +353,13 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
         uart->input_config = &input_config.mavlink;
         break;
     case PROTOCOL_LTM:
-        /* code */
+        LOG_I(TAG, "Set [UART] to [LTM] for input.");
+        input_ltm_init(&uart->inputs.ltm);
+        uart->input = (input_t *)&uart->inputs.ltm;
+        input_config.ltm.tx = uart->gpio_tx;
+        input_config.ltm.rx = uart->gpio_rx;
+        input_config.ltm.baudrate = uart->baudrate;
+        uart->input_config = &input_config.ltm;
         break;
     }
 
@@ -378,6 +385,7 @@ void tracker_init(tracker_t *t)
     servo.internal.ease_config = e_cfg;
 
     t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE),
+    t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT),
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -467,7 +475,7 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+                    float tracker_lat = t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
                     float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
                     float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
                     float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
@@ -507,7 +515,7 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    int32_t tracker_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE));
+                    int32_t tracker_alt =  t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE));
                     int32_t plane_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE));
 
                     uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
