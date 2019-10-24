@@ -1,7 +1,7 @@
 # iAts_pro(Antenna automatic tracking system pro)
 
 ## AAT test video
-You can see the test video at [here](https://www.bilibili.com/video/av53142016)
+You can see the test video at [here](https://www.bilibili.com/video/av53142016).
 
 ## Development is on the way...
 
