@@ -147,8 +147,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
             strcpy((char *)&wifi_config.sta.ssid, ssid);
             strcpy((char *)&wifi_config.sta.password, password);
-            // strcpy((char *)&wifi_config.sta.ssid, "tan_wifi");
-            // strcpy((char *)&wifi_config.sta.password, "B04811BEA833");
             
             LOG_I(TAG, "Connecting to ap SSID:%s PWD:%s", wifi_config.sta.ssid, wifi_config.sta.password);
 
@@ -192,6 +190,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         {
             if (wifi->enable)
             {
+                ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	            ESP_ERROR_CHECK(esp_wifi_start());
                 ESP_ERROR_CHECK(esp_wifi_connect());
                 wifi->status_change(wifi, WIFI_STATUS_DISCONNECTED);
             }
@@ -202,6 +202,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         }
         break;
     case SYSTEM_EVENT_STA_STOP:
+        LOG_I(TAG, "SYSTEM_EVENT_STA_STOP");
         if (wifi->enable)
         {
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -226,15 +227,26 @@ static void wifi_status_change(void *w, uint8_t status)
 
     if (wifi->status == WIFI_STATUS_UDP_CONNECTED && status == WIFI_STATUS_CONNECTED)
     {
+        
+        wifi->status = status;
         ip4_addr_t broadcast_addr = {
             .addr = (u32_t)(wifi->ip | 0xff000000)
         };
 
         LOG_I(TAG, "Broadcast Address: %s", ip4addr_ntoa(&broadcast_addr));
         wifi_udp_set_server_ip(&broadcast_addr.addr);
+    } 
+    else if (wifi->status == WIFI_STATUS_CONNECTED && status == WIFI_STATUS_SMARTCONFIG)
+    {
+        wifi->status = status;        
+        LOG_I(TAG, "Stop wifi.");
+        ESP_ERROR_CHECK(esp_wifi_stop());
     }
-
-    wifi->status = status;
+    else
+    {
+        wifi->status = status;
+    }
+    
     wifi->status_change_notifier->mSubject.Notify(wifi->status_change_notifier, &wifi->status);
 }
 
