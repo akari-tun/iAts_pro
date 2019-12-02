@@ -152,6 +152,7 @@ static void screen_splash_task(void *arg)
     time_millis_delay(ANIMATION_FRAME_DURATION_MS);
 
     screen->internal.splashing = false;
+    LOG_I(TAG, "Screen splashing done.");
 
     vTaskDelete(NULL);
 }
@@ -940,6 +941,10 @@ static void screen_draw_debug_info(screen_t *s)
     }
 
     screen_draw_label_value(s, "W.Status:", buf, SCREEN_W(s), y, 3);
+    y += 8;
+
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, VERSION);
+    screen_draw_label_value(s, "Version:", buf, SCREEN_W(s), y, 3);
     y += 8;
 }
 
