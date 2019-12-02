@@ -67,17 +67,20 @@ static void ui_status_updated(void *notifier, void *s)
         ui->internal.tracker->internal.flag_changed(ui->internal.tracker, TRACKER_FLAG_WIFI_CONNECTED, 0);
         break;
     case TRACKER_STATUS_WIFI_CONNECTING:
-
 #if defined(USE_BEEPER)
         if (ui->internal.beeper.mode != BEEPER_MODE_WAIT_CONNECT)
+        {
             beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_WAIT_CONNECT);
+        }
 #endif
-
         if (led_mode_is_enable(LED_MODE_SMART_CONFIG))
+        {
             led_mode_remove(LED_MODE_SMART_CONFIG);
+        }
         if (!led_mode_is_enable(LED_MODE_WAIT_CONNECT))
+        {
             led_mode_add(LED_MODE_WAIT_CONNECT);
-
+        }
 #if defined(USE_SCREEN)
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
 #endif
@@ -479,6 +482,18 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_REAL_ALT))
     {
         ui->internal.tracker->internal.real_alt = setting_get_bool(setting);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_ESTIMATE_ENABLE))
+    {
+        ui->internal.tracker->internal.estimate_location = setting_get_bool(setting);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_ESTIMATE_SECOND))
+    {
+        ui->internal.tracker->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
         return;
     }
 }

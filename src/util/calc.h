@@ -8,6 +8,11 @@
 #define RAD_TO_DEG 57.295779513082320876798154814105
 #define EULER 2.718281828459045235360287471352
 
+#define MAX_LIMITED_LAT 79.9
+#define MIN_LIMITED_LAT -79.9
+#define A_Earth 6378137
+#define e_Earth 0.08181919104281579
+
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
 #define abs(x) ((x)>0?(x):-(x))
@@ -22,3 +27,4 @@
 float distance_between(float lat1, float long1, float lat2, float long2);
 float course_to(float lat1, float long1, float lat2, float long2);
 uint16_t tilt_to(uint16_t distance, uint32_t alt1, uint32_t alt2);
+void distance_move_to(float beginLat, float beginLon, float orient, float distance, float *distLat, float *distLon);

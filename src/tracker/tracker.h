@@ -13,6 +13,8 @@
 // #include "wifi/wifi.h"
 // #endif
 
+#define MAX_ESTIMATE_COUNT 5
+
 typedef struct _Notifier notifier_t;
 typedef struct atp_s atp_t;
 
@@ -44,6 +46,14 @@ typedef enum
     TRACKER_MODE_DEBUG,
 } tracker_mode_e;
 
+typedef enum
+{
+    TRACKER_ESTIMATE_1_SEC = 1,
+    TRACKER_ESTIMATE_3_SEC = 3,
+    TRACKER_ESTIMATE_5_SEC = 5,
+    TRACKER_ESTIMATE_10_SEC = 10
+} tracker_estimate_e;
+
 typedef void (*pTr_status_changed)(void *t, tracker_status_e s);
 typedef void (*pTr_flag_changed)(void *t, uint8_t f, uint8_t v);
 typedef void (*pTr_telemetry_changed)(void *t, uint8_t tag);
@@ -68,6 +78,15 @@ typedef struct uart_s
     input_t *input;
 } uart_t;
 
+typedef struct location_estimate_s
+{
+    int32_t latitude;
+    int32_t longitude;
+    uint16_t direction;
+    int16_t speed;
+    time_millis_t location_time;
+} location_estimate_t;
+
 typedef struct tracker_s
 {
     time_millis_t last_heartbeat;
@@ -77,6 +96,8 @@ typedef struct tracker_s
     {
         bool show_coordinate;
         bool real_alt;
+        bool estimate_location;
+        uint8_t eastimate_time;
         tracker_flag_e flag;
         tracker_status_e status;
         // tracker_mode_e mode;
@@ -85,22 +106,11 @@ typedef struct tracker_s
         pTr_telemetry_changed telemetry_changed;
         notifier_t *status_changed_notifier;
         notifier_t *flag_changed_notifier;
+        location_estimate_t *estimate;
     } internal;
 
     uart_t uart1;
     uart_t uart2;
-    // struct 
-    // {
-    //     bool io_runing;
-    //     bool invalidate_input;
-    //     bool invalidate_output;
-    //     union {
-    //         input_mavlink_t mavlink;
-    //     } inputs;
-
-    //     void *input_config; 
-    //     input_t *input;
-    // } io;
     
     servo_t *servo;
     atp_t *atp;

@@ -65,3 +65,45 @@ uint16_t tilt_to(uint16_t distance, uint32_t alt1, uint32_t alt2)
 
     return alpha;
 }
+
+void distance_move_to(float beginLat, float beginLon, float orient, float distance, float *distLat, float *distLon)
+{
+	distance = distance * 1852;
+
+	if (fabs(orient - 90) <= 0.0001 || fabs(orient - 270) <= 0.0001)
+	{
+		*distLat = beginLat;
+		float lonDist = (pow(1 - e_Earth * e_Earth * pow(sin(radians(beginLat)), 2), 0.5) * distance) / (A_Earth * cos(radians(beginLat)));
+
+		if (fabs(orient - 90) <= 0.0000001)
+		{
+			*distLon = fabs(orient - 90) <= 0.0000001 ? degrees(radians(beginLon) + lonDist) : degrees(radians(beginLon) - lonDist);
+		}
+	}
+	else
+	{
+		float A1 = 1+ 3. / 4 * pow(e_Earth, 2) + 45. / 64 * pow(e_Earth, 4) + 175. / 256 * pow(e_Earth, 6) + 11025. / 16384 * pow(e_Earth,8);
+		float A2 = -3. / 8 * pow(e_Earth, 2) - 15. / 32 * pow(e_Earth, 4) - 525. / 1024 * pow(e_Earth, 6) - 2205. / 4096 * pow(e_Earth,8);
+		float A3 = 15. / 256 * pow(e_Earth, 4) + 105. / 1024 * pow(e_Earth, 6) + 2205. / 16384 * pow(e_Earth, 8);
+		float A4 = -35. / 3072 * pow(e_Earth, 6) - 105. / 4096 * pow(e_Earth, 8);
+		float A5 = 315. / 131072 * pow(e_Earth,8);
+		float B1 = 3. / 8 * pow(e_Earth, 2) + 3. / 16 * pow(e_Earth, 4) + 213. / 2048 * pow(e_Earth, 6) + 255. / 4096 * pow(e_Earth, 8);
+		float B2 = 21. / 256 * pow(e_Earth, 4) + 21. / 256 * pow(e_Earth, 6) + 533. / 8192 * pow(e_Earth,8);
+		float B3 = 151. / 6144 * pow(e_Earth, 6) + 151. / 4096 * pow(e_Earth, 8);
+		float B4 = 1097. / 131082 * pow(e_Earth, 8);
+
+		float x1 = A_Earth * (1 - e_Earth * e_Earth) * (A1 * radians(beginLat) + A2 * sin(radians(2 * beginLat)) + A3 * sin(radians( 4 * beginLat)) + A4 * sin(radians(6 * beginLat)) + A5 * sin(radians(8 * beginLat)));
+		float x2 = x1 + distance * cos(radians(orient));
+		float b0 = x2 / ((1 - e_Earth * e_Earth) * A_Earth * A1);
+
+		*distLat = b0 + B1 * sin(2 * b0) + B2 * sin(4 * b0) + B3 * sin(6 * b0) + B4 * sin(8 * b0);
+		*distLat = degrees(*distLat);
+
+		float sin1 = sin(radians(beginLat));
+		float sin2 = sin(radians(*distLat));
+		float q1 = log((1 + sin1) / (1 - sin1)) / 2 - e_Earth * log((1 + sin1 * e_Earth) / (1 - sin1 * e_Earth)) / 2;
+		float q2 = log((1 + sin2) / (1 - sin2)) / 2 - e_Earth * log((1 + sin2 * e_Earth) / (1 - sin2 * e_Earth)) / 2;
+		*distLon = radians(beginLon) + (q2 - q1) * tan(radians(orient));
+		*distLon = degrees(*distLon);
+	}
+}

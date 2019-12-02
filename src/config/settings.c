@@ -111,6 +111,8 @@ static const char *uart_in_out_type_table[] = {"Input"};
 static const char *uart_protocol_table[] = {"ATP", "MSP", "MAVLINK", "LTM"};
 static const char *uart_baudrate_table[] = {"1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"};
 
+static const char *estimate_second_table[] = {"1 sec", "3 sec", "5 sec", "10 sec"};
+
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
@@ -132,6 +134,10 @@ static const setting_t settings[] = {
     FOLDER(SETTING_KEY_TRACKER, "Tracker", FOLDER_ID_TRACKER, FOLDER_ID_ROOT, NULL),
     BOOL_YN_SETTING(SETTING_KEY_TRACKER_SHOW_COORDINATE, "Show Coordinate", SETTING_FLAG_NAME_MAP, FOLDER_ID_TRACKER, true),
     BOOL_YN_SETTING(SETTING_KEY_TRACKER_REAL_ALT, "Real Altitude", SETTING_FLAG_NAME_MAP, FOLDER_ID_TRACKER, true),
+
+    FOLDER(SETTING_KEY_TRACKER_ESTIMATE, "Pos. Estimate", FOLDER_ID_ESTIMATE, FOLDER_ID_TRACKER, NULL),
+    BOOL_SETTING(SETTING_KEY_TRACKER_ESTIMATE_ENABLE, "Enable", SETTING_FLAG_NAME_MAP, FOLDER_ID_ESTIMATE, true),
+    U8_MAP_SETTING(SETTING_KEY_TRACKER_ESTIMATE_SECOND, "E.Sec", 0, FOLDER_ID_ESTIMATE, estimate_second_table, 0),
 
     FOLDER(SETTING_KEY_TRACKER_HOME, "Home", FOLDER_ID_HOME, FOLDER_ID_TRACKER, NULL),
     CMD_SETTING(SETTING_KEY_TRACKER_HOME_RECOVER, "Recover Home", FOLDER_ID_HOME, 0, SETTING_CMD_STATUS_NONE),

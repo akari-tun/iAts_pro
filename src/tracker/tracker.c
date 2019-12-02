@@ -10,6 +10,8 @@
 static const char *TAG = "Tarcker";
 static servo_t servo;
 static atp_t atp;
+static location_estimate_t estimate[MAX_ESTIMATE_COUNT];
+static uint8_t estimate_index;
 
 static int PROTOCOL_BAUDRATE[] = { PROTOCOL_BAUDRATE_1200, PROTOCOL_BAUDRATE_2400, PROTOCOL_BAUDRATE_4800, PROTOCOL_BAUDRATE_9600, PROTOCOL_BAUDRATE_19200, PROTOCOL_BAUDRATE_38400, PROTOCOL_BAUDRATE_57600,PROTOCOL_BAUDRATE_115200 };
 // static Observer telemetry_vals_observer;
@@ -109,16 +111,19 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_SERVO_COURSE))
     {
         t->servo->internal.course = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_DIRECTION))
     {
         t->servo->internal.pan.config.direction = setting_get_u8(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_DIRECTION))
     {
         t->servo->internal.tilt.config.direction = setting_get_u8(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MAX_PLUSEWIDTH))
@@ -126,6 +131,7 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->servo->internal.pan.config.max_pulsewidth = setting_get_u16(setting);
         if (t->servo->internal.pan.currtent_pulsewidth > t->servo->internal.pan.config.max_pulsewidth)
             t->servo->internal.pan.currtent_pulsewidth = t->servo->internal.pan.config.max_pulsewidth;
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_PAN_MIN_PLUSEWIDTH))
@@ -133,6 +139,7 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->servo->internal.pan.config.min_pulsewidth = setting_get_u16(setting);
         if (t->servo->internal.pan.currtent_pulsewidth < t->servo->internal.pan.config.min_pulsewidth)
             t->servo->internal.pan.currtent_pulsewidth = t->servo->internal.pan.config.min_pulsewidth;
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MAX_PLUSEWIDTH))
@@ -140,6 +147,7 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->servo->internal.tilt.config.max_pulsewidth = setting_get_u16(setting);
         if (t->servo->internal.tilt.currtent_pulsewidth > t->servo->internal.tilt.config.max_pulsewidth)
             t->servo->internal.tilt.currtent_pulsewidth = t->servo->internal.tilt.config.max_pulsewidth;
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_TILT_MIN_PLUSEWIDTH))
@@ -147,36 +155,43 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->servo->internal.tilt.config.min_pulsewidth = setting_get_u16(setting);
         if (t->servo->internal.tilt.currtent_pulsewidth < t->servo->internal.tilt.config.min_pulsewidth)
             t->servo->internal.tilt.currtent_pulsewidth = t->servo->internal.tilt.config.min_pulsewidth;
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_OUT_TYPE))
     {
         t->servo->internal.ease_config.ease_out = setting_get_u8(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_MAX_STEPS))
     {
         t->servo->internal.ease_config.max_steps = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_MIN_PULSEWIDTH))
     {
         t->servo->internal.ease_config.min_pulsewidth = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_STEP_MS))
     {
         t->servo->internal.ease_config.step_ms = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_MAX_MS))
     {
         t->servo->internal.ease_config.max_ms = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_SERVO_EASE_MIN_MS))
     {
         t->servo->internal.ease_config.min_ms = setting_get_u16(setting);
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_SET))
@@ -197,6 +212,8 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
             setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)));
             t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
         }
+
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_RECOVER))
@@ -209,6 +226,8 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_ALT), now);
         t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
+
+        return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_CLEAR))
@@ -226,6 +245,8 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), zero);
 
         t->internal.flag_changed(t, TRACKER_FLAG_HOMESETED, 0);
+
+        return;
     }
 }
 
@@ -384,8 +405,10 @@ void tracker_init(tracker_t *t)
 
     servo.internal.ease_config = e_cfg;
 
-    t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE),
-    t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT),
+    t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE);
+    t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT);
+    t->internal.estimate_location = settings_get_key_bool(SETTING_KEY_TRACKER_ESTIMATE_ENABLE);
+    t->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -421,6 +444,9 @@ void tracker_init(tracker_t *t)
     t->uart2.baudrate = PROTOCOL_BAUDRATE[settings_get_key_u8(SETTING_KEY_PORT_UART2_BAUDRATE)];
     t->uart2.protocol = settings_get_key_u8(SETTING_KEY_PORT_UART2_PROTOCOL);
     t->uart2.io_type = settings_get_key_u8(SETTING_KEY_PORT_UART2_TYPE);
+
+    memset(&estimate, 0, sizeof(location_estimate_t) * MAX_ESTIMATE_COUNT);
+    estimate_index = 0;
 
     settings_add_listener(tracker_settings_handler, t);
 
@@ -475,10 +501,42 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
+                    int32_t i_plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE));
+                    int32_t i_plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE));
+                    float plane_lat = 0;
+                    float plane_lon = 0;
+
+                    if (t->internal.estimate_location)
+                    {
+                        if (i_plane_lat == t->internal.estimate[estimate_index].latitude && i_plane_lon == t->internal.estimate[estimate_index].longitude)
+                        {
+                            time_millis_t move_time = now - t->internal.estimate[estimate_index].location_time;
+
+                            if (move_time > (t->internal.eastimate_time * 1000)) move_time = t->internal.eastimate_time * 1000;
+
+                            float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (move_time / 1000);
+                            distance_move_to(i_plane_lat / 10000000.0f, i_plane_lon / 10000000.0f, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist, 
+                                &plane_lat, &plane_lon);
+                        }
+                        else
+                        {
+                            estimate_index++;
+                            if (estimate_index > 4) estimate_index = 0;
+                            t->internal.estimate[estimate_index].latitude = i_plane_lat;
+                            t->internal.estimate[estimate_index].longitude = i_plane_lon;
+                            t->internal.estimate[estimate_index].location_time = time_millis_now();
+                            t->internal.estimate[estimate_index].speed = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED));
+                            t->internal.estimate[estimate_index].direction = telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING));
+                        }
+                    }
+                    else
+                    {
+                        plane_lat = i_plane_lat / 10000000.0f;
+                        plane_lon = i_plane_lon / 10000000.0f;
+                    }
+                    
                     float tracker_lat = t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
                     float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
-                    float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) / 10000000.0f;
-                    float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) / 10000000.0f;
 
                     distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
 
