@@ -419,6 +419,7 @@ void tracker_init(tracker_t *t)
     t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT);
     t->internal.estimate_location = settings_get_key_bool(SETTING_KEY_TRACKER_ESTIMATE_ENABLE);
     t->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
+    t->internal.estimate = &estimate;
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -511,38 +512,49 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    int32_t i_plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE));
-                    int32_t i_plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE));
-                    float plane_lat = 0;
-                    float plane_lon = 0;
+                    float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) /  10000000.0f;
+                    float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) /  10000000.0f;
 
                     if (t->internal.estimate_location)
                     {
-                        if (i_plane_lat == t->internal.estimate[estimate_index].latitude && i_plane_lon == t->internal.estimate[estimate_index].longitude)
+                        if (plane_lat == t->internal.estimate[estimate_index].latitude && plane_lon == t->internal.estimate[estimate_index].longitude)
                         {
                             time_millis_t move_time = now - t->internal.estimate[estimate_index].location_time;
 
                             if (move_time > (t->internal.eastimate_time * 1000)) move_time = t->internal.eastimate_time * 1000;
 
-                            float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (move_time / 1000);
-                            distance_move_to(i_plane_lat / 10000000.0f, i_plane_lon / 10000000.0f, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist, 
-                                &plane_lat, &plane_lon);
+                            float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (move_time / 1250.0f);
+
+                            // LOG_I(TAG, "p_speed:%d, p_heading:%d, now:%d, location_time:%d, move_time:%d, move_dist:%f", 
+                            //     telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)), 
+                            //     telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)),
+                            //     now,
+                            //     t->internal.estimate[estimate_index].location_time,
+                            //     move_time,
+                            //     dist);
+
+                            float new_plane_lat = 0;
+                            float new_plane_lon = 0;
+
+                            distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
+                                &new_plane_lat, &new_plane_lon);
+
+                             LOG_I(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, new_plane_lat, new_plane_lon);
+
+                            plane_lat = new_plane_lat;
+                            plane_lon = new_plane_lon;
                         }
                         else
                         {
+                            LOG_I(TAG, "estimate_index:%d", estimate_index);
                             estimate_index++;
                             if (estimate_index > 4) estimate_index = 0;
-                            t->internal.estimate[estimate_index].latitude = i_plane_lat;
-                            t->internal.estimate[estimate_index].longitude = i_plane_lon;
-                            t->internal.estimate[estimate_index].location_time = time_millis_now();
+                            t->internal.estimate[estimate_index].latitude = plane_lat;
+                            t->internal.estimate[estimate_index].longitude = plane_lon;
+                            t->internal.estimate[estimate_index].location_time = now;
                             t->internal.estimate[estimate_index].speed = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED));
                             t->internal.estimate[estimate_index].direction = telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING));
                         }
-                    }
-                    else
-                    {
-                        plane_lat = i_plane_lat / 10000000.0f;
-                        plane_lon = i_plane_lon / 10000000.0f;
                     }
                     
                     float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
@@ -588,7 +600,7 @@ void tracker_task(void *arg)
 
                     uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
 
-                    LOG_I(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
+                    LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
 
                     if (tilt_deg != servo.internal.tilt.currtent_degree || servo.internal.tilt.is_reverse != servo.internal.pan.is_reverse)
                     {

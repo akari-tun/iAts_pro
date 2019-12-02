@@ -493,7 +493,12 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_ESTIMATE_SECOND))
     {
-        ui->internal.tracker->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
+        uint8_t v = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
+        if (v == 0) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_1_SEC;
+        if (v == 1) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_3_SEC;
+        if (v == 2) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_5_SEC;
+        if (v == 3) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_10_SEC;
+        
         return;
     }
 }

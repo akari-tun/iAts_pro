@@ -82,8 +82,8 @@ typedef struct uart_s
 
 typedef struct location_estimate_s
 {
-    int32_t latitude;
-    int32_t longitude;
+    float latitude;
+    float longitude;
     uint16_t direction;
     int16_t speed;
     time_millis_t location_time;
