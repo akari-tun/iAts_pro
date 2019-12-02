@@ -5,7 +5,6 @@
 #include "util/macros.h"
 
 #include "telemetry.h"
-#include "gps/gps.h"
 
 const char *telemetry_format_str(const telemetry_t *val, char *buf, size_t bufsize)
 {
@@ -100,13 +99,13 @@ const char *telemetry_format_att(const telemetry_t *val, char *buf, size_t bufsi
 
 const char *telemetry_format_gps_fix(const telemetry_t *val, char *buf, size_t bufsize)
 {
-    switch ((gps_fix_type_e)val->val.u8)
+    switch (val->val.u8)
     {
-    case GPS_FIX_NONE:
+    case 0:
         return "None";
-    case GPS_FIX_2D:
+    case 1:
         return "2D";
-    case GPS_FIX_3D:
+    case 2:
         return "3D";
     }
     return NULL;
