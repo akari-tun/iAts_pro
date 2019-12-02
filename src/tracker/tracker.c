@@ -345,6 +345,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
     union {
         input_mavlink_config_t mavlink;
         input_ltm_config_t ltm;
+        input_nmea_config_t nmea;
     } input_config;
 
     if (uart->input != NULL)
@@ -381,6 +382,15 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
         input_config.ltm.rx = uart->gpio_rx;
         input_config.ltm.baudrate = uart->baudrate;
         uart->input_config = &input_config.ltm;
+        break;
+    case PROTOCOL_NMEA:
+        LOG_I(TAG, "Set [UART] to [NMEA] for input.");
+        input_nmea_init(&uart->inputs.nmea);
+        uart->input = (input_t *)&uart->inputs.nmea;
+        input_config.nmea.tx = uart->gpio_tx;
+        input_config.nmea.rx = uart->gpio_rx;
+        input_config.nmea.baudrate = uart->baudrate;
+        uart->input_config = &input_config.nmea;
         break;
     }
 
@@ -535,7 +545,7 @@ void tracker_task(void *arg)
                         plane_lon = i_plane_lon / 10000000.0f;
                     }
                     
-                    float tracker_lat = t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+                    float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
                     float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
 
                     distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
@@ -578,7 +588,7 @@ void tracker_task(void *arg)
 
                     uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
 
-                    LOG_D(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
+                    LOG_I(TAG, "t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
 
                     if (tilt_deg != servo.internal.tilt.currtent_degree || servo.internal.tilt.is_reverse != servo.internal.pan.is_reverse)
                     {

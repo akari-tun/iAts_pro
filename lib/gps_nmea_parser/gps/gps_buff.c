@@ -31,7 +31,7 @@
  * Author:          Tilen MAJERLE <tilen@majerle.eu>
  * Version:         v1.0
  */
-#include "gps/gps_buff.h"
+#include "../include/gps/gps_buff.h"
 
 /* --- Buffer unique part starts --- */
 /* Prefix for all buffer functions and typedefs */

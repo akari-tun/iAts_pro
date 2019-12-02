@@ -31,7 +31,7 @@
  * Author:          Tilen MAJERLE <tilen@majerle.eu>
  * Version:         v1.1.0
  */
-#include "gps/gps.h"
+#include "../include/gps/gps.h"
 
 #include <math.h>
 #include <string.h>

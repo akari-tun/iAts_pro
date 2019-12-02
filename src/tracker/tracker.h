@@ -3,6 +3,7 @@
 #include "util/time.h"
 #include "input/input_mavlink.h"
 #include "input/input_ltm.h"
+#include "input/input_nmea.h"
 #include "telemetry.h"
 #include "servo.h"
 #include "observer.h"
@@ -72,6 +73,7 @@ typedef struct uart_s
     union {
         input_mavlink_t mavlink;
         input_ltm_t ltm;
+        input_nmea_t nmea;
     } inputs;
 
     void *input_config; 
