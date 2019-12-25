@@ -360,13 +360,11 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
     switch (uart->protocol)
     {
     case PROTOCOL_ATP:
-    /* code */
         break;
     case PROTOCOL_MSP:
-        /* code */
         break;
     case PROTOCOL_MAVLINK:
-        LOG_I(TAG, "Set [UART] to [MAVLINK] for input.");
+        LOG_I(TAG, "Set [UART%d] to [MAVLINK] for input.", uart->com);
         input_mavlink_init(&uart->inputs.mavlink);
         uart->input = (input_t *)&uart->inputs.mavlink;
         input_config.mavlink.tx = uart->gpio_tx;
@@ -375,7 +373,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
         uart->input_config = &input_config.mavlink;
         break;
     case PROTOCOL_LTM:
-        LOG_I(TAG, "Set [UART] to [LTM] for input.");
+        LOG_I(TAG, "Set [UART%d] to [LTM] for input.", uart->com);
         input_ltm_init(&uart->inputs.ltm);
         uart->input = (input_t *)&uart->inputs.ltm;
         input_config.ltm.tx = uart->gpio_tx;
@@ -384,7 +382,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
         uart->input_config = &input_config.ltm;
         break;
     case PROTOCOL_NMEA:
-        LOG_I(TAG, "Set [UART] to [NMEA] for input.");
+        LOG_I(TAG, "Set [UART%d] to [NMEA] for input.", uart->com);
         input_nmea_init(&uart->inputs.nmea);
         uart->input = (input_t *)&uart->inputs.nmea;
         input_config.nmea.tx = uart->gpio_tx;
@@ -392,11 +390,59 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
         input_config.nmea.baudrate = uart->baudrate;
         uart->input_config = &input_config.nmea;
         break;
+    case PROTOCOL_PELCO_D:
+        break;
     }
 
     if (uart->input != NULL)
     {
         input_open(&t->atp, uart->input, uart->input_config);
+    }
+}
+
+static void tracker_reconfigure_output(tracker_t *t, uart_t *uart)
+{
+    LOG_I(TAG, "Reconfigure output");
+
+    union {
+        output_pelco_d_config_t pelco_d;
+    } output_config;
+
+    if (uart->output != NULL)
+    {
+        output_close(uart->output, uart->output_config);
+        uart->output = NULL;
+        uart->output_config = NULL;
+    }
+
+    memset(&uart->outputs, 0, sizeof(uart->outputs));
+
+    switch (uart->protocol)
+    {
+    case PROTOCOL_ATP:
+        break;
+    case PROTOCOL_MSP:
+        break;
+    case PROTOCOL_MAVLINK:
+        break;
+    case PROTOCOL_LTM:
+        break;
+    case PROTOCOL_NMEA:
+        break;
+    case PROTOCOL_PELCO_D:
+        LOG_I(TAG, "Set [UART%d] to [PELCO_D] for output.", uart->com);
+        output_pelco_d_init(&uart->outputs.pelco_d);
+        uart->output = (output_t *)&uart->outputs.pelco_d;
+        output_config.pelco_d.tx = uart->gpio_tx;
+        output_config.pelco_d.rx = uart->gpio_rx;
+        output_config.pelco_d.baudrate = uart->baudrate;
+        uart->output_config = &output_config.pelco_d;
+        break;
+    }
+
+    if (uart->output != NULL)
+    {
+        output_open(&t, uart->output, uart->output_config);
     }
 }
 
@@ -419,7 +465,7 @@ void tracker_init(tracker_t *t)
     t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT);
     t->internal.estimate_location = settings_get_key_bool(SETTING_KEY_TRACKER_ESTIMATE_ENABLE);
     t->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
-    t->internal.estimate = &estimate;
+    t->internal.estimate = &estimate[0];
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed = tracker_status_changed;
@@ -434,8 +480,11 @@ void tracker_init(tracker_t *t)
     t->atp->tracker = t;
     t->atp->tag_value_changed = t->internal.telemetry_changed;
 
+    t->uart1.com = 1;
     t->uart1.input_config = NULL;
     t->uart1.input = NULL;
+    t->uart1.output_config = NULL;
+    t->uart1.output = NULL;
     t->uart1.io_runing = false;
     t->uart1.invalidate_input = true;
     t->uart1.invalidate_output = true;
@@ -445,8 +494,11 @@ void tracker_init(tracker_t *t)
     t->uart1.protocol = settings_get_key_u8(SETTING_KEY_PORT_UART1_PROTOCOL);
     t->uart1.io_type = settings_get_key_u8(SETTING_KEY_PORT_UART1_TYPE);
 
+    t->uart2.com = 2;
     t->uart2.input_config = NULL;
     t->uart2.input = NULL;
+    t->uart2.output_config = NULL;
+    t->uart2.output = NULL;
     t->uart2.io_runing = false;
     t->uart2.invalidate_input = true;
     t->uart2.invalidate_output = true;
@@ -473,10 +525,22 @@ void tracker_uart_update(tracker_t *t, uart_t *uart)
         uart->invalidate_input = false;
     }
 
+        if (UNLIKELY(uart->invalidate_output) && LIKELY(uart->io_type == PROTOCOL_IO_OUTPUT))
+    {
+        tracker_reconfigure_output(t, uart);
+        uart->invalidate_output = false;
+    }
+
     if (LIKELY(uart->input != NULL))
     {
         time_micros_t now = time_micros_now();
         uart->input->vtable.update(uart->input, t->atp, now);
+    }
+
+    if (LIKELY(uart->output != NULL))
+    {
+        time_micros_t now = time_micros_now();
+        uart->output->vtable.update(uart->output, t, now);
     }
 }
 
@@ -525,7 +589,7 @@ void tracker_task(void *arg)
 
                             float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (move_time / 1250.0f);
 
-                            // LOG_I(TAG, "p_speed:%d, p_heading:%d, now:%d, location_time:%d, move_time:%d, move_dist:%f", 
+                            // LOG_D(TAG, "p_speed:%d, p_heading:%d, now:%d, location_time:%d, move_time:%d, move_dist:%f", 
                             //     telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)), 
                             //     telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)),
                             //     now,
@@ -539,14 +603,14 @@ void tracker_task(void *arg)
                             distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
                                 &new_plane_lat, &new_plane_lon);
 
-                             LOG_I(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, new_plane_lat, new_plane_lon);
+                            //LOG_D(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, new_plane_lat, new_plane_lon);
 
                             plane_lat = new_plane_lat;
                             plane_lon = new_plane_lon;
                         }
                         else
                         {
-                            LOG_I(TAG, "estimate_index:%d", estimate_index);
+                            LOG_D(TAG, "estimate_index:%d", estimate_index);
                             estimate_index++;
                             if (estimate_index > 4) estimate_index = 0;
                             t->internal.estimate[estimate_index].latitude = plane_lat;

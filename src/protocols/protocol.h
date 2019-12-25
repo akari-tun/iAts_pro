@@ -13,7 +13,8 @@ typedef enum
     PROTOCOL_MSP,
     PROTOCOL_MAVLINK,
     PROTOCOL_LTM,
-    PROTOCOL_NMEA
+    PROTOCOL_NMEA,
+    PROTOCOL_PELCO_D
 } protocol_e;
 
 typedef enum

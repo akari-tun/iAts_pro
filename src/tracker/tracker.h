@@ -4,6 +4,7 @@
 #include "input/input_mavlink.h"
 #include "input/input_ltm.h"
 #include "input/input_nmea.h"
+#include "output/output_pelco_d.h"
 #include "telemetry.h"
 #include "servo.h"
 #include "observer.h"
@@ -61,6 +62,7 @@ typedef void (*pTr_telemetry_changed)(void *t, uint8_t tag);
 
 typedef struct uart_s
 {
+    uint8_t com;
     bool io_runing;
     bool invalidate_input;
     bool invalidate_output;
@@ -76,8 +78,15 @@ typedef struct uart_s
         input_nmea_t nmea;
     } inputs;
 
+    union {
+        output_pelco_d_t pelco_d;
+    } outputs;
+
     void *input_config; 
     input_t *input;
+
+    void *output_config;
+    output_t *output;
 } uart_t;
 
 typedef struct location_estimate_s
