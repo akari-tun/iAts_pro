@@ -108,7 +108,9 @@ typedef struct tracker_s
         bool show_coordinate;
         bool real_alt;
         bool estimate_location;
+        bool advanced_position;
         uint8_t eastimate_time;
+        uint16_t advanced_time;
         tracker_flag_e flag;
         tracker_status_e status;
         // tracker_mode_e mode;

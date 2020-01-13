@@ -183,8 +183,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         if (wifi->status == WIFI_STATUS_SMARTCONFIG)
         {
             LOG_I(TAG, "Smartconfig stop");
-            ESP_ERROR_CHECK(esp_smartconfig_stop());
-            ESP_ERROR_CHECK(esp_wifi_stop());
+            esp_smartconfig_stop();
+            esp_wifi_stop();
         }
         else
         {
@@ -236,11 +236,15 @@ static void wifi_status_change(void *w, uint8_t status)
         LOG_I(TAG, "Broadcast Address: %s", ip4addr_ntoa(&broadcast_addr));
         wifi_udp_set_server_ip(&broadcast_addr.addr);
     } 
+    //else if ((wifi->status == WIFI_STATUS_CONNECTED || wifi->status == WIFI_STATUS_CONNECTING) && status == WIFI_STATUS_SMARTCONFIG)
     else if (wifi->status == WIFI_STATUS_CONNECTED && status == WIFI_STATUS_SMARTCONFIG)
     {
-        wifi->status = status;        
-        LOG_I(TAG, "Stop wifi.");
-        ESP_ERROR_CHECK(esp_wifi_stop());
+        LOG_I(TAG, "wifi disconnect.");
+        ESP_ERROR_CHECK(esp_wifi_disconnect());
+        ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
+        ESP_ERROR_CHECK(esp_smartconfig_start(sc_callback));
+        wifi->status = status;
+        //ESP_ERROR_CHECK(esp_wifi_stop());
     }
     else
     {

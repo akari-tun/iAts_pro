@@ -501,6 +501,18 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         
         return;
     }
+
+        if (SETTING_IS(setting, SETTING_KEY_TRACKER_ADVANCED_POS_ENABLE))
+    {
+        ui->internal.tracker->internal.advanced_position = setting_get_bool(setting);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_ADVANCED_POS_SECOND))
+    {
+        ui->internal.tracker->internal.advanced_time = settings_get_key_u16(SETTING_KEY_TRACKER_ADVANCED_POS_SECOND);
+        return;
+    }
 }
 
 #if defined(USE_BEEPER)

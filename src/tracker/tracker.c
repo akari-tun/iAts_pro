@@ -464,7 +464,9 @@ void tracker_init(tracker_t *t)
     t->internal.show_coordinate = settings_get_key_bool(SETTING_KEY_TRACKER_SHOW_COORDINATE);
     t->internal.real_alt = settings_get_key_bool(SETTING_KEY_TRACKER_REAL_ALT);
     t->internal.estimate_location = settings_get_key_bool(SETTING_KEY_TRACKER_ESTIMATE_ENABLE);
+    t->internal.advanced_position = settings_get_key_bool(SETTING_KEY_TRACKER_ADVANCED_POS_ENABLE);
     t->internal.eastimate_time = settings_get_key_u8(SETTING_KEY_TRACKER_ESTIMATE_SECOND);
+    t->internal.advanced_time = settings_get_key_u8(SETTING_KEY_TRACKER_ADVANCED_POS_SECOND);
     t->internal.estimate = &estimate[0];
     t->internal.flag_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
     t->internal.status_changed_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
@@ -579,6 +581,24 @@ void tracker_task(void *arg)
                     float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) /  10000000.0f;
                     float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) /  10000000.0f;
 
+                    //Estimate the vehicle's advance position
+                    if (t->internal.advanced_time)
+                    {
+                        float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (t->internal.advanced_time / 1250.0f);
+
+                        float advanced_plane_lat = 0;
+                        float advanced_plane_lon = 0;
+
+                        distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
+                            &advanced_plane_lat, &advanced_plane_lon);
+
+                        LOG_D(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, advanced_plane_lat, advanced_plane_lon);
+
+                        plane_lat = advanced_plane_lat;
+                        plane_lon = advanced_plane_lon;
+                    }
+
+                    //Estimate the position of the vehicle at the next time point
                     if (t->internal.estimate_location)
                     {
                         if (plane_lat == t->internal.estimate[estimate_index].latitude && plane_lon == t->internal.estimate[estimate_index].longitude)
@@ -589,24 +609,24 @@ void tracker_task(void *arg)
 
                             float dist = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)) * (move_time / 1250.0f);
 
-                            // LOG_D(TAG, "p_speed:%d, p_heading:%d, now:%d, location_time:%d, move_time:%d, move_dist:%f", 
-                            //     telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)), 
-                            //     telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)),
-                            //     now,
-                            //     t->internal.estimate[estimate_index].location_time,
-                            //     move_time,
-                            //     dist);
+                            LOG_D(TAG, "p_speed:%d, p_heading:%d, now:%d, location_time:%d, move_time:%d, move_dist:%f", 
+                                telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED)), 
+                                telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)),
+                                now,
+                                t->internal.estimate[estimate_index].location_time,
+                                move_time,
+                                dist);
 
-                            float new_plane_lat = 0;
-                            float new_plane_lon = 0;
+                            float estimate_plane_lat = 0;
+                            float estimate_plane_lon = 0;
 
                             distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
-                                &new_plane_lat, &new_plane_lon);
+                                &estimate_plane_lat, &estimate_plane_lon);
 
-                            //LOG_D(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, new_plane_lat, new_plane_lon);
+                            LOG_D(TAG, "plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, estimate_plane_lat, estimate_plane_lon);
 
-                            plane_lat = new_plane_lat;
-                            plane_lon = new_plane_lon;
+                            plane_lat = estimate_plane_lat;
+                            plane_lon = estimate_plane_lon;
                         }
                         else
                         {
