@@ -33,6 +33,14 @@ typedef enum
 
 typedef enum
 {
+    SCREEN_MAIN_SECONDARY_MODE_DEFAULT,
+    SCREEN_MAIN_SECONDARY_MODE_PLANE,
+    SCREEN_MAIN_SECONDARY_MODE_TRACKER,
+    SCREEN_MAIN_SECONDARY_MODE_NUM,
+} screen_main_secondary_mode_e;
+
+typedef enum
+{
     SCREEN_ORIENTATION_HORIZONTAL_LEFT = 0,
     SCREEN_ORIENTATION_HORIZONTAL_RIGHT,
     SCREEN_ORIENTATION_VERTICAL,
@@ -83,6 +91,7 @@ typedef struct screen_s
         bool available;
         int8_t main_mode;      // from screen_main_mode_e
         int8_t secondary_mode; // from screen_secondary_mode_e
+        int8_t main_secondary_mode;
         struct
         {
             int8_t page;
@@ -102,6 +111,7 @@ bool screen_is_available(const screen_t *screen);
 void screen_shutdown(screen_t *screen);
 void screen_power_on(screen_t *screen);
 void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode);
+void screen_enter_main_secondary_mode(screen_t *screen, screen_main_secondary_mode_e mode);
 
 bool screen_handle_button_event(screen_t *screen, bool before_menu, const button_event_t *ev);
 

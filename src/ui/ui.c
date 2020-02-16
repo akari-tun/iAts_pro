@@ -482,12 +482,14 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_REAL_ALT))
     {
         ui->internal.tracker->internal.real_alt = setting_get_bool(setting);
+        LOG_I(TAG, "REAL_ALT set to :%d", setting_get_bool(setting));
         return;
     }
 
     if (SETTING_IS(setting, SETTING_KEY_TRACKER_ESTIMATE_ENABLE))
     {
         ui->internal.tracker->internal.estimate_location = setting_get_bool(setting);
+        LOG_I(TAG, "ESTIMATE_ENABLE set to :%d", setting_get_bool(setting));
         return;
     }
 
@@ -498,13 +500,14 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         if (v == 1) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_3_SEC;
         if (v == 2) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_5_SEC;
         if (v == 3) ui->internal.tracker->internal.eastimate_time = TRACKER_ESTIMATE_10_SEC;
-        
+        LOG_I(TAG, "ESTIMATE_SECOND set to :%d", v);
         return;
     }
 
         if (SETTING_IS(setting, SETTING_KEY_TRACKER_ADVANCED_POS_ENABLE))
     {
         ui->internal.tracker->internal.advanced_position = setting_get_bool(setting);
+        LOG_I(TAG, "ADVANCED_POS_ENABLE set to :%d", setting_get_bool(setting));
         return;
     }
 

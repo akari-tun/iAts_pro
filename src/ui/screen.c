@@ -54,6 +54,7 @@ bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker)
     screen->internal.available = screen_i2c_init(cfg, &u8g2);
     screen->internal.cfg = *cfg;
     screen->internal.tracker = tracker;
+    screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
     return screen->internal.available;
 }
 
@@ -76,6 +77,12 @@ void screen_enter_secondary_mode(screen_t *screen, screen_secondary_mode_e mode)
 {
     screen->internal.secondary_mode = mode;
     LOG_I(TAG, "SCREEN_SECONDARY_MODE -> %d", mode);
+}
+
+void screen_enter_main_secondary_mode(screen_t *screen, screen_main_secondary_mode_e mode)
+{
+    screen->internal.main_secondary_mode = mode;
+    LOG_I(TAG, "MAIN_SCREEN_SECONDARY_MODE -> %d", mode);
 }
 
 static void screen_splash_task(void *arg)
@@ -320,6 +327,12 @@ static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
         }
     }
 
+    if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+    {
+        screen->internal.main_secondary_mode = screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_DEFAULT ? SCREEN_MAIN_SECONDARY_MODE_NUM - 1 : screen->internal.main_secondary_mode - 1;
+        return true;
+    }
+
     return false;
 }
 
@@ -332,6 +345,12 @@ static bool screen_button_right_press(screen_t *screen, const button_event_t *ev
         if (t->internal.status == TRACKER_STATUS_MANUAL)
         {
             return screen_manual_button_handle(t, ev->button);
+        }
+
+        if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
+        {
+            screen->internal.main_secondary_mode = screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_NUM - 1 ? SCREEN_MAIN_SECONDARY_MODE_DEFAULT : screen->internal.main_secondary_mode + 1;
+            return true;
         }
     }
 
@@ -626,6 +645,40 @@ static void screen_draw_wait_server(screen_t *s)
     }
 }
 
+static void screen_draw_plane(screen_t *s)
+{
+    const uint16_t per_h = s->internal.h / 16;
+    char *buf = SCREEN_BUF(s);
+
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P.lat:%03.7f", get_plane_lat());
+    u8g2_DrawStr(&u8g2, 0, per_h * 4, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P.lon:%03.7f", get_plane_lon());
+    u8g2_DrawStr(&u8g2, 0, per_h * 6, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P.alt:%04.2f", get_plane_alt());
+    u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P.spd:%04.2f", get_plane_speed());
+    u8g2_DrawStr(&u8g2, 0, per_h * 10, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "P.dic:%d", get_plane_direction());
+    u8g2_DrawStr(&u8g2, 0, per_h * 12, buf);
+}
+
+static void screen_draw_tracker(screen_t *s)
+{
+    const uint16_t per_h = s->internal.h / 16;
+    char *buf = SCREEN_BUF(s);
+
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.lat:%03.7f", get_tracker_lat());
+    u8g2_DrawStr(&u8g2, 0, per_h * 4, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.lon:%03.7f", get_tracker_lon());
+    u8g2_DrawStr(&u8g2, 0, per_h * 6, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.alt:%04.2f", get_tracker_alt());
+    u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
+}
+
 static void screen_draw_main(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
@@ -720,7 +773,18 @@ static void screen_draw_main(screen_t *s)
     if ((s->internal.tracker->internal.flag & TRACKER_FLAG_SERVER_CONNECTED) || s->internal.tracker->internal.status == TRACKER_STATUS_MANUAL 
         || (s->internal.tracker->internal.status == TRACKER_STATUS_TRACKING && s->internal.wifi->status == WIFI_STATUS_NONE))
     {
-        screen_draw_servo(s);
+        switch (s->internal.main_secondary_mode)
+        {
+        case SCREEN_MAIN_SECONDARY_MODE_DEFAULT:
+            screen_draw_servo(s);
+            break;
+        case SCREEN_MAIN_SECONDARY_MODE_PLANE:
+            screen_draw_plane(s);
+            break;
+        case SCREEN_MAIN_SECONDARY_MODE_TRACKER:
+            screen_draw_tracker(s);
+            break;
+        }
     }
     else
     {

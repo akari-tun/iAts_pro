@@ -139,6 +139,8 @@ bool get_tracker_reversing(const tracker_t *t);
 float get_plane_lat();
 float get_plane_lon();
 float get_plane_alt();
+float get_plane_speed();
+uint16_t get_plane_direction();
 float get_tracker_lat();
 float get_tracker_lon();
 float get_tracker_alt();
