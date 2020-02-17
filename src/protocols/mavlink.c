@@ -84,6 +84,10 @@ int mavlink_update(mavlink_t *mavlink, void *data)
                 atp->tag_value_changed(atp->tracker, TAG_TRACKER_LATITUDE);
                 atp->tag_value_changed(atp->tracker, TAG_TRACKER_ALTITUDE);
                 break;
+            case MAVLINK_MSG_ID_GPS_RAW_INT:
+                mavlink_msg_gps_raw_int_decode(mavlink->message, mavlink->message_value.gps_raw);
+                ATP_SET_I16(TAG_PLANE_SPEED,  (uint16_t)(mavlink->message_value.gps_raw->vel / 100), now);
+                break;
             }
 
             ret = 2;

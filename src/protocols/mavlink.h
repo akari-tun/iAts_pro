@@ -10,6 +10,7 @@ typedef struct __mavlink_status mavlink_status_t;
 typedef struct __mavlink_message mavlink_message_t;
 typedef struct __mavlink_global_position_int_t mavlink_global_position_int_t;
 typedef struct __mavlink_home_position_t mavlink_home_position_t;
+typedef struct __mavlink_gps_raw_int_t mavlink_gps_raw_int_t;
 
 typedef struct mavlink_s
 {
@@ -26,6 +27,7 @@ typedef struct mavlink_s
     {
         mavlink_global_position_int_t *global_position;
         mavlink_home_position_t *home_position;
+        mavlink_gps_raw_int_t *gps_raw;
     } message_value;
     
 } mavlink_t;
