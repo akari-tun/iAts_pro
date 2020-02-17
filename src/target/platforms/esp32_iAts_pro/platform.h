@@ -9,6 +9,10 @@
 //#define USE_PWMC
 //#define USE_TRACKING_LED
 
+#define I2C_BUS I2C_NUM_1
+#define I2C_GPIO_SDA 32
+#define I2C_GPIO_SCL 33
+
 #define USE_SCREEN
 #define SCREEN_I2C_BUS I2C_NUM_1
 #define SCREEN_I2C_ADDR 0x3c

@@ -34,7 +34,10 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
         HAL_ERR_ASSERT_OK(hal_gpio_set_level(cfg->rst, HAL_GPIO_HIGH));
     }
 
-    HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_bus, cfg->sda, cfg->scl, SCREEN_I2C_MASTER_FREQ_HZ));
+    if (!cfg->i2c_cfg->is_init)
+    {
+        HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_cfg->i2c_bus, cfg->i2c_cfg->sda, cfg->i2c_cfg->scl, SCREEN_I2C_MASTER_FREQ_HZ));
+    }
 
     // Detect if the screen is present
     hal_i2c_cmd_t cmd;
@@ -43,7 +46,7 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write_byte(&cmd, HAL_I2C_WRITE_ADDR(cfg->addr), true));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_stop(&cmd));
 
-    hal_err_t err = hal_i2c_cmd_master_exec(cfg->i2c_bus, &cmd);
+    hal_err_t err = hal_i2c_cmd_master_exec(cfg->i2c_cfg->i2c_bus, &cmd);
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_destroy(&cmd));
 
     if (err != HAL_ERR_NONE)
@@ -52,7 +55,7 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
         {
             hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
         }
-        HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_bus));
+        HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
 
         ESP_LOGI(TAG, "%d", err);
 

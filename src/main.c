@@ -25,11 +25,14 @@
 #include "util/time.h"
 #include "util/macros.h"
 
+#include "io/hal_i2c.h"
+
 static ui_t ui;
 #if defined(USE_WIFI)
 static wifi_t wifi;
 #endif
 static tracker_t tracker;
+static hal_i2c_config_t i2c_cfg;
 
 static void setting_changed(const setting_t *setting, void *user_data)
 {
@@ -62,9 +65,10 @@ void iats_ui_init(void)
 		.beeper = BEEPER_GPIO,
 #endif
 #ifdef USE_SCREEN
-		.screen.i2c_bus = SCREEN_I2C_BUS,
-		.screen.sda = SCREEN_GPIO_SDA,
-		.screen.scl = SCREEN_GPIO_SCL,
+		// .screen.i2c_bus = SCREEN_I2C_BUS,
+		// .screen.sda = SCREEN_GPIO_SDA,
+		// .screen.scl = SCREEN_GPIO_SCL,
+		.screen.i2c_cfg = &i2c_cfg,
 		.screen.rst = SCREEN_GPIO_RST,
 		.screen.addr = SCREEN_I2C_ADDR,
 #endif
@@ -87,6 +91,15 @@ void iats_wifi_init(void)
 	tracker.atp->atp_send = wifi.send;
 }
 #endif
+
+void iats_tracker_i2c(void)
+{
+	i2c_cfg.i2c_bus = I2C_BUS;
+	i2c_cfg.scl = I2C_GPIO_SCL;
+	i2c_cfg.sda = I2C_GPIO_SDA;
+
+	hal_i2c_init(&i2c_cfg);
+}
 
 void task_ui(void *arg)
 {
@@ -135,6 +148,7 @@ void app_main()
 	settings_init();
 	settings_add_listener(setting_changed, NULL);
 
+	iats_tracker_i2c();
 	iats_tracker_init();
 #if defined(USE_WIFI)
 	iats_wifi_init();

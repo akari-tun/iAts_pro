@@ -111,7 +111,7 @@ static uint8_t u8g2_msg_i2c_and_delay_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
 
 void u8g2_init_ssd1306_128x64_noname(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 {
-    hal.i2c_bus = cfg->i2c_bus;
+    hal.i2c_bus = cfg->i2c_cfg->i2c_bus;
     hal.rst = cfg->rst;
 
     u8g2_Setup_ssd1306_128x64_noname_f(
