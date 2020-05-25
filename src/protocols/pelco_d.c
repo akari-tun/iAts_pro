@@ -75,18 +75,22 @@ int pelco_d_update(pelco_d_t *pelco_d, void *data)
         {   
             pelco_d->pan_degree = t->servo->internal.pan.currtent_degree;
             ret = 1;
+
+            LOG_I(TAG, "Curr_Deg:%d | Pan_Deg:%d | Write: %d", t->servo->internal.pan.currtent_degree, pelco_d->pan_degree, n);
         }
     }
 
     if (t->servo->internal.tilt.currtent_degree != pelco_d->tilt_degree)
     {
-        set_tilt(pelco_d, t->servo->internal.tilt.currtent_degree);
+        set_tilt(pelco_d, 360 - t->servo->internal.tilt.currtent_degree);
         n = io_write(pelco_d->io, &pelco_d->send_buf, PELCO_D_FRAME_SIZE);
 
         if (n > 0)
         {   
             pelco_d->tilt_degree = t->servo->internal.tilt.currtent_degree;
             ret = 1;
+
+            LOG_I(TAG, "Curr_Deg:%d | Tilt_Deg:%d | Write: %d", t->servo->internal.tilt.currtent_degree, pelco_d->tilt_degree, n);
         }
     }
 
