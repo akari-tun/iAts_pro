@@ -6,6 +6,7 @@
 #include "tracker.h"
 #include "protocols/atp.h"
 #include "util/calc.h"
+#include "sensors/imu_task.h"
 
 static const char *TAG = "Tarcker";
 static servo_t servo;
@@ -246,6 +247,24 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
 
         t->internal.flag_changed(t, TRACKER_FLAG_HOMESETED, 0);
 
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC))
+    {
+        imu_task_do_accel_calibration_init();
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO))
+    {
+        imu_task_do_gyro_calibration();
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG))
+    {
+        imu_task_do_mag_calibration();
         return;
     }
 }
@@ -766,6 +785,21 @@ float get_tracker_lon()
 float get_tracker_alt()
 {
     return telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE)) / 100.0f;
+}
+
+float get_tracker_roll()
+{
+    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_ROLL)) / 100.0f;
+}
+
+float get_tracker_pitch()
+{
+    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_PITCH)) / 100.0f;
+}
+
+float get_tracker_yaw()
+{
+    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_YAW)) / 100.0f;
 }
 
 void tracker_pan_move(tracker_t *t, int v)

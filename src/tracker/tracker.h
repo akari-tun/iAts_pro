@@ -9,6 +9,7 @@
 #include "servo.h"
 #include "observer.h"
 #include "protocols/protocol.h"
+#include "sensors/imu.h"
 // #include "protocols/atp.h"
 
 // #if defined(USE_WIFI)
@@ -127,6 +128,7 @@ typedef struct tracker_s
     
     servo_t *servo;
     atp_t *atp;
+    imu_t *imu;
 } tracker_t;
 
 void tracker_init(tracker_t *t);
@@ -144,5 +146,8 @@ uint16_t get_plane_direction();
 float get_tracker_lat();
 float get_tracker_lon();
 float get_tracker_alt();
+float get_tracker_roll();
+float get_tracker_pitch();
+float get_tracker_yaw();
 void tracker_pan_move(tracker_t *t, int v);
 void tracker_tilt_move(tracker_t *t, int v);
