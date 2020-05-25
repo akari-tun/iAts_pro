@@ -9,13 +9,16 @@
 //#define USE_PWMC
 //#define USE_TRACKING_LED
 
-#define I2C_BUS I2C_NUM_1
+#define I2C_BUS I2C_NUM_0
+//#define I2C_GPIO_SDA 16
+//#define I2C_GPIO_SCL 17
 #define I2C_GPIO_SDA 32
 #define I2C_GPIO_SCL 33
 
 #define USE_SCREEN
 #define SCREEN_I2C_BUS I2C_NUM_1
 #define SCREEN_I2C_ADDR 0x3c
+#define SCREEN_I2C_MASTER_FREQ_HZ 1250000
 #define SCREEN_GPIO_SDA 32
 #define SCREEN_GPIO_SCL 33
 #define SCREEN_GPIO_RST HAL_GPIO_NONE
@@ -86,4 +89,8 @@
 
     #define RX5808_SPI_ADDRESS_SYNTH_A 0x01
     #define RX5808_SPI_ADDRESS_POWER 0x0A
+#endif
+
+#if defined(USE_IMU)
+    #define MPU9250
 #endif
