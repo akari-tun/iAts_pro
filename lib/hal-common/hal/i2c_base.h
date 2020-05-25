@@ -24,5 +24,9 @@ hal_err_t hal_i2c_cmd_master_start(hal_i2c_cmd_t *cmd);
 hal_err_t hal_i2c_cmd_master_stop(hal_i2c_cmd_t *cmd);
 
 hal_err_t hal_i2c_cmd_master_write_byte(hal_i2c_cmd_t *cmd, uint8_t data, bool ack_en);
+hal_err_t hal_i2c_cmd_master_write(hal_i2c_cmd_t *cmd, uint8_t *data, size_t data_len, bool ack_en);
+
+hal_err_t hal_i2c_cmd_master_read_byte(hal_i2c_cmd_t *cmd, uint8_t *data, uint8_t ack_en);
+hal_err_t hal_i2c_cmd_master_read(hal_i2c_cmd_t *cmd, uint8_t *data, size_t data_len, uint8_t ack_en);
 
 hal_err_t hal_i2c_cmd_master_exec(hal_i2c_bus_t bus, hal_i2c_cmd_t *cmd);

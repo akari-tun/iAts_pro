@@ -51,6 +51,21 @@ hal_err_t hal_i2c_cmd_master_write_byte(hal_i2c_cmd_t *cmd, uint8_t data, bool a
     return i2c_master_write_byte(cmd->handle, data, ack_en);
 }
 
+hal_err_t hal_i2c_cmd_master_write(hal_i2c_cmd_t *cmd, uint8_t *data, size_t data_len, bool ack_en)
+{
+    return i2c_master_write(cmd->handle, data, data_len, ack_en);
+}
+
+hal_err_t hal_i2c_cmd_master_read_byte(hal_i2c_cmd_t *cmd, uint8_t *data, uint8_t ack)
+{
+    return i2c_master_read_byte(cmd->handle, data, ack);
+}
+
+hal_err_t hal_i2c_cmd_master_read(hal_i2c_cmd_t *cmd, uint8_t *data, size_t data_len, uint8_t ack)
+{
+    return i2c_master_read(cmd->handle, data, data_len, ack);
+}
+
 hal_err_t hal_i2c_cmd_master_exec(hal_i2c_bus_t bus, hal_i2c_cmd_t *cmd)
 {
     // TODO: Hardcoded timeout
