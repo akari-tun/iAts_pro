@@ -11,8 +11,6 @@
 #include "ui/screen_i2c.h"
 #include "ui/u8g2_hal.h"
 
-#define ACK_CHECK_EN true
-
 typedef struct u8g2_hal_s
 {
     hal_i2c_bus_t i2c_bus;
@@ -36,6 +34,7 @@ static uint8_t u8g2_msg_i2c_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void 
 
     case U8X8_MSG_BYTE_SEND:
     {
+        hal_i2c_cmd_take(hal.i2c_bus);
         uint8_t cmddata;
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
         ESP_ERROR_CHECK(i2c_master_start(cmd));
@@ -65,6 +64,7 @@ static uint8_t u8g2_msg_i2c_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void 
         ESP_ERROR_CHECK(i2c_master_stop(cmd));
         ESP_ERROR_CHECK(i2c_master_cmd_begin(hal.i2c_bus, cmd, portMAX_DELAY));
         i2c_cmd_link_delete(cmd);
+        hal_i2c_cmd_give(hal.i2c_bus);
         break;
     }
     }

@@ -21,6 +21,7 @@
 #include "tracker/tracker.h"
 #include "wifi/wifi.h"
 #include "config/settings.h"
+#include "sensors/imu_task.h"
 
 #define SCREEN_DRAW_BUF_SIZE 128
 #define ANIMATION_FRAME_DURATION_MS 500
@@ -265,6 +266,15 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
 #endif
         break;
     case BUTTON_EVENT_TYPE_DOUBLE_PRESS:
+        if (screen->internal.main_mode == SCREEN_MODE_WIFI_CONFIG)
+        {
+            const setting_t *setting = settings_get_key(SETTING_KEY_WIFI_ENABLE);
+            setting_set_bool(setting, false);
+            screen->internal.wifi->status_change(screen->internal.wifi, WIFI_STATUS_NONE);
+            wifi_smartconfig_stop(screen->internal.wifi);
+            return true;
+        }
+
         if (t->internal.status >= TRACKER_STATUS_WIFI_CONNECTING && t->internal.status != TRACKER_STATUS_MANUAL) 
         {
             t->internal.status_changed(t, TRACKER_STATUS_MANUAL);
@@ -679,6 +689,21 @@ static void screen_draw_tracker(screen_t *s)
     u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
 }
 
+static void screen_draw_imu(screen_t *s)
+{
+    const uint16_t per_h = s->internal.h / 16;
+    char *buf = SCREEN_BUF(s);
+
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Roll :%3.2f", get_tracker_roll());
+    u8g2_DrawStr(&u8g2, 0, per_h * 4, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Pitch:%3.2f", get_tracker_pitch());
+    u8g2_DrawStr(&u8g2, 0, per_h * 6, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Yaw  :%3.2f", get_tracker_yaw());
+    u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
+}
+
 static void screen_draw_main(screen_t *s)
 {
     u8g2_SetDrawColor(&u8g2, 1);
@@ -783,6 +808,9 @@ static void screen_draw_main(screen_t *s)
             break;
         case SCREEN_MAIN_SECONDARY_MODE_TRACKER:
             screen_draw_tracker(s);
+            break;
+        case SCREEN_MAIN_SECONDARY_MODE_IMU:
+            screen_draw_imu(s);
             break;
         }
     }
@@ -1012,6 +1040,78 @@ static void screen_draw_debug_info(screen_t *s)
     y += 8;
 }
 
+static void screen_draw_calibration_acc(screen_t *s)
+{
+    uint16_t tw;
+    char *buf = SCREEN_BUF(s);
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+
+    if (s->internal.tracker->imu->calibration_acc_step <= 6)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "Calibration Step %d", s->internal.tracker->imu->calibration_acc_step);
+        tw = u8g2_GetStrWidth(&u8g2, buf);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) * 3, buf);
+
+        if (s->internal.tracker->imu->calibration_time > 0)
+        {
+            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%d", s->internal.tracker->imu->calibration_time);
+            u8g2_SetFontPosCenter(&u8g2);
+            u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
+        }
+        else
+        {
+            if (s->internal.tracker->imu->calibration_acc_step == 0)
+            {
+                snprintf(buf, SCREEN_DRAW_BUF_SIZE, "Press [enter] to start");
+            }
+            else
+            {
+                snprintf(buf, SCREEN_DRAW_BUF_SIZE, "Press [enter] to next");
+            }
+
+            u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+            u8g2_SetFontPosCenter(&u8g2);
+            tw = u8g2_GetStrWidth(&u8g2, buf);
+            u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
+        }
+    }
+    else
+    {
+        if (TIME_CYCLE_EVERY_MS(600, 2) == 0)
+        {
+            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "== DONE ==");
+            tw = u8g2_GetStrWidth(&u8g2, buf);
+            u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 2) - 4, buf);
+        }
+    }
+}
+
+static void screen_draw_calibration(screen_t *s)
+{
+    char *buf = SCREEN_BUF(s);
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
+
+    if (s->internal.tracker->imu->calibration_time > 0)
+    {
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "Calibration");
+        uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) * 3, buf);
+        snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%d", s->internal.tracker->imu->calibration_time);
+        u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
+    }
+    else
+    {
+        if (TIME_CYCLE_EVERY_MS(600, 2) == 0)
+        {
+            snprintf(buf, SCREEN_DRAW_BUF_SIZE, "== DONE ==");
+            uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
+            u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 2), buf);
+        }
+    }
+}
+
 static void screen_draw(screen_t *screen)
 {
     menu_t *menu = menu_get_active();
@@ -1063,6 +1163,15 @@ static void screen_draw(screen_t *screen)
         case SCREEN_SECONDARY_MODE_DEBUG_INFO:
             screen_draw_debug_info(screen);
             break;
+        case SCREEN_SECONDARY_MODE_CALIBRATION_ACC:
+            screen_draw_calibration_acc(screen);
+            break;
+        case SCREEN_SECONDARY_MODE_CALIBRATION_GYRO:
+            screen_draw_calibration(screen);
+            break;
+        case SCREEN_SECONDARY_MODE_CALIBRATION_MAG:
+            screen_draw_calibration(screen);
+            break;
         }
     }
 }
@@ -1071,6 +1180,38 @@ bool screen_handle_button_event(screen_t *screen, bool before_menu, const button
 {
     if (screen->internal.secondary_mode != SCREEN_SECONDARY_MODE_NONE)
     {
+        if ((screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_CALIBRATION_GYRO || 
+                screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_CALIBRATION_MAG)
+            && screen->internal.tracker->imu->calibration_time > 0)
+        {
+            return true;
+        }
+
+        if (screen->internal.secondary_mode == SCREEN_SECONDARY_MODE_CALIBRATION_ACC)
+        {
+            if (screen->internal.tracker->imu->calibration_time <= 0)
+            {
+                if (screen->internal.tracker->imu->calibration_acc_step <= 6)
+                {
+                    if (screen->internal.tracker->imu->calibration_acc_step == 6)
+                    {
+                        imu_task_do_accel_calibration_finish();
+                    }
+                    else
+                    {
+                        imu_task_do_accel_calibration_start();
+                    }
+                
+                    screen->internal.tracker->imu->calibration_acc_step++;
+                    return true;
+                }
+            }
+            else
+            {
+                return true;
+            }
+        }
+
         screen->internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
         return true;
     }

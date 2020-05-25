@@ -355,6 +355,26 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
     }
 #endif
 
+#ifdef USE_IMU
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_ACC);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_GYRO);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG))
+    {
+        screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_MAG);
+        return;
+    }
+#endif
+
 #ifdef USE_BATTERY_MONITORING
     battery_t *b = ui->internal.screen.internal.battery;
 

@@ -20,7 +20,6 @@
 // this is the max frequency allowed by the OLED screen
 //#define SCREEN_I2C_MASTER_FREQ_HZ 1800000
 //#define SCREEN_I2C_MASTER_FREQ_HZ 400000
-#define SCREEN_I2C_MASTER_FREQ_HZ 1250000
 
 static const char *TAG = "screen.i2c";
 
@@ -57,7 +56,7 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
         }
         HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
 
-        ESP_LOGI(TAG, "%d", err);
+        LOG_I(TAG, "%d", err);
 
         return false;
     }
