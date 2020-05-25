@@ -27,12 +27,14 @@
 
 #include "io/hal_i2c.h"
 
+#include "sensors/imu_task.h"
+
 static ui_t ui;
 #if defined(USE_WIFI)
 static wifi_t wifi;
 #endif
 static tracker_t tracker;
-static hal_i2c_config_t i2c_cfg;
+static hal_i2c_config_t i2c_0_cfg;
 
 static void setting_changed(const setting_t *setting, void *user_data)
 {
@@ -68,7 +70,7 @@ void iats_ui_init(void)
 		// .screen.i2c_bus = SCREEN_I2C_BUS,
 		// .screen.sda = SCREEN_GPIO_SDA,
 		// .screen.scl = SCREEN_GPIO_SCL,
-		.screen.i2c_cfg = &i2c_cfg,
+		.screen.i2c_cfg = &i2c_0_cfg,
 		.screen.rst = SCREEN_GPIO_RST,
 		.screen.addr = SCREEN_I2C_ADDR,
 #endif
@@ -92,13 +94,21 @@ void iats_wifi_init(void)
 }
 #endif
 
-void iats_tracker_i2c(void)
+void iats_i2c_init(void)
 {
-	i2c_cfg.i2c_bus = I2C_BUS;
-	i2c_cfg.scl = I2C_GPIO_SCL;
-	i2c_cfg.sda = I2C_GPIO_SDA;
+	i2c_0_cfg.i2c_bus = I2C_BUS;
+	i2c_0_cfg.scl = I2C_GPIO_SCL;
+	i2c_0_cfg.sda = I2C_GPIO_SDA;
+	i2c_0_cfg.freq_hz = I2C_MASTER_FREQ_HZ;
 
-	hal_i2c_init(&i2c_cfg);
+	hal_i2c_init(&i2c_0_cfg);
+
+	// i2c_1_cfg.i2c_bus = SCREEN_I2C_BUS;
+	// i2c_1_cfg.scl = SCREEN_GPIO_SCL;
+	// i2c_1_cfg.sda = SCREEN_GPIO_SDA;
+	// i2c_1_cfg.freq_hz = SCREEN_I2C_MASTER_FREQ_HZ;
+
+	// hal_i2c_init(&i2c_1_cfg);
 }
 
 void task_ui(void *arg)
@@ -148,7 +158,7 @@ void app_main()
 	settings_init();
 	settings_add_listener(setting_changed, NULL);
 
-	iats_tracker_i2c();
+	iats_i2c_init();
 	iats_tracker_init();
 #if defined(USE_WIFI)
 	iats_wifi_init();
@@ -158,4 +168,7 @@ void app_main()
 	xTaskCreatePinnedToCore(tracker_task, "TRACKER", 4096, &tracker, 1, NULL, 1);
 	xTaskCreatePinnedToCore(task_ui, "UI", 4096, NULL, 1, NULL, 0);
 	xTaskCreatePinnedToCore(task_io, "TRACKER.IO", 4096, &tracker, 1, NULL, 1);
+
+	//imu_task_init(&i2c_0_cfg);
+	tracker.imu = imu_task_get();
 }
