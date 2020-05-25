@@ -14,7 +14,7 @@
 #define TAG_COUNT TAG_BASE_COUNT + TAG_PLANE_COUNT + TAG_TRACKER_COUNT + TAG_PARAM_COUNT + TAG_PARAM_IATS_PRO_COUNT  //TAG数量，定义了新的TAG需要增加这个值
 #define TAG_BASE_COUNT                             3         //基础Tag数量
 #define TAG_PLANE_COUNT                            10        //Plane tags count
-#define TAG_TRACKER_COUNT                          13        //Tarcker tags count
+#define TAG_TRACKER_COUNT                          16        //Tarcker tags count
 #define TAG_PARAM_COUNT                            11        //Parameter tags count
 #define TAG_PARAM_IATS_PRO_COUNT                   29        //iats_pro Parameter tags count
    
@@ -43,7 +43,7 @@
 #define TAG_TRACKER_LATITUDE					   0x41      //家的纬度 L:4
 #define TAG_TRACKER_ALTITUDE					   0x42      //家的高度 L:4
 #define TAG_TRACKER_HEADING						   0x43      //家的朝向 L:2
-#define TAG_TRACKER_PITCH  						   0x44      //家的俯仰 L:1
+#define TAG_TRACKER_PITCH  						   0x44      //家的俯仰 L:2
 #define TAG_TRACKER_VOLTAGE						   0x45      //家的电压 L:2
 #define TAG_TRACKER_MODE						   0x46      //家的模式 L:1
 #define TAG_TRACKER_DECLINATION					   0x47      //磁偏角 L:1
@@ -53,6 +53,8 @@
 #define TAG_TRACKER_S_PORT                         0x4B      //SERVER PORT :2
 #define TAG_TRACKER_FLAG                           0x4C      //标志位 L:1
 #define TAG_TRACKER_SEVRO_POWER                    0x4D      //舵机供电是否打开 L:1
+#define TAG_TRACKER_ROLL                           0x4E      //家的横滚角度 L:2
+#define TAG_TRACKER_YAW                            0x4F      //家的朝向 L:2
 //-----------------配置参数---------------------------------------------------
 #define TAG_PARAM_PID_P							   0x70      //PID_P L:2
 #define TAG_PARAM_PID_I							   0x71      //PID_I L:2
