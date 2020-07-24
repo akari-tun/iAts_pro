@@ -18,6 +18,7 @@ typedef enum
     TELEMETRY_TYPE_INT16,
     TELEMETRY_TYPE_UINT32,
     TELEMETRY_TYPE_INT32,
+    TELEMETRY_TYPE_FLOAT,
     TELEMETRY_TYPE_STRING, // null terminated
 } telemetry_type_e;
 
@@ -30,6 +31,7 @@ typedef union telemetry_u {
     int16_t i16;
     uint32_t u32;
     int32_t i32;
+    float f;
     char s[TELEMETRY_STRING_MAX_SIZE + 1];
 } PACKED telemetry_val_t;
 
@@ -60,6 +62,7 @@ const char *telemetry_format_vertical_speed(const telemetry_t *val, char *buf, s
 const char *telemetry_format_deg(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_acc(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_att(const telemetry_t *val, char *buf, size_t bufsize);
+const char *telemetry_format_ahrs(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_gps_fix(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_u8(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_u16(const telemetry_t *val, char *buf, size_t bufsize);
@@ -88,6 +91,7 @@ uint16_t telemetry_get_u16(const telemetry_t *val);
 int16_t telemetry_get_i16(const telemetry_t *val);
 uint32_t telemetry_get_u32(const telemetry_t *val);
 int32_t telemetry_get_i32(const telemetry_t *val);
+float telemetry_get_float(const telemetry_t *val);
 const char *telemetry_get_str(const telemetry_t *val);
 bool telemetry_set_u8(telemetry_t *val, uint8_t v, time_micros_t now);
 bool telemetry_set_i8(telemetry_t *val, int8_t v, time_micros_t now);
@@ -95,5 +99,6 @@ bool telemetry_set_u16(telemetry_t *val, uint16_t v, time_micros_t now);
 bool telemetry_set_i16(telemetry_t *val, int16_t v, time_micros_t now);
 bool telemetry_set_u32(telemetry_t *val, uint32_t v, time_micros_t now);
 bool telemetry_set_i32(telemetry_t *val, int32_t v, time_micros_t now);
+bool telemetry_set_float(telemetry_t *val, float v, time_micros_t now);
 bool telemetry_set_str(telemetry_t *val, const char *str, time_micros_t now);
 bool telemetry_set_bytes(telemetry_t *val, const void *data, size_t size, time_micros_t now);

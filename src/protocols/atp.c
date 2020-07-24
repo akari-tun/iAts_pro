@@ -13,6 +13,12 @@ static atp_cmd_t atp_cmd;
 static atp_ctr_t atp_ctr;
 static atp_t *atp;
 
+typedef union
+{
+	float fdata;
+	unsigned long ldata;
+}FloatLongType;
+
 static const atp_tag_info_t atp_tag_infos[] = {
     { TAG_PLANE_LONGITUDE,                         TELEMETRY_TYPE_INT32,   "Lon",            telemetry_format_coordinate },                 
     { TAG_PLANE_LATITUDE,                          TELEMETRY_TYPE_INT32,   "Lat",            telemetry_format_coordinate },
@@ -28,7 +34,7 @@ static const atp_tag_info_t atp_tag_infos[] = {
     { TAG_TRACKER_LATITUDE,                        TELEMETRY_TYPE_INT32,   "Lat",            telemetry_format_coordinate },
     { TAG_TRACKER_ALTITUDE,                        TELEMETRY_TYPE_INT32,   "Alt",            telemetry_format_altitude },
     { TAG_TRACKER_HEADING,                         TELEMETRY_TYPE_UINT16,  "Heading",        telemetry_format_deg },
-    { TAG_TRACKER_PITCH,                           TELEMETRY_TYPE_INT16,   "Pitch",          telemetry_format_att },
+    { TAG_TRACKER_PITCH,                           TELEMETRY_TYPE_FLOAT,   "Pitch",          telemetry_format_ahrs },
     { TAG_TRACKER_VOLTAGE,                         TELEMETRY_TYPE_UINT16,  "Batt. V.",       telemetry_format_voltage },
     { TAG_TRACKER_MODE,                            TELEMETRY_TYPE_UINT8,   "Mode",           telemetry_format_tracker_mode },
     { TAG_TRACKER_DECLINATION,                     TELEMETRY_TYPE_INT8,    "Dec.",           telemetry_format_deg},
@@ -38,8 +44,8 @@ static const atp_tag_info_t atp_tag_infos[] = {
     { TAG_TRACKER_S_PORT,                          TELEMETRY_TYPE_UINT16,  "S Port.",        telemetry_format_u16 },
     { TAG_TRACKER_FLAG,                            TELEMETRY_TYPE_UINT8,   "Flag",           telemetry_format_u8 },
     { TAG_TRACKER_SEVRO_POWER,                     TELEMETRY_TYPE_UINT8,   "S. Power",       telemetry_format_u8 },
-    { TAG_TRACKER_ROLL,                            TELEMETRY_TYPE_INT16,   "ROLL",           telemetry_format_att },
-    { TAG_TRACKER_YAW,                             TELEMETRY_TYPE_INT16,   "YAW",            telemetry_format_att },
+    { TAG_TRACKER_ROLL,                            TELEMETRY_TYPE_FLOAT,   "ROLL",           telemetry_format_ahrs },
+    { TAG_TRACKER_YAW,                             TELEMETRY_TYPE_FLOAT,   "YAW",            telemetry_format_ahrs },
     { TAG_PARAM_PID_P,                             TELEMETRY_TYPE_UINT16,  "P",              telemetry_format_u16 },
     { TAG_PARAM_PID_I,                             TELEMETRY_TYPE_UINT16,  "I",              telemetry_format_u16 },
     { TAG_PARAM_PID_D,                             TELEMETRY_TYPE_UINT16,  "D",              telemetry_format_u16 },
@@ -140,6 +146,15 @@ static void tag_write_telemetry(atp_frame_t *frame, telemetry_t *val)
             frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 1) & 0xFF;
             frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 2) & 0xFF;
             frame->buffer[frame->buffer_index++] = (val_i32 >> 8 * 3) & 0xFF;
+            break;
+        case TELEMETRY_TYPE_FLOAT:
+            frame->buffer[frame->buffer_index++] = 4;
+            FloatLongType fl;
+	        fl.fdata = telemetry_get_float(val);
+            frame->buffer[frame->buffer_index++] = (unsigned char)(fl.ldata);
+            frame->buffer[frame->buffer_index++] = (unsigned char)(fl.ldata >> 8);
+            frame->buffer[frame->buffer_index++] = (unsigned char)(fl.ldata >> 16);
+            frame->buffer[frame->buffer_index++] = (unsigned char)(fl.ldata >> 24);
             break;
         case TELEMETRY_TYPE_STRING:
 

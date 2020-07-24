@@ -217,5 +217,6 @@ void atp_remove_ctr(uint8_t len);
 #define ATP_SET_I16(tag, v, now) telemetry_set_i16(atp_get_telemetry_tag_val(tag), v, now);
 #define ATP_SET_U32(tag, v, now) telemetry_set_u32(atp_get_telemetry_tag_val(tag), v, now);
 #define ATP_SET_I32(tag, v, now) telemetry_set_i32(atp_get_telemetry_tag_val(tag), v, now);
+#define ATP_SET_FLOAT(tag, v, now) telemetry_set_float(atp_get_telemetry_tag_val(tag), v, now);
 #define ATP_SET_STR(tag, v, now) telemetry_set_str(atp_get_telemetry_tag_val(tag), v, now);
 #define ATP_SET_BYTES(tag, v, now) telemetry_set_bytes(atp_get_telemetry_tag_val(tag), v, now);

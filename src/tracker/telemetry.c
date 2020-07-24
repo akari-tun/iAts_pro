@@ -97,6 +97,13 @@ const char *telemetry_format_att(const telemetry_t *val, char *buf, size_t bufsi
     return buf;
 }
 
+const char *telemetry_format_ahrs(const telemetry_t *val, char *buf, size_t bufsize)
+{
+    snprintf(buf, bufsize, "%-5.2fdeg", val->val.f);
+    return buf;
+}
+
+
 const char *telemetry_format_gps_fix(const telemetry_t *val, char *buf, size_t bufsize)
 {
     switch (val->val.u8)
@@ -192,6 +199,8 @@ bool telemetry_value_is_equal(const telemetry_t *val, const telemetry_val_t *new
         return val->val.u32 == new_val->u32;
     case TELEMETRY_TYPE_INT32:
         return val->val.i32 == new_val->i32;
+    case TELEMETRY_TYPE_FLOAT:
+        return val->val.f == new_val->f;
     case TELEMETRY_TYPE_STRING:
         return strcmp(val->val.s, new_val->s) == 0;
     }
@@ -233,6 +242,13 @@ int32_t telemetry_get_i32(const telemetry_t *val)
     TELEMETRY_ASSERT_TYPE(val->type, TELEMETRY_TYPE_INT32);
     return val->val.i32;
 }
+
+float telemetry_get_float(const telemetry_t *val)
+{
+    TELEMETRY_ASSERT_TYPE(val->type, TELEMETRY_TYPE_FLOAT);
+    return val->val.f;
+}
+
 
 const char *telemetry_get_str(const telemetry_t *val)
 {
@@ -290,6 +306,15 @@ bool telemetry_set_i32(telemetry_t *val, int32_t v, time_micros_t now)
     TELEMETRY_ASSERT_TYPE(val->type, TELEMETRY_TYPE_INT32);
     bool changed = v != val->val.i32;
     val->val.i32 = v;
+    data_state_update(&val->data_state, changed, now);
+    return changed;
+}
+
+bool telemetry_set_float(telemetry_t *val, float v, time_micros_t now)
+{
+    TELEMETRY_ASSERT_TYPE(val->type, TELEMETRY_TYPE_FLOAT);
+    bool changed = v != val->val.f;
+    val->val.f = v;
     data_state_update(&val->data_state, changed, now);
     return changed;
 }

@@ -789,17 +789,17 @@ float get_tracker_alt()
 
 float get_tracker_roll()
 {
-    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_ROLL)) / 100.0f;
+    return telemetry_get_float(atp_get_telemetry_tag_val(TAG_TRACKER_ROLL));
 }
 
 float get_tracker_pitch()
 {
-    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_PITCH)) / 100.0f;
+    return telemetry_get_float(atp_get_telemetry_tag_val(TAG_TRACKER_PITCH));
 }
 
 float get_tracker_yaw()
 {
-    return telemetry_get_i16(atp_get_telemetry_tag_val(TAG_TRACKER_YAW)) / 100.0f;
+    return telemetry_get_float(atp_get_telemetry_tag_val(TAG_TRACKER_YAW));
 }
 
 void tracker_pan_move(tracker_t *t, int v)
