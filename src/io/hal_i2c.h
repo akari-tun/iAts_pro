@@ -16,8 +16,10 @@ typedef struct hal_i2c_config_s
     hal_gpio_t scl;
     bool is_init;
     uint32_t freq_hz;
+    SemaphoreHandle_t xSemaphore;
 } hal_i2c_config_t;
 
 void hal_i2c_init(hal_i2c_config_t *cfg);
+void hal_i2c_deinit(hal_i2c_config_t *cfg);
 void hal_i2c_cmd_take(hal_i2c_bus_t i2c_bus);
 void hal_i2c_cmd_give(hal_i2c_bus_t i2c_bus);

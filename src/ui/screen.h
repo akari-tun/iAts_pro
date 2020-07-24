@@ -93,6 +93,7 @@ typedef struct screen_s
         power_t *power;
 #endif
         bool available;
+        bool is_init;
         int8_t main_mode;      // from screen_main_mode_e
         int8_t secondary_mode; // from screen_secondary_mode_e
         int8_t main_secondary_mode;

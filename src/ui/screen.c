@@ -51,11 +51,15 @@ static u8g2_t u8g2;
 
 bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker)
 {
-    memset(screen, 0, sizeof(*screen));
-    screen->internal.available = screen_i2c_init(cfg, &u8g2);
-    screen->internal.cfg = *cfg;
-    screen->internal.tracker = tracker;
-    screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
+    if (!screen->internal.is_init)
+    {
+        memset(screen, 0, sizeof(*screen));
+        screen->internal.available = screen_i2c_init(cfg, &u8g2);
+        screen->internal.cfg = *cfg;
+        screen->internal.tracker = tracker;
+        screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
+        screen->internal.is_init = true;
+    }
     return screen->internal.available;
 }
 
@@ -696,11 +700,11 @@ static void screen_draw_imu(screen_t *s)
 
     u8g2_SetFontPosCenter(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Roll :%3.2f", get_tracker_roll());
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Roll :%-5.2f", get_tracker_roll());
     u8g2_DrawStr(&u8g2, 0, per_h * 4, buf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Pitch:%3.2f", get_tracker_pitch());
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Pitch:%-5.2f", get_tracker_pitch());
     u8g2_DrawStr(&u8g2, 0, per_h * 6, buf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Yaw  :%3.2f", get_tracker_yaw());
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Yaw  :%-5.2f", get_tracker_yaw());
     u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
 }
 
@@ -1244,14 +1248,18 @@ void screen_update(screen_t *screen)
     }
 
     char buf[SCREEN_DRAW_BUF_SIZE];
-
-    screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
-    screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
-    screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
-    screen->internal.buf = buf;
-    u8g2_ClearBuffer(&u8g2);
-    screen_draw(screen);
-    u8g2_SendBuffer(&u8g2);
+    
+    xSemaphoreTake(screen->internal.cfg.i2c_cfg->xSemaphore, portMAX_DELAY );
+    {
+        screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
+        screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
+        screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
+        screen->internal.buf = buf;
+        u8g2_ClearBuffer(&u8g2);
+        screen_draw(screen);
+        u8g2_SendBuffer(&u8g2);
+    }
+    xSemaphoreGive(screen->internal.cfg.i2c_cfg->xSemaphore);
 }
 
 #endif

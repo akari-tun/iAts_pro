@@ -669,7 +669,17 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
 #endif
         ui->internal.screen.internal.main_mode = SCREEN_MODE_WAIT_CONNECT;
         ui->internal.screen.internal.secondary_mode = SCREEN_SECONDARY_MODE_NONE;
+
+        LOG_I(TAG, "Screen detected");
+        system_add_flag(SYSTEM_FLAG_SCREEN);
+        screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
+        ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
     }
+    else
+    {
+        LOG_I(TAG, "No screen detected");
+    }
+    menu_init(tracker);
 #endif
     for (unsigned ii = 0; ii < ARRAY_COUNT(ui->internal.buttons); ii++)
     {
@@ -686,20 +696,6 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
 #endif
 
     system_add_flag(SYSTEM_FLAG_BUTTON);
-#ifdef USE_SCREEN
-    if (screen_is_available(&ui->internal.screen))
-    {
-        LOG_I(TAG, "Screen detected");
-        system_add_flag(SYSTEM_FLAG_SCREEN);
-        screen_set_brightness(&ui->internal.screen, settings_get_key_u8(SETTING_KEY_SCREEN_BRIGHTNESS));
-        ui_set_screen_set_autooff(ui, settings_get_key_u8(SETTING_KEY_SCREEN_AUTO_OFF));
-    }
-    else
-    {
-        LOG_I(TAG, "No screen detected");
-    }
-    menu_init(tracker);
-#endif
     settings_add_listener(ui_settings_handler, ui);
 
 #ifdef USE_BATTERY_MONITORING
@@ -726,6 +722,15 @@ bool ui_screen_is_available(const ui_t *ui)
 #endif
 }
 
+bool ui_screen_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker)
+{
+#ifdef USE_SCREEN
+    return screen_init(&ui->internal.screen, &cfg->screen, tracker);
+#else
+    return false;
+#endif
+}
+
 void ui_screen_splash(ui_t *ui)
 {
 #ifdef USE_SCREEN
@@ -735,7 +740,7 @@ void ui_screen_splash(ui_t *ui)
 
 bool ui_is_animating(const ui_t *ui)
 {
-#ifdef USE_SCREEN
+#ifdef USE_SCREENd
     return screen_is_animating(&ui->internal.screen);
 #else
     return false;

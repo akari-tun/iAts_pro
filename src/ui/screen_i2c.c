@@ -35,7 +35,8 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
 
     if (!cfg->i2c_cfg->is_init)
     {
-        HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_cfg->i2c_bus, cfg->i2c_cfg->sda, cfg->i2c_cfg->scl, SCREEN_I2C_MASTER_FREQ_HZ));
+        //HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_cfg->i2c_bus, cfg->i2c_cfg->sda, cfg->i2c_cfg->scl, SCREEN_I2C_MASTER_FREQ_HZ));
+        hal_i2c_init(cfg->i2c_cfg);
     }
 
     // Detect if the screen is present
