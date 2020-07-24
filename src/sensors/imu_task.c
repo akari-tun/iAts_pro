@@ -15,6 +15,8 @@
 #include "imu_task.h"
 #include "driver/mpu9250.h"
 
+#include "config/settings.h"
+
 #include "platform/storage.h"
 #include "protocols/atp.h"
 
@@ -52,7 +54,8 @@ static void imu_task_load_calibration(void)
             .accel_scale = {4096, 4096, 4096},
             .gyro_off = {0, 0, 0},
             .mag_bias = {0, 0, 0},
-            .mag_declination = 0.0f};
+            .mag_declination = 0.0f
+        };
 
     //err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
     // if (err != ESP_OK)
@@ -61,7 +64,7 @@ static void imu_task_load_calibration(void)
     //     ESP_LOGI(TAG, "nvs_open failed. going with all defaults");
     //     return;
     // }
-    
+
     if (storage_get_i16(&storage, "accel_off_x", &_imu.cal.accel_off[0]))
     {
         _imu.cal.accel_off[0] = cal_default.accel_off[0];
@@ -159,9 +162,16 @@ static void imu_task(void *pvParameters)
 
     LOG_I(TAG, "starting imu task");
 
-    mpu9250_init(&_mpu9250, MPU9250_Accelerometer_2G, MPU9250_Gyroscope_1000s, &_imu.lsb);
+    mpu9250_init(&_mpu9250, MPU9250_Accelerometer_8G, MPU9250_Gyroscope_1000s, &_imu.lsb);
+    _imu.available = mpu9250_is_available(&_mpu9250);
 
-    while (1)
+    if (!_imu.available)
+    {
+        imu_disable();
+        LOG_I(TAG, "imu_disable");
+    }
+
+    while (_imu.available)
     {
         if (xQueueReceive(_cmd_queue, &cmd, xDelay))
         {
@@ -199,24 +209,23 @@ static void imu_task(void *pvParameters)
         xSemaphoreTake(_mutex, portMAX_DELAY);
 
         // mpu9250_read_all(&_mpu9250, &_imu.raw);
-        mpu9250_read_gyro_accel(&_mpu9250, &_imu.raw);
-        if (cnt == 0)
+
+        xSemaphoreTake(_mpu9250.mpu9250_i2c_cfg.i2c_cfg->xSemaphore, portMAX_DELAY);
         {
-            mpu9250_read_mag(&_mpu9250, &_imu.raw);
+            mpu9250_read_gyro_accel(&_mpu9250, &_imu.raw);
+
+            if (cnt == 0) mpu9250_read_mag(&_mpu9250, &_imu.raw);
+            cnt++;
+            if (cnt >= 25) cnt = 0;
         }
-        cnt++;
-        if (cnt >= 25)
-        {
-            cnt = 0;
-        }
+        xSemaphoreGive(_mpu9250.mpu9250_i2c_cfg.i2c_cfg->xSemaphore);
 
         imu_update(&_imu);
-        //vTaskDelay(xDelay);
 
-        ATP_SET_I16(TAG_TRACKER_ROLL, (int16_t)(_imu.data.orientation[0] * 100), time_micros_now());
-        ATP_SET_I16(TAG_TRACKER_PITCH, (int16_t)(_imu.data.orientation[1] * 100), time_micros_now());
-        ATP_SET_I16(TAG_TRACKER_YAW, (int16_t)(_imu.data.orientation[2] * 100), time_micros_now());
-        
+        ATP_SET_FLOAT(TAG_TRACKER_ROLL, _imu.data.orientation[0], time_micros_now());
+        ATP_SET_FLOAT(TAG_TRACKER_PITCH, _imu.data.orientation[1], time_micros_now());
+        ATP_SET_FLOAT(TAG_TRACKER_YAW, _imu.data.orientation[2], time_micros_now());
+
         if (_imu.mode != imu_mode_normal)
         {
             gettimeofday(&now, NULL);
@@ -244,7 +253,7 @@ static void imu_task(void *pvParameters)
                 break;
 
             case imu_mode_accel_calibrating:
-                _imu.calibration_time = 20 - (now.tv_sec - cal_start_time.tv_sec);
+                _imu.calibration_time = 10 - (now.tv_sec - cal_start_time.tv_sec);
                 //if ((now.tv_sec - cal_start_time.tv_sec) >= 20)
                 if (_imu.calibration_time <= 0)
                 {
@@ -257,7 +266,7 @@ static void imu_task(void *pvParameters)
                 break;
             }
         }
-        
+
         xSemaphoreGive(_mutex);
         _loop_cnt++;
     }
@@ -267,16 +276,17 @@ void imu_task_init(hal_i2c_config_t *i2c_cfg)
 {
     LOG_I(TAG, "initialing IMU task");
 
-    if (i2c_cfg->is_init)
+    if (settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         storage_init(&storage, IMU_STORAGE_KEY);
 
-  	    _mpu9250.mpu9250_i2c_cfg.i2c_cfg = i2c_cfg;
-	    _mpu9250.mpu9250_i2c_cfg.rst = HAL_GPIO_NONE;
-	    _mpu9250.mpu9250_i2c_cfg.addr = MPU9250_I2C_ADDR;
-	    _mpu9250.mpu9250_i2c_cfg.ak8963_addr = AK8963_I2C_ADDR;
+        _mpu9250.mpu9250_i2c_cfg.i2c_cfg = i2c_cfg;
+        _mpu9250.mpu9250_i2c_cfg.rst = HAL_GPIO_NONE;
+        _mpu9250.mpu9250_i2c_cfg.addr = MPU9250_I2C_ADDR;
+        _mpu9250.mpu9250_i2c_cfg.ak8963_addr = AK8963_I2C_ADDR;
 
         imu_init(&_imu);
+
         imu_task_load_calibration();
 
         _mutex = xSemaphoreCreateMutex();

@@ -1,6 +1,7 @@
 #ifndef __IMU_DEF_H__
 #define __IMU_DEF_H__
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "filter/madgwick.h"
 #include "filter/mahony.h"
@@ -90,10 +91,14 @@ typedef struct
     int32_t calibration_time;
     int8_t calibration_acc_step;
     float update_rate;
+    bool enabla;
+    bool available;
 } imu_t;
 
 extern void imu_init(imu_t *imu);
 extern void imu_update(imu_t *imu);
+extern bool imu_is_available(imu_t *imu);
+extern void imu_disable();
 
 extern void imu_mag_calibration_start(imu_t *imu);
 extern void imu_mag_calibration_finish(imu_t *imu);

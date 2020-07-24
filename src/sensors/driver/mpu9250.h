@@ -122,13 +122,14 @@ typedef struct
     mpu9250_i2c_config_t mpu9250_i2c_cfg;
     MPU9250_Accelerometer_t   accel_config;
     MPU9250_Gyroscope_t       gyro_config;
+    bool available;
 } mpu9250_t;
 
 extern void mpu9250_init(mpu9250_t* mpu9250,
     MPU9250_Accelerometer_t accel_sensitivity,
     MPU9250_Gyroscope_t gyro_sensitivity,
     imu_raw_to_real_t* lsb);
-
+extern bool mpu9250_is_available(mpu9250_t* mpu9250);
 extern bool mpu9250_read_all(mpu9250_t* mpu9250, imu_sensor_data_t* data);
 extern bool mpu9250_read_mag(mpu9250_t* mpu9250, imu_sensor_data_t* imu);
 extern bool mpu9250_read_gyro_accel(mpu9250_t* mpu9250, imu_sensor_data_t* imu);

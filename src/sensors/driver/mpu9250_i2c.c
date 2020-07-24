@@ -14,7 +14,8 @@ static bool mpu9250_handl_error(mpu9250_i2c_config_t *cfg, hal_err_t err)
         {
             hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
         }
-        HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
+        //HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
+        hal_i2c_deinit(cfg->i2c_cfg);
 
         LOG_E(TAG, "%d", err);
         
@@ -30,7 +31,8 @@ void mpu9250_i2c_init(mpu9250_i2c_config_t *cfg)
     if (!cfg->i2c_cfg->is_init)
     {
         LOG_I(TAG, "init i2c");
-        HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_cfg->i2c_bus, cfg->i2c_cfg->sda, cfg->i2c_cfg->scl, cfg->i2c_cfg->freq_hz));
+        hal_i2c_init(cfg->i2c_cfg);
+        //HAL_ERR_ASSERT_OK(hal_i2c_bus_init(cfg->i2c_cfg->i2c_bus, cfg->i2c_cfg->sda, cfg->i2c_cfg->scl, cfg->i2c_cfg->freq_hz));
     }
 }
 
@@ -43,9 +45,9 @@ bool mpu9250_i2c_read(mpu9250_i2c_config_t *cfg, uint8_t* data, uint32_t size)
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write_byte(&cmd, HAL_I2C_READ_ADDR(cfg->addr), ACK_CHECK_EN));
     if (size > 1)
     {
-        HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read(&cmd, data, size, ACK_VAL));
+        HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read(&cmd, data, size - 1, ACK_VAL));
     }
-    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read_byte(&cmd, data, NACK_VAL));
+    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read_byte(&cmd, &data[size - 1], NACK_VAL));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_stop(&cmd));
 
     hal_err_t err = hal_i2c_cmd_master_exec(cfg->i2c_cfg->i2c_bus, &cmd);
@@ -61,7 +63,7 @@ bool mpu9250_i2c_write(mpu9250_i2c_config_t *cfg, uint8_t* data, uint32_t size)
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_init(&cmd));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_start(&cmd));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write_byte(&cmd, HAL_I2C_WRITE_ADDR(cfg->addr), ACK_CHECK_EN));
-    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write(&cmd, data, size, true));
+    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write(&cmd, data, size, ACK_CHECK_EN));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_stop(&cmd));
 
     hal_err_t err = hal_i2c_cmd_master_exec(cfg->i2c_cfg->i2c_bus, &cmd);
@@ -79,9 +81,9 @@ bool ak8963_i2c_read(mpu9250_i2c_config_t *cfg, uint8_t* data, uint32_t size)
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_write_byte(&cmd, HAL_I2C_READ_ADDR(cfg->ak8963_addr), ACK_CHECK_EN));
     if (size > 1)
     {
-        HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read(&cmd, data, size, ACK_VAL));
+        HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read(&cmd, data, size - 1, ACK_VAL));
     }
-    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read_byte(&cmd, data, NACK_VAL));
+    HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_read_byte(&cmd, &data[size - 1], NACK_VAL));
     HAL_ERR_ASSERT_OK(hal_i2c_cmd_master_stop(&cmd));
 
     hal_err_t err = hal_i2c_cmd_master_exec(cfg->i2c_cfg->i2c_bus, &cmd);

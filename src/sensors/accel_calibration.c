@@ -75,7 +75,6 @@ void accel_calibration_update(int16_t ax, int16_t ay, int16_t az)
     accel_value[1] = ay;
     accel_value[2] = az;
 
-
     axis_ndx = getPrimaryAxisIndex(accel_value);
 
     if (axis_ndx < 0)

@@ -2,10 +2,15 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "hal/log.h"
+
 #include "imu.h"
+#include "config/settings.h"
 #include "mag_calibration.h"
 #include "gyro_calibration.h"
 #include "accel_calibration.h"
+
+const static char *TAG = "imu";
 
 /*
    is my MPU really MPU9250? Looks like a chinese clone hmmmmm.
@@ -166,6 +171,8 @@ static void imu_update_normal(imu_t *imu)
 
     imu_calc_sensor_value(imu);
 
+    //LOG_I(TAG, "MAG[0]:%f | MAG[1]:%f | MAG[2]:%f", imu->data.mag[0], imu->data.mag[1], imu->data.mag[2]);
+
     //
     // remember
     // a) accel/mag is unitless. you can push in values in any unit
@@ -178,7 +185,7 @@ static void imu_update_normal(imu_t *imu)
                     imu->data.gyro[0], imu->data.gyro[1], imu->data.gyro[2],
                     imu->data.accel[0], imu->data.accel[1], imu->data.accel[2],
                     imu->data.mag[0], imu->data.mag[1], imu->data.mag[2]);
-
+    
     madgwick_get_roll_pitch_yaw(&imu->filter,
                                 imu->data.orientation,
                                 imu->cal.mag_declination);
@@ -213,9 +220,13 @@ void imu_init(imu_t *imu)
     // update_rate
     // sensor align
     //
-    imu->accel_align = imu_board_align_cw_0;
-    imu->gyro_align = imu_board_align_cw_0;
-    imu->mag_align = imu_board_align_cw_0;
+    //imu->accel_align = imu_board_align_cw_0;
+    //imu->gyro_align = imu_board_align_cw_0;
+    //imu->mag_align = imu_board_align_cw_0;
+
+    imu->accel_align  = imu_board_align_special2;
+    imu->gyro_align   = imu_board_align_cw_180;
+    imu->mag_align    = imu_board_align_special;
 
     imu->update_rate = 500;
 
@@ -224,6 +235,8 @@ void imu_init(imu_t *imu)
 #else
     mahony_init(&imu->filter, imu->update_rate);
 #endif
+
+    imu->enabla = settings_get_key_bool(SETTING_KEY_IMU_ENABLE);
 }
 
 void imu_update(imu_t *imu)
@@ -293,4 +306,15 @@ void imu_accel_calibration_finish(imu_t *imu)
 {
     imu->mode = imu_mode_normal;
     accel_calibration_finish(imu->cal.accel_off, imu->cal.accel_scale);
+}
+
+bool imu_is_available(imu_t *imu)
+{
+    return imu->available;
+}
+
+void imu_disable()
+{
+    const setting_t *setting = settings_get_key(SETTING_KEY_IMU_ENABLE);
+    setting_set_bool(setting, false);
 }

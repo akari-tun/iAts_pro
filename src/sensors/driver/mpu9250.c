@@ -55,11 +55,12 @@ static inline void mpu9250_write_reg16(mpu9250_t *mpu9250, uint8_t reg, uint16_t
 
 static inline uint8_t mpu9250_read_reg(mpu9250_t *mpu9250, uint8_t reg)
 {
-  uint8_t ret;
+  uint8_t ret = 0;
 
   if (mpu9250_i2c_write(&mpu9250->mpu9250_i2c_cfg, &reg, 1) == false)
   {
     LOG_E(TAG, "mpu9250_read_reg: failed to mpu9250_i2c_write");
+    return ret;
   }
 
   if (mpu9250_i2c_read(&mpu9250->mpu9250_i2c_cfg, &ret, 1) == false)
@@ -75,6 +76,7 @@ static inline void mpu9250_read_data(mpu9250_t *mpu9250, uint8_t reg, uint8_t *d
   if (mpu9250_i2c_write(&mpu9250->mpu9250_i2c_cfg, &reg, 1) == false)
   {
     LOG_E(TAG, "mpu9250_read_data: failed to mpu9250_i2c_write");
+    return;
   }
 
   if (mpu9250_i2c_read(&mpu9250->mpu9250_i2c_cfg, data, len) == false)
@@ -85,11 +87,12 @@ static inline void mpu9250_read_data(mpu9250_t *mpu9250, uint8_t reg, uint8_t *d
 
 static inline uint8_t ak8963_read_reg(mpu9250_t *mpu9250, uint8_t reg)
 {
-  uint8_t ret;
+  uint8_t ret = 0;
 
   if (ak8963_i2c_write(&mpu9250->mpu9250_i2c_cfg, &reg, 1) == false)
   {
     LOG_E(TAG, "ak8963_read_reg: failed to mpu9250_i2c_write");
+    return ret;
   }
 
   if (ak8963_i2c_read(&mpu9250->mpu9250_i2c_cfg, &ret, 1) == false)
@@ -117,6 +120,7 @@ static inline void ak8963_read_data(mpu9250_t *mpu9250, uint8_t reg, uint8_t *da
   if (ak8963_i2c_write(&mpu9250->mpu9250_i2c_cfg, &reg, 1) == false)
   {
     LOG_E(TAG, "ak8963_read_data: failed to mpu9250_i2c_write");
+    return;
   }
 
   if (ak8963_i2c_read(&mpu9250->mpu9250_i2c_cfg, data, len) == false)
@@ -130,7 +134,7 @@ static void ak8963_init(mpu9250_t *mpu9250)
   uint8_t v;
 
   v = ak8963_read_reg(mpu9250, AK8963_WIA);
-  ESP_LOGI(TAG, "ak8963 chip ID: %x", v);
+  LOG_I(TAG, "ak8963 chip ID: %x", v);
 
   // put ak8963 in mode 2 for 100Hz measurement
   // also set 16 bit output
@@ -138,7 +142,7 @@ static void ak8963_init(mpu9250_t *mpu9250)
   ak8963_write_reg(mpu9250, AK8963_CNTL1, v);
 
   v = ak8963_read_reg(mpu9250, AK8963_CNTL1);
-  ESP_LOGI(TAG, "ak8963 control reg: %x", v);
+  LOG_I(TAG, "ak8963 control reg: %x", v);
 }
 
 static void ak8963_read_all(mpu9250_t *mpu9250, imu_sensor_data_t *imu)
@@ -146,7 +150,7 @@ static void ak8963_read_all(mpu9250_t *mpu9250, imu_sensor_data_t *imu)
   uint8_t data[7];
 
   ak8963_read_data(mpu9250, AK8963_HXL, data, 7);
-
+  //printf("[0][%d]    [1][%d]\r\n", data[0], data[1]);
   imu->mag[0] = (int16_t)(data[1] << 8 | data[0]);
   imu->mag[1] = (int16_t)(data[3] << 8 | data[2]);
   imu->mag[2] = (int16_t)(data[5] << 8 | data[4]);
@@ -163,6 +167,20 @@ void mpu9250_init(mpu9250_t *mpu9250,
                   imu_raw_to_real_t *lsb)
 {
   mpu9250_i2c_init(&mpu9250->mpu9250_i2c_cfg);
+
+  uint8_t v;
+
+  v = mpu9250_read_reg(mpu9250, MPU9250_WHO_AM_I);
+  
+  mpu9250->available = (v == 0x71);
+
+  if (!mpu9250->available)
+  {
+    LOG_I(TAG, "dont have mpu9250 chip.");
+    return;
+  }
+
+  LOG_I(TAG, "mpu9250 chip ID: %x", v);
 
   mpu9250->accel_config = accel_sensitivity;
   mpu9250->gyro_config = gyro_sensitivity;
@@ -251,3 +269,8 @@ mpu9250_convert_to_eng_units(mpu9250_t* mpu9250, imu_sensor_data_t* imu)
   imu->mag[2] = imu->mag_raw[2] * mpu9250->mag_lsb;
 }
  */
+
+bool mpu9250_is_available(mpu9250_t* mpu9250)
+{
+  return mpu9250->available;
+}
