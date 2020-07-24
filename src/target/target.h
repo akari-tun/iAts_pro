@@ -8,7 +8,7 @@
 #include "../src/target/platforms/esp32/pre_platform.h"
 #endif
 
-#define VERSION "0.1.1"
+#define VERSION "0.1.2"
 
 /*
     Version 0.1.1 
@@ -16,4 +16,11 @@
     1.Add ltm protocols.
     2.Fixes wifi smartconfig's bug.
     3.Other found bugs fixed.
+*/
+
+/*
+    Version 0.1.2 
+    release data 20200722
+    1.Support MPU9250
+    2.Compatible hardware v2.22 & v2.3
 */
