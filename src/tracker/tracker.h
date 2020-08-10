@@ -149,5 +149,6 @@ float get_tracker_alt();
 float get_tracker_roll();
 float get_tracker_pitch();
 float get_tracker_yaw();
+uint32_t get_tracker_imu_hz();
 void tracker_pan_move(tracker_t *t, int v);
 void tracker_tilt_move(tracker_t *t, int v);

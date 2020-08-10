@@ -802,6 +802,11 @@ float get_tracker_yaw()
     return telemetry_get_float(atp_get_telemetry_tag_val(TAG_TRACKER_YAW));
 }
 
+uint32_t get_tracker_imu_hz()
+{
+    return telemetry_get_u32(atp_get_telemetry_tag_val(TAG_TRACKER_IMU_HZ));
+}
+
 void tracker_pan_move(tracker_t *t, int v)
 {
     if (t->servo->internal.pan.currtent_degree == 0 && v < 0)
