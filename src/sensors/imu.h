@@ -91,7 +91,7 @@ typedef struct
     int32_t calibration_time;
     int8_t calibration_acc_step;
     float update_rate;
-    bool enabla;
+    bool enable;
     bool available;
 } imu_t;
 

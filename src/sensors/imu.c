@@ -236,7 +236,7 @@ void imu_init(imu_t *imu)
     mahony_init(&imu->filter, imu->update_rate);
 #endif
 
-    imu->enabla = settings_get_key_bool(SETTING_KEY_IMU_ENABLE);
+    imu->enable = settings_get_key_bool(SETTING_KEY_IMU_ENABLE);
 }
 
 void imu_update(imu_t *imu)

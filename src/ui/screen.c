@@ -348,6 +348,16 @@ static bool screen_button_left_press(screen_t *screen, const button_event_t *ev)
     if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
     {
         screen->internal.main_secondary_mode = screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_DEFAULT ? SCREEN_MAIN_SECONDARY_MODE_NUM - 1 : screen->internal.main_secondary_mode - 1;
+        
+        if (!screen->internal.tracker->imu->enable)
+        {
+            if (screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_IMU || 
+                screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL)
+            {
+                screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_TRACKER;
+            }
+        }
+
         return true;
     }
 
@@ -368,6 +378,16 @@ static bool screen_button_right_press(screen_t *screen, const button_event_t *ev
         if (ev->type == BUTTON_EVENT_TYPE_SHORT_PRESS)
         {
             screen->internal.main_secondary_mode = screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_NUM - 1 ? SCREEN_MAIN_SECONDARY_MODE_DEFAULT : screen->internal.main_secondary_mode + 1;
+
+        if (!screen->internal.tracker->imu->enable)
+        {
+            if (screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_IMU || 
+                screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL)
+            {
+                screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
+            }
+        }
+
             return true;
         }
     }
