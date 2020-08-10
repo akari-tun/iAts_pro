@@ -71,7 +71,8 @@ void iats_ui_init(void)
 		// .screen.i2c_bus = SCREEN_I2C_BUS,
 		// .screen.sda = SCREEN_GPIO_SDA,
 		// .screen.scl = SCREEN_GPIO_SCL,
-		.screen.i2c_cfg = tracker.imu->available ? &i2c_1_cfg : &i2c_0_cfg,
+		//.screen.i2c_cfg = tracker.imu->available ? &i2c_1_cfg : &i2c_0_cfg,
+		.screen.i2c_cfg = &i2c_1_cfg,
 		.screen.rst = SCREEN_GPIO_RST,
 		.screen.addr = SCREEN_I2C_ADDR,
 #endif

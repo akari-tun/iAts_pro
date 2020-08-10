@@ -55,7 +55,8 @@ bool screen_i2c_init(screen_i2c_config_t *cfg, u8g2_t *u8g2)
         {
             hal_gpio_set_level(cfg->rst, HAL_GPIO_LOW);
         }
-        HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
+        //HAL_ERR_ASSERT_OK(hal_i2c_bus_deinit(cfg->i2c_cfg->i2c_bus));
+        hal_i2c_deinit(cfg->i2c_cfg);
 
         LOG_I(TAG, "%d", err);
 
