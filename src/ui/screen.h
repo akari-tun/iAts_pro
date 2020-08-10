@@ -5,6 +5,7 @@
 
 #include "../src/target/target.h"
 
+#include "util/time.h"
 #include "ui/button.h"
 #include "ui/screen_i2c.h"
 #ifdef USE_MONITORING
@@ -40,6 +41,7 @@ typedef enum
     SCREEN_MAIN_SECONDARY_MODE_PLANE,
     SCREEN_MAIN_SECONDARY_MODE_TRACKER,
     SCREEN_MAIN_SECONDARY_MODE_IMU,
+    SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL,
     SCREEN_MAIN_SECONDARY_MODE_NUM,
 } screen_main_secondary_mode_e;
 
@@ -107,6 +109,7 @@ typedef struct screen_s
         unsigned direction;
         char *buf;
         bool splashing;
+        time_millis_t next_update;
     } internal;
 } screen_t;
 

@@ -15,6 +15,7 @@
 
 #include "util/time.h"
 #include "util/version.h"
+#include "util/calc.h"
 
 #include "menu.h"
 #include "screen.h"
@@ -60,6 +61,9 @@ bool screen_init(screen_t *screen, screen_i2c_config_t *cfg, tracker_t *tracker)
         screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
         screen->internal.is_init = true;
     }
+    
+    screen->internal.next_update = time_millis_now() + 40;
+
     return screen->internal.available;
 }
 
@@ -706,6 +710,40 @@ static void screen_draw_imu(screen_t *s)
     u8g2_DrawStr(&u8g2, 0, per_h * 6, buf);
     snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Yaw  :%-5.2f", get_tracker_yaw());
     u8g2_DrawStr(&u8g2, 0, per_h * 8, buf);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "T.Feq  :%dhz", get_tracker_imu_hz());
+    u8g2_DrawStr(&u8g2, 0, per_h * 10, buf);
+}
+
+static void screen_draw_horizontal(screen_t *s)
+{
+    const int line_w = s->internal.h - 4;
+    const int line_w_h = line_w / 2;
+
+    u8g2_SetFontPosCenter(&u8g2);
+    u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
+
+    const int c_x = s->internal.w / 2;
+    const int c_y = (s->internal.h / 2) + 4;
+
+    u8g2_DrawLine(&u8g2, c_x - 2, c_y, c_x + 2, c_y);
+    u8g2_DrawLine(&u8g2, c_x, c_y - 2, c_x, c_y + 2);
+
+    double d_x = line_w_h * sin((90 - get_tracker_roll()) * DEG_TO_RAD);
+    double d_y = line_w_h * sin(get_tracker_roll() * DEG_TO_RAD);
+
+    int x0 = c_x + ((d_x < 1.00 && d_x > - 1.00) ? 0 : d_x);
+    int y0 = c_y + ((d_y < 1.00 && d_y > - 1.00) ? 0 : d_y);
+    int x1 = c_x - ((d_x < 1.00 && d_x > - 1.00) ? 0 : d_x);
+    int y1 = c_y - ((d_y < 1.00 && d_y > - 1.00) ? 0 : d_y);
+
+    int pitch_l = ((line_w / 90.00f) * get_tracker_pitch()) / 2;
+
+    if (abs(pitch_l) > line_w_h) 
+    {
+        pitch_l = pitch_l < 0 ? line_w - abs(pitch_l) : 0 - line_w - abs(pitch_l);
+    }
+
+    u8g2_DrawLine(&u8g2, x0, y0 + pitch_l, x1, y1 + pitch_l);
 }
 
 static void screen_draw_main(screen_t *s)
@@ -815,6 +853,9 @@ static void screen_draw_main(screen_t *s)
             break;
         case SCREEN_MAIN_SECONDARY_MODE_IMU:
             screen_draw_imu(s);
+            break;
+        case SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL:
+            screen_draw_horizontal(s);
             break;
         }
     }
@@ -1246,20 +1287,25 @@ void screen_update(screen_t *screen)
     {
         return;
     }
-
-    char buf[SCREEN_DRAW_BUF_SIZE];
     
-    xSemaphoreTake(screen->internal.cfg.i2c_cfg->xSemaphore, portMAX_DELAY );
+    if (time_millis_now() > screen->internal.next_update)
     {
-        screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
-        screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
-        screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
-        screen->internal.buf = buf;
-        u8g2_ClearBuffer(&u8g2);
-        screen_draw(screen);
-        u8g2_SendBuffer(&u8g2);
+        char buf[SCREEN_DRAW_BUF_SIZE];
+
+        screen->internal.next_update = time_millis_now() + 10;
+
+        xSemaphoreTake(screen->internal.cfg.i2c_cfg->xSemaphore, portMAX_DELAY );
+        {
+            screen->internal.w = u8g2_GetDisplayWidth(&u8g2);
+            screen->internal.h = u8g2_GetDisplayHeight(&u8g2);
+            screen->internal.direction = SCREEN_W(screen) > SCREEN_H(screen) ? SCREEN_DIRECTION_HORIZONTAL : SCREEN_DIRECTION_VERTICAL;
+            screen->internal.buf = buf;
+            u8g2_ClearBuffer(&u8g2);
+            screen_draw(screen);
+            u8g2_SendBuffer(&u8g2);
+        }
+        xSemaphoreGive(screen->internal.cfg.i2c_cfg->xSemaphore);
     }
-    xSemaphoreGive(screen->internal.cfg.i2c_cfg->xSemaphore);
 }
 
 #endif
