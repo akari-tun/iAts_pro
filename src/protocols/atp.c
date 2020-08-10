@@ -46,6 +46,7 @@ static const atp_tag_info_t atp_tag_infos[] = {
     { TAG_TRACKER_SEVRO_POWER,                     TELEMETRY_TYPE_UINT8,   "S. Power",       telemetry_format_u8 },
     { TAG_TRACKER_ROLL,                            TELEMETRY_TYPE_FLOAT,   "ROLL",           telemetry_format_ahrs },
     { TAG_TRACKER_YAW,                             TELEMETRY_TYPE_FLOAT,   "YAW",            telemetry_format_ahrs },
+    { TAG_TRACKER_IMU_HZ,                          TELEMETRY_TYPE_UINT32,  "IMU HZ",         telemetry_format_u32 },
     { TAG_PARAM_PID_P,                             TELEMETRY_TYPE_UINT16,  "P",              telemetry_format_u16 },
     { TAG_PARAM_PID_I,                             TELEMETRY_TYPE_UINT16,  "I",              telemetry_format_u16 },
     { TAG_PARAM_PID_D,                             TELEMETRY_TYPE_UINT16,  "D",              telemetry_format_u16 },
