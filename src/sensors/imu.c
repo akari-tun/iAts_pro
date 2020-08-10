@@ -220,15 +220,15 @@ void imu_init(imu_t *imu)
     // update_rate
     // sensor align
     //
-    //imu->accel_align = imu_board_align_cw_0;
-    //imu->gyro_align = imu_board_align_cw_0;
-    //imu->mag_align = imu_board_align_cw_0;
+    imu->accel_align = imu_board_align_cw_0;
+    imu->gyro_align = imu_board_align_cw_0;
+    imu->mag_align = imu_board_align_cw_0;
 
-    imu->accel_align  = imu_board_align_special2;
-    imu->gyro_align   = imu_board_align_cw_180;
-    imu->mag_align    = imu_board_align_special;
+    // imu->accel_align  = imu_board_align_special2;
+    // imu->gyro_align   = imu_board_align_cw_180;
+    // imu->mag_align    = imu_board_align_special;
 
-    imu->update_rate = 500;
+    imu->update_rate = 100;
 
 #if USE_MADGWICK == 1
     madgwick_init(&imu->filter, imu->update_rate);

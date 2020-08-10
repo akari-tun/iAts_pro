@@ -12,6 +12,8 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 
+#include "util/calc.h"
+#include <math.h>
 #include "imu_task.h"
 #include "driver/mpu9250.h"
 
@@ -65,65 +67,71 @@ static void imu_task_load_calibration(void)
     //     return;
     // }
 
-    if (storage_get_i16(&storage, "accel_off_x", &_imu.cal.accel_off[0]))
+    if (!storage_get_i16(&storage, "accel_off_x", &_imu.cal.accel_off[0]))
     {
         _imu.cal.accel_off[0] = cal_default.accel_off[0];
     }
 
-    if (storage_get_i16(&storage, "accel_off_y", &_imu.cal.accel_off[1]))
+    if (!storage_get_i16(&storage, "accel_off_y", &_imu.cal.accel_off[1]))
     {
         _imu.cal.accel_off[1] = cal_default.accel_off[1];
     }
 
-    if (storage_get_i16(&storage, "accel_off_z", &_imu.cal.accel_off[2]))
+    if (!storage_get_i16(&storage, "accel_off_z", &_imu.cal.accel_off[2]))
     {
         _imu.cal.accel_off[2] = cal_default.accel_off[2];
     }
 
-    if (storage_get_i16(&storage, "accel_scale_x", &_imu.cal.accel_scale[0]))
+    if (!storage_get_i16(&storage, "accel_scale_x", &_imu.cal.accel_scale[0]))
     {
         _imu.cal.accel_scale[0] = cal_default.accel_scale[0];
     }
 
-    if (storage_get_i16(&storage, "accel_scale_y", &_imu.cal.accel_scale[1]))
+    if (!storage_get_i16(&storage, "accel_scale_y", &_imu.cal.accel_scale[1]))
     {
         _imu.cal.accel_scale[1] = cal_default.accel_scale[1];
     }
 
-    if (storage_get_i16(&storage, "accel_scale_z", &_imu.cal.accel_scale[2]))
+    if (!storage_get_i16(&storage, "accel_scale_z", &_imu.cal.accel_scale[2]))
     {
         _imu.cal.accel_scale[2] = cal_default.accel_scale[2];
     }
 
-    if (storage_get_i16(&storage, "gyro_off_x", &_imu.cal.gyro_off[0]))
+    if (!storage_get_i16(&storage, "gyro_off_x", &_imu.cal.gyro_off[0]))
     {
         _imu.cal.gyro_off[0] = cal_default.gyro_off[0];
     }
 
-    if (storage_get_i16(&storage, "gyro_off_y", &_imu.cal.gyro_off[1]))
+    if (!storage_get_i16(&storage, "gyro_off_y", &_imu.cal.gyro_off[1]))
     {
         _imu.cal.gyro_off[1] = cal_default.gyro_off[1];
     }
 
-    if (storage_get_i16(&storage, "gyro_off_z", &_imu.cal.gyro_off[2]))
+    if (!storage_get_i16(&storage, "gyro_off_z", &_imu.cal.gyro_off[2]))
     {
         _imu.cal.gyro_off[2] = cal_default.gyro_off[2];
     }
 
-    if (storage_get_i16(&storage, "mag_bias_x", &_imu.cal.mag_bias[0]))
+    if (!storage_get_i16(&storage, "mag_bias_x", &_imu.cal.mag_bias[0]))
     {
         _imu.cal.mag_bias[0] = cal_default.mag_bias[0];
     }
 
-    if (storage_get_i16(&storage, "mag_bias_y", &_imu.cal.mag_bias[1]))
+    if (!storage_get_i16(&storage, "mag_bias_y", &_imu.cal.mag_bias[1]))
     {
         _imu.cal.mag_bias[1] = cal_default.mag_bias[1];
     }
 
-    if (storage_get_i16(&storage, "mag_bias_z", &_imu.cal.mag_bias[2]))
+    if (!storage_get_i16(&storage, "mag_bias_z", &_imu.cal.mag_bias[2]))
     {
         _imu.cal.mag_bias[2] = cal_default.mag_bias[2];
     }
+
+    LOG_I(TAG, "accel_off_x:[%d] | accel_off_y:[%d] | accel_off_z:[%d]", _imu.cal.accel_off[0], _imu.cal.accel_off[1], _imu.cal.accel_off[2]);
+    LOG_I(TAG, "accel_scale_x:[%d] | accel_scale_y:[%d] | accel_scale_z:[%d]", _imu.cal.accel_scale[0], _imu.cal.accel_scale[1], _imu.cal.accel_scale[2]);
+    LOG_I(TAG, "gyro_off_x:[%d] | gyro_off_y:[%d] | gyro_off_z:[%d]", _imu.cal.gyro_off[0], _imu.cal.gyro_off[1], _imu.cal.gyro_off[2]);
+    LOG_I(TAG, "mag_bias_x:[%d] | mag_bias_y:[%d] | mag_bias_z:[%d]", _imu.cal.mag_bias[0], _imu.cal.mag_bias[1], _imu.cal.mag_bias[2]);
+
 }
 
 static void imu_task_save_calibration(void)
@@ -139,15 +147,26 @@ static void imu_task_save_calibration(void)
     storage_set_i16(&storage, "accel_off_x", _imu.cal.accel_off[0]);
     storage_set_i16(&storage, "accel_off_y", _imu.cal.accel_off[1]);
     storage_set_i16(&storage, "accel_off_z", _imu.cal.accel_off[2]);
+
+    LOG_I(TAG, "accel_off_x:[%d] | accel_off_y:[%d] | accel_off_z:[%d]", _imu.cal.accel_off[0], _imu.cal.accel_off[1], _imu.cal.accel_off[2]);
+
     storage_set_i16(&storage, "accel_scale_x", _imu.cal.accel_scale[0]);
     storage_set_i16(&storage, "accel_scale_y", _imu.cal.accel_scale[1]);
     storage_set_i16(&storage, "accel_scale_z", _imu.cal.accel_scale[2]);
+
+    LOG_I(TAG, "accel_scale_x:[%d] | accel_scale_y:[%d] | accel_scale_z:[%d]", _imu.cal.accel_scale[0], _imu.cal.accel_scale[1], _imu.cal.accel_scale[2]);
+
     storage_set_i16(&storage, "gyro_off_x", _imu.cal.gyro_off[0]);
     storage_set_i16(&storage, "gyro_off_y", _imu.cal.gyro_off[1]);
     storage_set_i16(&storage, "gyro_off_z", _imu.cal.gyro_off[2]);
+
+    LOG_I(TAG, "gyro_off_x:[%d] | gyro_off_y:[%d] | gyro_off_z:[%d]", _imu.cal.gyro_off[0], _imu.cal.gyro_off[1], _imu.cal.gyro_off[2]);
+
     storage_set_i16(&storage, "mag_bias_x", _imu.cal.mag_bias[0]);
     storage_set_i16(&storage, "mag_bias_y", _imu.cal.mag_bias[1]);
     storage_set_i16(&storage, "mag_bias_z", _imu.cal.mag_bias[2]);
+
+    LOG_I(TAG, "mag_bias_x:[%d] | mag_bias_y:[%d] | mag_bias_z:[%d]", _imu.cal.mag_bias[0], _imu.cal.mag_bias[1], _imu.cal.mag_bias[2]);
 
     storage_commit(&storage);
 }
@@ -159,6 +178,9 @@ static void imu_task(void *pvParameters)
     struct timeval cal_start_time,
         now;
     int cnt = 0;
+    time_millis_t fq = time_millis_now();
+
+    uint fq_hz = 0;
 
     LOG_I(TAG, "starting imu task");
 
@@ -214,7 +236,15 @@ static void imu_task(void *pvParameters)
         {
             mpu9250_read_gyro_accel(&_mpu9250, &_imu.raw);
 
-            if (cnt == 0) mpu9250_read_mag(&_mpu9250, &_imu.raw);
+            //LOG_I(TAG, "ACC[0] %5d | ACC[1] %5d | ACC[2] %5d", _imu.raw.accel[0], _imu.raw.accel[1], _imu.raw.accel[2]);
+            //LOG_I(TAG, "gyro[0] %5d | gyro[1] %5d | gyro[2] %5d", _imu.raw.gyro[0], _imu.raw.gyro[1], _imu.raw.gyro[2]);
+
+            if (cnt == 0) 
+            {
+                mpu9250_read_mag(&_mpu9250, &_imu.raw);
+                //int deg = 180 + atan2(_imu.raw.mag[1], _imu.raw.mag[0]) * 180 / PI;
+                //LOG_I(TAG, "mag[0] %5d | mag[1] %5d | mag[2] %5d | deg %3d", _imu.raw.mag[0], _imu.raw.mag[1], _imu.raw.mag[2], deg);
+            }
             cnt++;
             if (cnt >= 25) cnt = 0;
         }
@@ -225,6 +255,7 @@ static void imu_task(void *pvParameters)
         ATP_SET_FLOAT(TAG_TRACKER_ROLL, _imu.data.orientation[0], time_micros_now());
         ATP_SET_FLOAT(TAG_TRACKER_PITCH, _imu.data.orientation[1], time_micros_now());
         ATP_SET_FLOAT(TAG_TRACKER_YAW, _imu.data.orientation[2], time_micros_now());
+        ATP_SET_U32(TAG_TRACKER_IMU_HZ, fq_hz, time_micros_now());
 
         if (_imu.mode != imu_mode_normal)
         {
@@ -269,6 +300,12 @@ static void imu_task(void *pvParameters)
 
         xSemaphoreGive(_mutex);
         _loop_cnt++;
+
+        fq_hz = (_loop_cnt * 1000 / (time_millis_now() - fq));
+        _imu.filter.invSampleFreq = 1.0f / fq_hz;
+#if USE_MADGWICK == 1
+        _imu.filter.sampleFreq = fq_hz;
+#endif
     }
 }
 

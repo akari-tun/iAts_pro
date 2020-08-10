@@ -149,11 +149,17 @@ static void ak8963_read_all(mpu9250_t *mpu9250, imu_sensor_data_t *imu)
 {
   uint8_t data[7];
 
-  ak8963_read_data(mpu9250, AK8963_HXL, data, 7);
-  //printf("[0][%d]    [1][%d]\r\n", data[0], data[1]);
-  imu->mag[0] = (int16_t)(data[1] << 8 | data[0]);
-  imu->mag[1] = (int16_t)(data[3] << 8 | data[2]);
-  imu->mag[2] = (int16_t)(data[5] << 8 | data[4]);
+  if(ak8963_read_reg(mpu9250, AK8963_ST1) & 0x01) 
+  {
+    ak8963_read_data(mpu9250, AK8963_HXL, data, 7);
+    //printf("[0][%d]    [1][%d]\r\n", data[0], data[1]);
+    uint8_t c = data[6];
+    if(!(c & 0x08)) { 
+      imu->mag[0] = (int16_t)(data[1] << 8 | data[0]);
+      imu->mag[1] = (int16_t)(data[3] << 8 | data[2]);
+      imu->mag[2] = (int16_t)(data[5] << 8 | data[4]);
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
