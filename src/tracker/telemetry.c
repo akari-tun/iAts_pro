@@ -126,7 +126,13 @@ const char *telemetry_format_u8(const telemetry_t *val, char *buf, size_t bufsiz
 
 const char *telemetry_format_u16(const telemetry_t *val, char *buf, size_t bufsize)
 {
-    snprintf(buf, bufsize, "%d", val->val.u8);
+    snprintf(buf, bufsize, "%d", val->val.u16);
+    return buf;
+}
+
+const char *telemetry_format_u32(const telemetry_t *val, char *buf, size_t bufsize)
+{
+    snprintf(buf, bufsize, "%d", val->val.u32);
     return buf;
 }
 

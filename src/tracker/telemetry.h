@@ -66,6 +66,7 @@ const char *telemetry_format_ahrs(const telemetry_t *val, char *buf, size_t bufs
 const char *telemetry_format_gps_fix(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_u8(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_u16(const telemetry_t *val, char *buf, size_t bufsize);
+const char *telemetry_format_u32(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_coordinate(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_horizontal_speed(const telemetry_t *val, char *buf, size_t bufsize);
 const char *telemetry_format_hdop(const telemetry_t *val, char *buf, size_t bufsize);
