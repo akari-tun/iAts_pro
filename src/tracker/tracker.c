@@ -7,6 +7,8 @@
 #include "protocols/atp.h"
 #include "util/calc.h"
 #include "sensors/imu_task.h"
+#include "home.h"
+#include "plane.h"
 
 static const char *TAG = "Tarcker";
 static servo_t servo;
@@ -65,6 +67,9 @@ static void tracker_flag_changed(void *t, uint8_t f, uint8_t v)
 
     ATP_SET_U8(TAG_TRACKER_FLAG, tracker->internal.flag, now);
     tracker->internal.flag_changed_notifier->mSubject.Notify(tracker->internal.flag_changed_notifier, &f);
+
+    if (f == TRACKER_FLAG_PLANESETED) tracker->plane->seted = tracker->internal.flag & TRACKER_FLAG_PLANESETED;
+    if (f == TRACKER_FLAG_HOMESETED) tracker->home->seted = tracker->internal.flag & TRACKER_FLAG_HOMESETED;
 }
 
 static void tracker_telemetry_changed(void *t, uint8_t tag)
@@ -195,55 +200,55 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_SET))
+    if (SETTING_IS(setting, SETTING_KEY_HOME_SET))
     {
         if (t->internal.flag && TRACKER_FLAG_PLANESETED)
         {
             time_micros_t now = time_micros_now();
 
             telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)), now);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LAT), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)));
-            t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
-
             telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)), now);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LON), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)));
-            t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
-
             telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)), now);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE)));
+
+            home_update(t->home);
+
+            t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
+            t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
             t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
+
+            home_save(t->home);
         }
 
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_RECOVER))
+    if (SETTING_IS(setting, SETTING_KEY_HOME_RECOVER))
     {
         time_micros_t now = time_micros_now();
 
-        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_LAT), now);
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), settings_get_key_i32(SETTING_KEY_HOME_LAT), now);
         t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
-        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_LON), now);
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), settings_get_key_i32(SETTING_KEY_HOME_LON), now);
         t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
-        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), settings_get_key_i32(SETTING_KEY_TRACKER_HOME_ALT), now);
+        telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), settings_get_key_i32(SETTING_KEY_HOME_ALT), now);
         t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
 
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_TRACKER_HOME_CLEAR))
+    if (SETTING_IS(setting, SETTING_KEY_HOME_CLEAR))
     {
         time_micros_t now = time_micros_now();
         int32_t zero = 0;
 
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), zero, now);
-        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LAT), zero);
+        setting_set_i32(settings_get_key(SETTING_KEY_HOME_LAT), zero);
 
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), zero, now);
-        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LON), zero);
+        setting_set_i32(settings_get_key(SETTING_KEY_HOME_LON), zero);
 
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), zero, now);
-        setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), zero);
+        setting_set_i32(settings_get_key(SETTING_KEY_HOME_ALT), zero);
 
         t->internal.flag_changed(t, TRACKER_FLAG_HOMESETED, 0);
 
@@ -265,6 +270,12 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
     if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG))
     {
         imu_task_do_mag_calibration();
+        return;
+    }
+
+        if (SETTING_IS(setting, SETTING_KEY_HOME_REAL_TIME))
+    {
+        t->home->real_time = settings_get_key_bool(SETTING_KEY_HOME_REAL_TIME);
         return;
     }
 }
@@ -415,7 +426,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
 
     if (uart->input != NULL)
     {
-        uart->input->home_source = uart->com == settings_get_key_u8(SETTING_KEY_TRACKER_HOME_SOURCE);
+        uart->input->home_source = uart->com == settings_get_key_u8(SETTING_KEY_HOME_SOURCE);
         input_open(&t->atp, uart->input, uart->input_config);
     }
 }
@@ -469,6 +480,12 @@ static void tracker_reconfigure_output(tracker_t *t, uart_t *uart)
 void tracker_init(tracker_t *t)
 {
     esp_log_level_set(TAG, ESP_LOG_INFO);
+
+    t->plane = (plane_t *)malloc(sizeof(plane_t));
+    plane_init(t->plane);
+
+    t->home = (home_t *)malloc(sizeof(home_t));
+    home_init(t->home);
 
     ease_config_t e_cfg = {
         .max_steps = settings_get_key_u16(SETTING_KEY_SERVO_EASE_MAX_STEPS),
@@ -598,8 +615,9 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) /  10000000.0f;
-                    float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) /  10000000.0f;
+                    plane_update(t->plane);
+                    //float plane_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LATITUDE)) /  10000000.0f;
+                    //float plane_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_LONGITUDE)) /  10000000.0f;
 
                     //Estimate the vehicle's advance position
                     if (t->internal.advanced_position)
@@ -609,19 +627,19 @@ void tracker_task(void *arg)
                         float advanced_plane_lat = 0;
                         float advanced_plane_lon = 0;
 
-                        distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
+                        distance_move_to(t->plane->latitude, t->plane->longitude, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
                             &advanced_plane_lat, &advanced_plane_lon);
 
-                        LOG_D(TAG, "[Adv Pos] plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, advanced_plane_lat, advanced_plane_lon);
+                        LOG_D(TAG, "[Adv Pos] plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", t->plane->latitude, t->plane->longitude, advanced_plane_lat, advanced_plane_lon);
 
-                        plane_lat = advanced_plane_lat;
-                        plane_lon = advanced_plane_lon;
+                        t->plane->latitude = advanced_plane_lat;
+                        t->plane->longitude = advanced_plane_lon;
                     }
 
                     //Estimate the position of the vehicle at the next time point
                     if (t->internal.estimate_location)
                     {
-                        if (plane_lat == t->internal.estimate[estimate_index].latitude && plane_lon == t->internal.estimate[estimate_index].longitude)
+                        if (t->plane->latitude == t->internal.estimate[estimate_index].latitude && t->plane->longitude == t->internal.estimate[estimate_index].longitude)
                         {
                             time_millis_t move_time = now - t->internal.estimate[estimate_index].location_time;
 
@@ -640,35 +658,36 @@ void tracker_task(void *arg)
                             float estimate_plane_lat = 0;
                             float estimate_plane_lon = 0;
 
-                            distance_move_to(plane_lat, plane_lon, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
+                            distance_move_to(t->plane->latitude, t->plane->longitude, telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING)), dist / 1000.0f, 
                                 &estimate_plane_lat, &estimate_plane_lon);
 
-                            LOG_D(TAG, "[Est Loc] plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", plane_lat, plane_lon, estimate_plane_lat, estimate_plane_lon);
+                            LOG_D(TAG, "[Est Loc] plane_lat:%f, plane_lon:%f, new_plane_lat:%f, new_plane_lon:%f", t->plane->latitude, t->plane->longitude, estimate_plane_lat, estimate_plane_lon);
 
-                            plane_lat = estimate_plane_lat;
-                            plane_lon = estimate_plane_lon;
+                            t->plane->latitude = estimate_plane_lat;
+                            t->plane->longitude = estimate_plane_lon;
                         }
                         else
                         {
                             LOG_D(TAG, "[Est Loc] estimate_index:%d", estimate_index);
                             estimate_index++;
                             if (estimate_index > 4) estimate_index = 0;
-                            t->internal.estimate[estimate_index].latitude = plane_lat;
-                            t->internal.estimate[estimate_index].longitude = plane_lon;
+                            t->internal.estimate[estimate_index].latitude = t->plane->latitude;
+                            t->internal.estimate[estimate_index].longitude = t->plane->longitude;
                             t->internal.estimate[estimate_index].location_time = now;
                             t->internal.estimate[estimate_index].speed = telemetry_get_i16(atp_get_telemetry_tag_val(TAG_PLANE_SPEED));
                             t->internal.estimate[estimate_index].direction = telemetry_get_u16(atp_get_telemetry_tag_val(TAG_PLANE_HEADING));
                         }
                     }
                     
-                    float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
-                    float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+                    //float tracker_lat = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)) / 10000000.0f;
+                    //float tracker_lon = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)) / 10000000.0f;
+                    home_update(t->home);
 
-                    distance = distance_between(tracker_lat, tracker_lon, plane_lat, plane_lon);
+                    distance = distance_between(t->home->latitude, t->home->longitude, t->plane->latitude, t->plane->longitude);
 
-                    LOG_D(TAG, "[pan] t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d", tracker_lat, tracker_lon, plane_lat, plane_lon, distance);
+                    LOG_D(TAG, "[pan] t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d", t->home->latitude, t->home->longitude, t->plane->latitude, t->plane->longitude, distance);
 
-                    uint16_t course_deg = course_to(tracker_lat, tracker_lon, plane_lat, plane_lon);
+                    uint16_t course_deg = course_to(t->home->latitude, t->home->longitude, t->plane->latitude, t->plane->longitude);
                     course_deg = course_deg + servo.internal.course;
                     if (course_deg >= 360u)
                     {
@@ -699,12 +718,14 @@ void tracker_task(void *arg)
             {
                 if (t->internal.flag & (TRACKER_FLAG_HOMESETED | TRACKER_FLAG_PLANESETED) && t->internal.status == TRACKER_STATUS_TRACKING)
                 {
-                    int32_t tracker_alt =  t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE));
-                    int32_t plane_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE));
+                    home_update(t->home);
+                    plane_update(t->plane);
+                    //int32_t tracker_alt =  t->internal.real_alt ? 0 : telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE));
+                    //int32_t plane_alt = telemetry_get_i32(atp_get_telemetry_tag_val(TAG_PLANE_ALTITUDE));
 
-                    uint16_t tilt_deg = tilt_to(distance, tracker_alt, plane_alt);
+                    uint16_t tilt_deg = tilt_to(distance, t->internal.real_alt ? 0 : t->home->altitude, t->plane->altitude);
 
-                    LOG_D(TAG, "[tilt] t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", tracker_alt, plane_alt, distance, tilt_deg);
+                    LOG_D(TAG, "[tilt] t_alt:%d | p_alt:%d | dist:%d | tilt_deg:%d", t->home->altitude, t->plane->altitude, distance, tilt_deg);
 
                     if (tilt_deg != servo.internal.tilt.currtent_degree || servo.internal.tilt.is_reverse != servo.internal.pan.is_reverse)
                     {

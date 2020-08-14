@@ -20,6 +20,8 @@
 
 typedef struct _Notifier notifier_t;
 typedef struct atp_s atp_t;
+typedef struct home_s home_t;
+typedef struct plane_s plane_t;
 
 typedef enum
 {
@@ -122,6 +124,9 @@ typedef struct tracker_s
         notifier_t *flag_changed_notifier;
         location_estimate_t *estimate;
     } internal;
+
+    plane_t *plane;
+    home_t *home;
 
     uart_t uart1;
     uart_t uart2;
