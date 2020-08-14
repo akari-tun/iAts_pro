@@ -59,6 +59,8 @@ static bool input_nmea_open(void *input, void *config)
     input_nmea->nmea->io->flags = (io_flags_f)&serial_port_io_flags;
     input_nmea->nmea->io->data = input_nmea->serial_port;
 
+    input_nmea->nmea->home_source = input_nmea->input.home_source;
+
     return true;
 }
 

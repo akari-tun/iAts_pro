@@ -42,13 +42,25 @@ int nmea_update(nmea_t *nmea, void *data)
             time_micros_t now = time_micros_now();
             atp_t *atp = (atp_t *)data;
 
-            ATP_SET_I32(TAG_PLANE_LONGITUDE, (int32_t)(gps.longitude * 10000000.0f), now);
-            ATP_SET_I32(TAG_PLANE_LATITUDE, (int32_t)(gps.latitude * 10000000.0f), now);
-            ATP_SET_I32(TAG_PLANE_ALTITUDE, (int32_t)(gps.altitude * 100), now);
-            ATP_SET_I16(TAG_PLANE_SPEED, (int16_t)gps_to_speed(gps.speed, gps_speed_mps), now);
-            ATP_SET_U16(TAG_PLANE_HEADING, (uint16_t)gps.coarse, now);
-            atp->tag_value_changed(atp->tracker, TAG_PLANE_LATITUDE);
-            atp->tag_value_changed(atp->tracker, TAG_PLANE_LONGITUDE);
+            if (nmea->home_source)
+            {
+                ATP_SET_I32(TAG_TRACKER_LONGITUDE, (int32_t)(gps.longitude * 10000000.0f), now);
+                ATP_SET_I32(TAG_TRACKER_LATITUDE, (int32_t)(gps.latitude * 10000000.0f), now);
+                ATP_SET_I32(TAG_TRACKER_ALTITUDE, (int32_t)(gps.altitude * 100), now);
+                atp->tag_value_changed(atp->tracker, TAG_TRACKER_LATITUDE);
+                atp->tag_value_changed(atp->tracker, TAG_TRACKER_LONGITUDE);
+            }
+            else
+            {
+                ATP_SET_I32(TAG_PLANE_LONGITUDE, (int32_t)(gps.longitude * 10000000.0f), now);
+                ATP_SET_I32(TAG_PLANE_LATITUDE, (int32_t)(gps.latitude * 10000000.0f), now);
+                ATP_SET_I32(TAG_PLANE_ALTITUDE, (int32_t)(gps.altitude * 100), now);
+                ATP_SET_I16(TAG_PLANE_SPEED, (int16_t)gps_to_speed(gps.speed, gps_speed_mps), now);
+                ATP_SET_U16(TAG_PLANE_HEADING, (uint16_t)gps.coarse, now);
+                atp->tag_value_changed(atp->tracker, TAG_PLANE_LATITUDE);
+                atp->tag_value_changed(atp->tracker, TAG_PLANE_LONGITUDE);
+            }
+            
 
             ret = 1;
         }

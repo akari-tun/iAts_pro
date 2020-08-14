@@ -16,6 +16,7 @@ typedef struct msp_transport_s msp_transport_t;
 typedef struct input_s
 {
     bool is_open;
+    bool home_source;
     void *data;
     input_vtable_t vtable;
 } input_t;

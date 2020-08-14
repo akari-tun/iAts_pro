@@ -11,6 +11,7 @@ typedef struct nmea_s
     io_t *io;
     uint8_t buf[NMEA_FRAME_SIZE_MAX * 2];
     int buf_pos;
+    bool home_source;
 
     gps_t *gps;
     

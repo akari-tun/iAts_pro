@@ -22,3 +22,11 @@ typedef enum
     PROTOCOL_IO_INPUT = 0,
     PROTOCOL_IO_OUTPUT = 1,
 } protocol_io_type_e;
+
+typedef enum
+{
+    PROTOCOL_IO_ATP = 0,
+    PROTOCOL_IO_BLUETOOTH,
+    PROTOCOL_IO_UART1,
+    PROTOCOL_IO_UART2
+} protocol_io_source_e;

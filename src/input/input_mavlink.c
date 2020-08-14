@@ -63,6 +63,8 @@ static bool input_mavlink_open(void *input, void *config)
     input_mavlink->mavlink->io->flags = (io_flags_f)&serial_port_io_flags;
     input_mavlink->mavlink->io->data = input_mavlink->serial_port;
 
+    input_mavlink->mavlink->home_source = input_mavlink->input.home_source;
+
     return true;
 }
 

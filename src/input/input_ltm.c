@@ -60,6 +60,8 @@ static bool input_ltm_open(void *input, void *config)
     input_ltm->ltm->io->flags = (io_flags_f)&serial_port_io_flags;
     input_ltm->ltm->io->data = input_ltm->serial_port;
 
+    input_ltm->ltm->home_source = input_ltm->input.home_source;
+
     return true;
 }
 

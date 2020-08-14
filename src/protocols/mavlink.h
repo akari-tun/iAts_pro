@@ -22,6 +22,7 @@ typedef struct mavlink_s
     mavlink_message_t *message;
     uint8_t counter;
     float link_quality;
+    bool home_source;
 
     struct 
     {

@@ -91,6 +91,8 @@ typedef struct ltm_s
 {
     telemetry_t *plane_vals;
     io_t *io;
+    bool home_source;
+
     uint8_t buf[LTM_BUFFER_SIZE * 2];
     uint8_t payload[LTM_MAX_PAYLOAD_SIZE];
     uint8_t buf_pos;
