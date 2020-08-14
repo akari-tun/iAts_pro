@@ -415,6 +415,7 @@ static void tracker_reconfigure_input(tracker_t *t, uart_t *uart)
 
     if (uart->input != NULL)
     {
+        uart->input->home_source = uart->com == settings_get_key_u8(SETTING_KEY_TRACKER_HOME_SOURCE);
         input_open(&t->atp, uart->input, uart->input_config);
     }
 }
