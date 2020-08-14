@@ -385,7 +385,7 @@ static void atp_cmd_sethome(atp_frame_t *frame)
             int32_t lon = (int32_t)tagread_u32(frame);
             ATP_SET_I32(TAG_TRACKER_LONGITUDE, lon, now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_LONGITUDE);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LON), lon);
+            setting_set_i32(settings_get_key(SETTING_KEY_HOME_LON), lon);
             // printf("TAG_TRACKER_LONGITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE)));
             break;
         case TAG_TRACKER_LATITUDE: //tarcker's latitude L:4
@@ -393,7 +393,7 @@ static void atp_cmd_sethome(atp_frame_t *frame)
             int32_t lat = (int32_t)tagread_u32(frame);
             ATP_SET_I32(TAG_TRACKER_LATITUDE, lat, now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_LATITUDE);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_LAT), lat);
+            setting_set_i32(settings_get_key(SETTING_KEY_HOME_LAT), lat);
             // printf("TAG_TRACKER_LATITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE)));
             break;
         case TAG_TRACKER_ALTITUDE: //tarcker's altitude L:4
@@ -401,7 +401,7 @@ static void atp_cmd_sethome(atp_frame_t *frame)
             int32_t alt = (int32_t)tagread_u32(frame);
             ATP_SET_I32(TAG_TRACKER_ALTITUDE, alt, now);
             atp->tag_value_changed(atp->tracker, TAG_TRACKER_ALTITUDE);
-            setting_set_i32(settings_get_key(SETTING_KEY_TRACKER_HOME_ALT), alt);
+            setting_set_i32(settings_get_key(SETTING_KEY_HOME_ALT), alt);
             // printf("TAG_TRACKER_ALTITUDE:%d\n", telemetry_get_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE)));
             break;
         case TAG_TRACKER_MODE: //tarcker's mode L:1
