@@ -11,6 +11,8 @@
    To calculate offset/scale, we use a typical 6 axis sampling/calibration mechanism.
 */
 
+const static char *TAG = "ACC_CAL";
+
 static int32_t _sample_count[6];
 static int32_t _acc_sum[6][3];
 static int32_t _offset[3];
@@ -85,7 +87,7 @@ void accel_calibration_update(int16_t ax, int16_t ay, int16_t az)
     if (_axis_idx != axis_ndx)
     {
         _axis_idx = axis_ndx;
-        LOG_I("CALI", "Calibration Axis [%d] x[%d] y[%d] z[%d]", _axis_idx, ax, ay, az);
+        LOG_I(TAG, "Calibration Axis [%d] x[%d] y[%d] z[%d]", _axis_idx, ax, ay, az);
     }
     
     sensorCalibrationPushSampleForOffsetCalculation(&_cal_state, accel_value);
@@ -115,16 +117,19 @@ void accel_calibration_finish(int16_t offsets[3], int16_t gains[3])
 
     for (int axis = 0; axis < 6; axis++)
     {
-        LOG_I("CALI", "axis[%d] ->  _acc_sum[0] = %d | _acc_sum[1] = %d | _acc_sum[2] = %d | _sample_count = %d", axis, _acc_sum[axis][0], _acc_sum[axis][1], _acc_sum[axis][2], _sample_count[axis]);
+        LOG_I(TAG, "axis[%d] ->  _acc_sum[0] = %d | _acc_sum[1] = %d | _acc_sum[2] = %d | _sample_count = %d", axis, _acc_sum[axis][0], _acc_sum[axis][1], _acc_sum[axis][2], _sample_count[axis]);
     }
 
     for (int axis = 0; axis < 6; axis++)
     {
-        sample[0] = _acc_sum[axis][0] / _sample_count[axis] - _offset[0];
-        sample[1] = _acc_sum[axis][1] / _sample_count[axis] - _offset[1];
-        sample[2] = _acc_sum[axis][2] / _sample_count[axis] - _offset[2];
+        if (_sample_count[axis] != 0)
+        {
+            sample[0] = _acc_sum[axis][0] / _sample_count[axis] - _offset[0];
+            sample[1] = _acc_sum[axis][1] / _sample_count[axis] - _offset[1];
+            sample[2] = _acc_sum[axis][2] / _sample_count[axis] - _offset[2];
 
-        sensorCalibrationPushSampleForScaleCalculation(&_cal_state, axis / 2, sample, ACCEL_GAIN_REF);
+            sensorCalibrationPushSampleForScaleCalculation(&_cal_state, axis / 2, sample, ACCEL_GAIN_REF);
+        }
     }
 
     sensorCalibrationSolveForScale(&_cal_state, tmp);
