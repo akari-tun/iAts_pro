@@ -1121,7 +1121,8 @@ static void screen_draw_calibration_acc(screen_t *s)
         if (s->internal.tracker->imu->calibration_time > 0)
         {
             snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%d", s->internal.tracker->imu->calibration_time);
-            u8g2_SetFontPosCenter(&u8g2);
+            //u8g2_SetFontPosCenter(&u8g2);
+            tw = u8g2_GetStrWidth(&u8g2, buf);
             u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
         }
         else
@@ -1136,7 +1137,7 @@ static void screen_draw_calibration_acc(screen_t *s)
             }
 
             u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-            u8g2_SetFontPosCenter(&u8g2);
+            //u8g2_SetFontPosCenter(&u8g2);
             tw = u8g2_GetStrWidth(&u8g2, buf);
             u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
         }
@@ -1154,6 +1155,7 @@ static void screen_draw_calibration_acc(screen_t *s)
 
 static void screen_draw_calibration(screen_t *s)
 {
+    uint16_t tw;
     char *buf = SCREEN_BUF(s);
     u8g2_SetFontPosCenter(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_profont15_tf);
@@ -1161,9 +1163,10 @@ static void screen_draw_calibration(screen_t *s)
     if (s->internal.tracker->imu->calibration_time > 0)
     {
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "Calibration");
-        uint16_t tw = u8g2_GetStrWidth(&u8g2, buf);
+        tw = u8g2_GetStrWidth(&u8g2, buf);
         u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) * 3, buf);
         snprintf(buf, SCREEN_DRAW_BUF_SIZE, "%d", s->internal.tracker->imu->calibration_time);
+        tw = u8g2_GetStrWidth(&u8g2, buf);
         u8g2_DrawStr(&u8g2, (s->internal.w - tw) / 2, s->internal.h - (s->internal.h / 4) - 3, buf);
     }
     else
