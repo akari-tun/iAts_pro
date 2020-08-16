@@ -5,6 +5,7 @@
 #include "hal/log.h"
 
 #include "imu.h"
+#include "tracker/observer.h"
 #include "config/settings.h"
 #include "mag_calibration.h"
 #include "gyro_calibration.h"
@@ -210,6 +211,9 @@ void imu_init(imu_t *imu)
 {
     memset(imu, 0, sizeof(imu_t));
 
+    imu->cal_step_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
+    imu->cal_done_notifier = (notifier_t *)Notifier_Create(sizeof(notifier_t));
+
     imu->mode = imu_mode_normal;
 
     imu->cal.accel_scale[0] =
@@ -273,6 +277,7 @@ void imu_mag_calibration_finish(imu_t *imu)
 {
     imu->mode = imu_mode_normal;
     mag_calibration_finish(imu->cal.mag_bias);
+    imu->cal_done_notifier->mSubject.Notify(imu->cal_done_notifier, imu);
 }
 
 void imu_gyro_calibration_start(imu_t *imu)
@@ -285,6 +290,7 @@ void imu_gyro_calibration_finish(imu_t *imu)
 {
     imu->mode = imu_mode_normal;
     gyro_calibration_finish(imu->cal.gyro_off);
+    imu->cal_done_notifier->mSubject.Notify(imu->cal_done_notifier, imu);
 }
 
 void imu_accel_calibration_init(imu_t *imu)
@@ -300,12 +306,14 @@ void imu_accel_calibration_step_start(imu_t *imu)
 void imu_accel_calibration_step_stop(imu_t *imu)
 {
     imu->mode = imu_mode_normal;
+    imu->cal_step_notifier->mSubject.Notify(imu->cal_step_notifier, imu);
 }
 
 void imu_accel_calibration_finish(imu_t *imu)
 {
     imu->mode = imu_mode_normal;
     accel_calibration_finish(imu->cal.accel_off, imu->cal.accel_scale);
+    imu->cal_done_notifier->mSubject.Notify(imu->cal_done_notifier, imu);
 }
 
 bool imu_is_available(imu_t *imu)

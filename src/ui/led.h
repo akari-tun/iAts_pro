@@ -100,6 +100,10 @@ typedef enum
 
     LED_MODE_SETED,
 
+    LED_MODE_CAL_STEP,
+
+    LED_MODE_CAL_DONE,
+
     LED_MODE_COUNT,
 
 } led_mode_e;

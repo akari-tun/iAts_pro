@@ -35,6 +35,8 @@ static power_t power;
 static Observer ui_status_observer;
 static Observer ui_flag_observer;
 static Observer ui_reverse_observer;
+static Observer ui_imu_calibration_step_done_observer;
+static Observer ui_imu_calibration_done_observer;
 
 static void ui_status_updated(void *notifier, void *s)
 {
@@ -197,6 +199,32 @@ static void ui_reverse_updated(void *notifier, void *r)
     beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_REVERSING);
 #endif
     LOG_I(TAG, "Sevro turn round.");
+}
+
+static void ui_imu_calibration_step_done(void *notifier, void *r)
+{
+    UNUSED(r);
+
+    led_mode_add(LED_MODE_CAL_STEP);
+#if defined(USE_BEEPER)
+    Observer *obs = (Observer *)notifier;
+    ui_t *ui = (ui_t *)obs->Obj;
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_CAL_STEP);
+#endif
+    LOG_I(TAG, "Calibration step done.");
+}
+
+static void ui_imu_calibration_done(void *notifier, void *r)
+{
+    UNUSED(r);
+
+    led_mode_add(LED_MODE_CAL_DONE);
+#if defined(USE_BEEPER)
+    Observer *obs = (Observer *)notifier;
+    ui_t *ui = (ui_t *)obs->Obj;
+    beeper_set_mode(&ui->internal.beeper, BEEPER_MODE_CAL_DONE);
+#endif
+    LOG_I(TAG, "Calibration done.");
 }
 
 #if defined(USE_WIFI)
@@ -646,6 +674,16 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
     ui_reverse_observer.Name = "UI reverseing observer";
     ui_reverse_observer.Update = ui_reverse_updated;
     tracker->servo->internal.reverse_notifier->mSubject.Attach(tracker->servo->internal.reverse_notifier, &ui_reverse_observer);
+
+    ui_imu_calibration_step_done_observer.Obj = ui;
+    ui_imu_calibration_step_done_observer.Name = "UI cal_step observer";
+    ui_imu_calibration_step_done_observer.Update = ui_imu_calibration_step_done;
+    tracker->imu->cal_step_notifier->mSubject.Attach(tracker->imu->cal_step_notifier, &ui_imu_calibration_step_done_observer);
+
+    ui_imu_calibration_done_observer.Obj = ui;
+    ui_imu_calibration_done_observer.Name = "UI cal_done observer";
+    ui_imu_calibration_done_observer.Update = ui_imu_calibration_done;
+    tracker->imu->cal_done_notifier->mSubject.Attach(tracker->imu->cal_done_notifier, &ui_imu_calibration_done_observer);
 
     // #if defined(LED_1_USE_WS2812)
     //     led_init(&ui->internal.led_gradual_target);

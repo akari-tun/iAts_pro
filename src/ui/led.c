@@ -109,6 +109,25 @@ static const led_stage_t seted_stages[] = {
 };
 LED_PATTERN(seted_pattern, seted_stages, 1);
 
+static const led_stage_t cal_step_stages[] = {
+    LED_STAGE(255, HAL_WS2812_GREEN, 75, 0),
+};
+LED_PATTERN(cal_step_pattern, cal_step_stages, 1);
+
+static const led_stage_t cal_done_stages[] = {
+    LED_STAGE(255, HAL_WS2812_GREEN, 40, 0),
+    LED_STAGE_OFF(75, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 40, 0),
+    LED_STAGE_OFF(75, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 40, 0),
+    LED_STAGE_OFF(75, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 40, 0),
+    LED_STAGE_OFF(75, 0),
+    LED_STAGE(255, HAL_WS2812_GREEN, 40, 0),
+    LED_STAGE_OFF(75, 0),
+};
+LED_PATTERN(cal_done_pattern, cal_done_stages, 1);
+
 static const led_pattern_t *patterns[] = {
     [LED_MODE_NONE] = &none_pattern,
     [LED_MODE_TRACKING] = &tracking_pattern,
@@ -118,6 +137,8 @@ static const led_pattern_t *patterns[] = {
     [LED_MODE_BOOT] = &boot_pattern,
     [LED_MODE_REVERSING] = &reversing_pattern,
     [LED_MODE_SETED] = &seted_pattern,
+    [LED_MODE_CAL_STEP] = &cal_step_pattern,
+    [LED_MODE_CAL_DONE] = &cal_done_pattern
 };
 
 _Static_assert(LED_MODE_COUNT == ARRAY_COUNT(patterns), "invalid number of LED patterns");

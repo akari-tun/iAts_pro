@@ -10,6 +10,8 @@
 
 #define IMU_POLL_INTERVAL 2
 
+typedef struct _Notifier notifier_t;
+
 typedef enum
 {
     imu_mode_normal,
@@ -93,6 +95,9 @@ typedef struct
     float update_rate;
     bool enable;
     bool available;
+
+    notifier_t *cal_step_notifier;
+    notifier_t *cal_done_notifier;
 } imu_t;
 
 extern void imu_init(imu_t *imu);
