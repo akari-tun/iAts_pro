@@ -227,10 +227,13 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         time_micros_t now = time_micros_now();
 
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LATITUDE), settings_get_key_i32(SETTING_KEY_HOME_LAT), now);
-        t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_LONGITUDE), settings_get_key_i32(SETTING_KEY_HOME_LON), now);
-        t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
         telemetry_set_i32(atp_get_telemetry_tag_val(TAG_TRACKER_ALTITUDE), settings_get_key_i32(SETTING_KEY_HOME_ALT), now);
+
+        home_update(t->home);
+
+        t->atp->tag_value_changed(t, TAG_TRACKER_LATITUDE);
+        t->atp->tag_value_changed(t, TAG_TRACKER_LONGITUDE);
         t->atp->tag_value_changed(t, TAG_TRACKER_ALTITUDE);
 
         return;
@@ -273,9 +276,16 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         return;
     }
 
-        if (SETTING_IS(setting, SETTING_KEY_HOME_REAL_TIME))
+    if (SETTING_IS(setting, SETTING_KEY_HOME_REAL_TIME))
     {
         t->home->real_time = settings_get_key_bool(SETTING_KEY_HOME_REAL_TIME);
+        return;
+    }
+
+    if (SETTING_IS(setting, SETTING_KEY_HOME_AUTO_COURSE))
+    {
+        t->home->auto_course = settings_get_key_bool(SETTING_KEY_HOME_AUTO_COURSE);
+        if (!t->home->auto_course) t->home->heading = t->servo->internal.course;
         return;
     }
 }
@@ -688,7 +698,8 @@ void tracker_task(void *arg)
                     LOG_D(TAG, "[pan] t_lat:%f | t_lon:%f | p_lat:%f | p_lon:%f | dist:%d", t->home->latitude, t->home->longitude, t->plane->latitude, t->plane->longitude, distance);
 
                     uint16_t course_deg = course_to(t->home->latitude, t->home->longitude, t->plane->latitude, t->plane->longitude);
-                    course_deg = course_deg + servo.internal.course;
+                    course_deg = course_deg + (t->home->auto_course ? t->home->heading : servo.internal.course);
+
                     if (course_deg >= 360u)
                     {
                         course_deg = course_deg - 360u;

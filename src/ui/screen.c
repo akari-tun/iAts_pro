@@ -20,6 +20,7 @@
 #include "menu.h"
 #include "screen.h"
 #include "tracker/tracker.h"
+#include "tracker/home.h"
 #include "wifi/wifi.h"
 #include "config/settings.h"
 #include "sensors/imu_task.h"
@@ -307,6 +308,7 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
             servo_status_t *servo_pan = &screen->internal.tracker->servo->internal.pan;
             uint16_t deg = (servo_pan->currtent_pulsewidth - config->min_pulsewidth) / ((config->max_pulsewidth - config->min_pulsewidth) / config->max_degree);
             if (servo_pan->is_reverse) deg = 359 - deg;
+            t->home->heading = deg;
             t->servo->internal.course = deg;
             setting_set_u16(setting_course, deg);
             
@@ -320,7 +322,8 @@ static bool screen_button_enter_press(screen_t *screen, const button_event_t *ev
         {
             const setting_t *setting_course = settings_get_key(SETTING_KEY_SERVO_COURSE);
             uint16_t deg = 0;
-            screen->internal.tracker->servo->internal.course = deg;
+            t->servo->internal.course = deg;
+            t->home->heading = deg;
             setting_set_u16(setting_course, deg);
 
             LOG_I(TAG, "Course degree set to %d", deg);
@@ -379,14 +382,14 @@ static bool screen_button_right_press(screen_t *screen, const button_event_t *ev
         {
             screen->internal.main_secondary_mode = screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_NUM - 1 ? SCREEN_MAIN_SECONDARY_MODE_DEFAULT : screen->internal.main_secondary_mode + 1;
 
-        if (!screen->internal.tracker->imu->enable)
-        {
-            if (screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_IMU || 
-                screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL)
+            if (!screen->internal.tracker->imu->enable)
             {
-                screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
+                if (screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_IMU || 
+                    screen->internal.main_secondary_mode == SCREEN_MAIN_SECONDARY_MODE_HORIZONTAL)
+                {
+                    screen->internal.main_secondary_mode = SCREEN_MAIN_SECONDARY_MODE_DEFAULT;
+                }
             }
-        }
 
             return true;
         }
@@ -406,6 +409,7 @@ static bool screen_button_up_press(screen_t *screen, const button_event_t *ev)
             return screen_manual_button_handle(t, ev->button);
         }
     }
+    
 
     return false;
 }
@@ -807,7 +811,7 @@ static void screen_draw_main(screen_t *s)
 #endif
 
     u8g2_SetFont(&u8g2, u8g2_font_profont10_tf);
-    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "C->%d", s->internal.tracker->servo->internal.course);
+    snprintf(buf, SCREEN_DRAW_BUF_SIZE, "C->%d", s->internal.tracker->home->heading);
     u8g2_DrawStr(&u8g2, icon_index, 0, buf);
     icon_index += (u8g2_GetStrWidth(&u8g2, buf) + 1);
     u8g2_DrawHLine(&u8g2, icon_index, 0, 2);

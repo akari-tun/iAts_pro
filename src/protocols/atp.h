@@ -42,7 +42,7 @@
 #define TAG_TRACKER_LONGITUDE					   0x40      //家的经度 L:4
 #define TAG_TRACKER_LATITUDE					   0x41      //家的纬度 L:4
 #define TAG_TRACKER_ALTITUDE					   0x42      //家的高度 L:4
-#define TAG_TRACKER_HEADING						   0x43      //家的朝向 L:2
+#define TAG_TRACKER_HEADING						   0x43      //家的指向 L:2
 #define TAG_TRACKER_PITCH  						   0x44      //家的俯仰 L:2
 #define TAG_TRACKER_VOLTAGE						   0x45      //家的电压 L:2
 #define TAG_TRACKER_MODE						   0x46      //家的模式 L:1
