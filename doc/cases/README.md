@@ -1,3 +1,6 @@
+### Body
+I provide STL files that can be sliced, and STP files that can be modified, so that you can modify the shell according to your own requirements.
+
 ### Print parameter
 I use PLA filament to print this cases, 0.2mm resolution and 50% infill, at 1mm wall it has more strength, use 40mm/s speed for higher print quality.
 
