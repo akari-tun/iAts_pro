@@ -384,19 +384,19 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
 #endif
 
 #ifdef USE_IMU
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_ACC);
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_GYRO);
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         screen_enter_secondary_mode(&ui->internal.screen, SCREEN_SECONDARY_MODE_CALIBRATION_MAG);
         return;
@@ -675,22 +675,24 @@ void ui_init(ui_t *ui, ui_config_t *cfg, tracker_t *tracker_s)
     ui_reverse_observer.Update = ui_reverse_updated;
     tracker->servo->internal.reverse_notifier->mSubject.Attach(tracker->servo->internal.reverse_notifier, &ui_reverse_observer);
 
-    ui_imu_calibration_step_done_observer.Obj = ui;
-    ui_imu_calibration_step_done_observer.Name = "UI cal_step observer";
-    ui_imu_calibration_step_done_observer.Update = ui_imu_calibration_step_done;
-    tracker->imu->cal_step_notifier->mSubject.Attach(tracker->imu->cal_step_notifier, &ui_imu_calibration_step_done_observer);
+    if (settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
+    {
+        ui_imu_calibration_step_done_observer.Obj = ui;
+        ui_imu_calibration_step_done_observer.Name = "UI cal_step observer";
+        ui_imu_calibration_step_done_observer.Update = ui_imu_calibration_step_done;
+        tracker->imu->cal_step_notifier->mSubject.Attach(tracker->imu->cal_step_notifier, &ui_imu_calibration_step_done_observer);
 
-    ui_imu_calibration_done_observer.Obj = ui;
-    ui_imu_calibration_done_observer.Name = "UI cal_done observer";
-    ui_imu_calibration_done_observer.Update = ui_imu_calibration_done;
-    tracker->imu->cal_done_notifier->mSubject.Attach(tracker->imu->cal_done_notifier, &ui_imu_calibration_done_observer);
+        ui_imu_calibration_done_observer.Obj = ui;
+        ui_imu_calibration_done_observer.Name = "UI cal_done observer";
+        ui_imu_calibration_done_observer.Update = ui_imu_calibration_done;
+        tracker->imu->cal_done_notifier->mSubject.Attach(tracker->imu->cal_done_notifier, &ui_imu_calibration_done_observer);
+    }
 
     // #if defined(LED_1_USE_WS2812)
     //     led_init(&ui->internal.led_gradual_target);
     // #else
     led_init();
     // #endif
-
     button_callback_f button_callback = ui_handle_noscreen_button_event;
 #ifdef USE_SCREEN
     // if (screen_init(&ui->internal.screen, &cfg->screen, servo))

@@ -258,19 +258,19 @@ static void tracker_settings_handler(const setting_t *setting, void *user_data)
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_ACC) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         imu_task_do_accel_calibration_init();
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_GYRO) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         imu_task_do_gyro_calibration();
         return;
     }
 
-    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG))
+    if (SETTING_IS(setting, SETTING_KEY_IMU_CALIBRATION_MAG) && settings_get_key_bool(SETTING_KEY_IMU_ENABLE))
     {
         imu_task_do_mag_calibration();
         return;
