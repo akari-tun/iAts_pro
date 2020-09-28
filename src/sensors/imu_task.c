@@ -184,7 +184,6 @@ static void imu_task(void *pvParameters)
 
     LOG_I(TAG, "starting imu task");
 
-    mpu9250_init(&_mpu9250, MPU9250_Accelerometer_8G, MPU9250_Gyroscope_1000s, &_imu.lsb);
     _imu.available = mpu9250_is_available(&_mpu9250);
 
     if (!_imu.available)
@@ -329,6 +328,8 @@ void imu_task_init(hal_i2c_config_t *i2c_cfg)
         _mutex = xSemaphoreCreateMutex();
 
         _cmd_queue = xQueueCreate(10, sizeof(uint32_t));
+
+        mpu9250_init(&_mpu9250, MPU9250_Accelerometer_8G, MPU9250_Gyroscope_1000s, &_imu.lsb);
 
         xTaskCreatePinnedToCore(imu_task, "IMU_Task", 4096, NULL, 1, NULL, 0);
     }
