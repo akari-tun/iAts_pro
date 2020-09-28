@@ -12,7 +12,6 @@ static bool input_mavlink_update(void *input, void *data, time_micros_t now)
     input_mavlink_t *input_mavlink = input;
 
     bool updated = false;
-
     int ret = mavlink_update(input_mavlink->mavlink, data);
     if (ret == 2)
     {
@@ -50,7 +49,7 @@ static bool input_mavlink_open(void *input, void *config)
         .stop_bits = SERIAL_STOP_BITS_1,
         .inverted = input_mavlink->inverted,
     };
-
+    
     input_mavlink->serial_port = serial_port_open(&serial_config);
     LOG_I(TAG, "Open with Baudrate: %d, TX: %s, RX: %s", config_mavlink->baudrate, gpio_toa(config_mavlink->tx), gpio_toa(config_mavlink->rx));
 
@@ -61,8 +60,8 @@ static bool input_mavlink_open(void *input, void *config)
     input_mavlink->mavlink->io->write = (io_write_f)&serial_port_write;
     input_mavlink->mavlink->io->read = (io_read_f)&serial_port_read;
     input_mavlink->mavlink->io->flags = (io_flags_f)&serial_port_io_flags;
-    input_mavlink->mavlink->io->data = input_mavlink->serial_port;
 
+    input_mavlink->mavlink->io->data = input_mavlink->serial_port;
     input_mavlink->mavlink->home_source = input_mavlink->input.home_source;
 
     return true;
