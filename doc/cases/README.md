@@ -18,6 +18,10 @@ I use PLA filament to print this cases, 0.2mm resolution and 50% infill, at 1mm 
 1  X 15 * 6 [level vial](https://item.taobao.com/item.htm?id=525788874394)  
 1  X MF128zz [bearing](https://detail.tmall.com/item.htm?id=593627759602&skuId=4095252424985)  
 
+#### Use Countersunk Screw
+
+[Countersunk Screw](https://github.com/akari-tun/iAts_pro/tree/master/doc/cases/Countersunk%20Screw)
+
 ### Servo
 I use the standard size of the servo, but the sizes of each servo different. I adjusted the design for sizes of the servo, and I recommend the use of this servo.  
 [Pan servo](https://item.taobao.com/item.htm?id=581039145230&_u=b1i80m591e6) 180° 25kg digital servo  
