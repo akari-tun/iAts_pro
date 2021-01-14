@@ -115,6 +115,10 @@ static const char *home_source_table[] = {"NONE", "UART1", "UART2"};
 
 static const char *estimate_second_table[] = {"1 sec", "3 sec", "5 sec", "10 sec"};
 
+#if defined(USE_POWER_MONITORING)
+static const char *power_enable_level[] = {"Low", "High"};
+#endif
+
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
@@ -162,6 +166,7 @@ static const setting_t settings[] = {
     FOLDER(SETTING_KEY_TRACKER_MONITOR_POWER, "Power", FOLDER_ID_POWER, FOLDER_ID_MONITOR, NULL),
     BOOL_SETTING(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE, "Enable Monitor", SETTING_FLAG_NAME_MAP, FOLDER_ID_POWER, true),
     BOOL_SETTING(SETTING_KEY_TRACKER_MONITOR_POWER_TURN, "Turn", SETTING_FLAG_NAME_MAP | SETTING_FLAG_EPHEMERAL, FOLDER_ID_POWER, true),
+    U8_MAP_SETTING(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE_LEVEL, "En.Level", 0, FOLDER_ID_POWER, power_enable_level, 0),
 #endif
 #endif
 

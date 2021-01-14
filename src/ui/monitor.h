@@ -27,6 +27,7 @@ typedef struct power_s {
     uint8_t remote_gpio;
 
     uint8_t turn_status;
+    uint8_t enable_level;
     uint8_t enable;
 } power_t;
 

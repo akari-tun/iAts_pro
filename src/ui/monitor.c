@@ -79,6 +79,7 @@ void power_init(power_t *power)
     power->monitoring_gpio = POWER_MONITORING_GPIO;
     power->remote_gpio = POWER_REMOTE_GPIO;
     power->enable = settings_get_key_bool(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE) ? 1 : 0;
+    power->enable_level = settings_get_key_u8(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE_LEVEL);
 
     HAL_ERR_ASSERT_OK(hal_gpio_setup(power->monitoring_gpio, HAL_GPIO_DIR_INPUT, HAL_GPIO_PULL_DOWN));
     HAL_ERR_ASSERT_OK(hal_gpio_setup(power->remote_gpio, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_BOTH));
@@ -95,14 +96,14 @@ uint8_t power_get_power_good(power_t *power)
 
 void power_turn_on(power_t *power)
 {
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_LOW));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, power->enable_level == 0 ? HAL_GPIO_LOW : HAL_GPIO_HIGH));
     power->turn_status = 1;
 
 }
 
 void power_turn_off(power_t *power)
 {
-    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, HAL_GPIO_HIGH));
+    HAL_ERR_ASSERT_OK(hal_gpio_set_level(power->remote_gpio, power->enable_level == 0 ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
     power->turn_status = 0;
 }
 #endif

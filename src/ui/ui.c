@@ -462,6 +462,12 @@ static void ui_settings_handler(const setting_t *setting, void *user_data)
         
         return;
     }
+
+    if (SETTING_IS(setting, SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE_LEVEL))
+    {
+        p->enable_level = settings_get_key_u8(SETTING_KEY_TRACKER_MONITOR_POWER_ENABLE_LEVEL);
+        return;
+    }
 #endif
 
 #if defined(USE_BEEPER)
