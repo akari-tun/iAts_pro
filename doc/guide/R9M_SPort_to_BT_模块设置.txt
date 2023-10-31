@@ -1,0 +1,7 @@
+蓝牙模块进入AT模式，在串口中输入以下指令（每条指令后面记得回车）
+
+AT+ORGL
+AT+NAME="R9M_SPort"
+AT+ROLE=0
+AT+PSWD=1234
+AT+UART=57600,0,0
