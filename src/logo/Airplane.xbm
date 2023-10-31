@@ -1,4 +1,0 @@
-#define Airplane_width 8
-#define Airplane_height 8
-static unsigned char Airplane_bits[] = {
-   0x04, 0x0c, 0x1d, 0xf7, 0xf7, 0x1d, 0x0c, 0x04 };
