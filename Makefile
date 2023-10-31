@@ -46,7 +46,7 @@ TARGET_DIR					:= $(ROOT)/main/target
 PLATFORMS_DIR				= $(TARGET_DIR)/platforms
 export PLATFORMS_DIR
 
-VALID_PLATFORMS				= $(dir $(wildcard $(PLATFORMS_DIR)/*/platform.h))
+VALID_PLATFORMS				= $(dir $(wildcard $(PLATFORMS_DIR)/*/target_platform.h))
 VALID_PLATFORMS				:= $(subst /,,$(subst $(PLATFORMS_DIR)/,,$(VALID_PLATFORMS)))
 VALID_PLATFORMS				:= $(sort $(VALID_PLATFORMS))
 
