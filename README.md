@@ -15,7 +15,25 @@ After I graduating from college, I never use C language to develop any project, 
 
 [RavenLRS](https://github.com/RavenLRS) project is built on ESP32 module, its also the realization of the function of some of its similar to some of my ideas, I learn by [RavenLRS](https://github.com/RavenLRS) project by learned a lot of of C language development experience, and use a lot of RavenLRS code to my project,Thanks to [RavenLRS](https://github.com/RavenLRS) author [fiam](https://github.com/fiam) open source for such an excellent project.
 
-## CONTROL APP
+## How to Building iAts_pro
+iAts_pro is built base on [esp-idf](https://github.com/espressif/esp-idf) v3.0 and has includes in path `/lib/esp-idf` as submodule, you need to install [Xtensa toolchanl](https://dl.espressif.com/dl/esp32_win32_msys2_environment_and_toolchain-20181001.zip) and set up the software environment follow the [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/v3.3/get-started/index.html).
+
+Use command `git clone git@github.com:akari-tun/iAts_pro.git --recursive` to clone iAts_pro repository, `--recursive` option can clone all submoduls that includes, the submodul already points to the correct `Commit` from respository of `esp-idf` , do not need update it to lastest version.
+
+Follow these command to build iAts_pro from your repository directory:
+
+``` sh
+cd iAts_pro
+TARGET=esp32_iAts_pro_180 make
+```
+
+And you can add `PORT=<port>` and `flash` option to flash to your board like this:
+
+``` sh
+TARGET=esp32_iAts_pro_180 PORT=com1 make flash
+```
+
+## Companion App
 I designed a android app for this project [Aircaft Viewer](https://github.com/akari-tun/iAts_pro/blob/master/tools).this app can be control aat to course the right direction and view the aircraft's location and some status infomation from the telemetry data.Its supported two protocol now.
 
 ## The Cases and STL file
